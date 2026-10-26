@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { makeCreator } from '../domain/creatorInput';
 import type { Creator, Platform } from '../domain/types';
 import type { FavoritesSource } from '../favorites/favorites';
@@ -7,11 +7,12 @@ interface Props {
   source: FavoritesSource;
   onPick(c: Creator): void;
   onClose(): void;
+  children?: ReactNode; // 맨 위에 넣을 내용 (투네이션 즐겨찾기)
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function FavoritesPicker({ source, onPick, onClose }: Props) {
+export function FavoritesPicker({ source, onPick, onClose, children }: Props) {
   const [list, setList] = useState(() => source.list());
   const [name, setName] = useState('');
   const [platform, setPlatform] = useState<Platform>('twitch');
@@ -42,6 +43,8 @@ export function FavoritesPicker({ source, onPick, onClose }: Props) {
             닫기
           </button>
         </div>
+        {children}
+        <h3>직접 추가한 크리에이터</h3>
         {list.length === 0 ? (
           <p className="muted">아직 즐겨찾기가 없습니다. 아래에서 크리에이터를 추가하세요.</p>
         ) : (

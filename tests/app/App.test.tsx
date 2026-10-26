@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import type { ToonationBridge } from '../../src/toonation/bridge';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
@@ -150,4 +151,37 @@ test('클립보드 실패 시 링크를 직접 보여준다', async () => {
     fireEvent.click(screen.getByRole('button', { name: '합방 링크 만들기' }));
   });
   expect(screen.getByText(/복사하지 못했습니다. 아래 링크를 직접 복사하세요: http:\/\/localhost:5230\/#s=/)).toBeInTheDocument();
+});
+
+describe('투네이션 즐겨찾기 연동', () => {
+  const tFav = { tag: 'tagT', name: '투네A', profile: '', channels: [{ platform: 'twitch', key: 'toon_a' }] };
+  const bridge = (account: unknown): ToonationBridge => ({
+    request: vi.fn((type: string): Promise<any> =>
+      type === 'status' ? Promise.resolve({ account }) : type === 'favorites' ? Promise.resolve([tFav]) : Promise.resolve({}),
+    ),
+  });
+
+  test('불러오기 창에서 투네이션 즐겨찾기를 골라 칸에 넣고, 확인 없이 후원한다', async () => {
+    const kv = safeStorage(undefined);
+    const win = {
+      open: vi.fn(() => ({ closed: false }) as unknown as Window),
+      screen: { availWidth: 1920, availHeight: 1040 } as Screen,
+      location: { hash: '', href: 'http://localhost:5230/' } as Location,
+      navigator: {} as Navigator,
+    };
+    render(<App favorites={localFavorites(kv)} kv={kv} win={win} bridge={bridge({ name: '나' })} />);
+    fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^투네A · Twitch/ }));
+    expect(within(tiles()[0] as HTMLElement).getByText('투네A')).toBeInTheDocument();
+    expect(screen.queryByText('검증되지 않음')).toBeNull();
+    donate();
+    expect(win.open).toHaveBeenCalledWith('https://toon.at/donate/tagT', 'mv-donate', expect.any(String));
+  });
+
+  test('로그인 전이면 투네이션 로그인 버튼이 보인다', async () => {
+    const kv = safeStorage(undefined);
+    render(<App favorites={localFavorites(kv)} kv={kv} bridge={bridge(null)} win={{ open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator }} />);
+    fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
+    expect(await screen.findByRole('button', { name: '투네이션 로그인' })).toBeInTheDocument();
+  });
 });

@@ -92,3 +92,11 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 .confirm-info { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
 .confirm-info dt { color: var(--muted); }
 .confirm-info dd { margin: 0; word-break: break-all; }
+
+/* 투네이션 즐겨찾기 */
+.toon-section { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.toon-section__head { display: flex; justify-content: space-between; align-items: center; }
+.toon-section__head h3 { margin: 0 0 8px; }
+.toon-section__login { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.fav-item--toon { display: flex; align-items: center; gap: 8px; }
+.fav-item__avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }

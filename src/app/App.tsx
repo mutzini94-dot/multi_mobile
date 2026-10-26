@@ -6,6 +6,9 @@ import { localFavorites, type FavoritesSource } from '../favorites/favorites';
 import type { PlayerHandle } from '../players/types';
 import { useAudioFocus } from '../players/useAudioFocus';
 import { buildShareUrl, decodeShare } from '../share/shareLink';
+import { createBridge, type ToonationBridge } from '../toonation/bridge';
+import { useToonation } from '../toonation/useToonation';
+import { ToonationSection } from '../ui/ToonationSection';
 import { safeStorage, type KV } from '../storage/safeStorage';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DonationBar } from '../ui/DonationBar';
@@ -21,6 +24,7 @@ interface Props {
   favorites?: FavoritesSource;
   kv?: KV;
   win?: AppWindow;
+  bridge?: ToonationBridge;
 }
 
 const POPUP_POLL_MS = 1000;
@@ -37,6 +41,8 @@ export function App(props: Props) {
   const win = props.win ?? window;
   const kv = useMemo(() => props.kv ?? safeStorage(readStorage()), [props.kv]);
   const favorites = useMemo(() => props.favorites ?? localFavorites(kv), [props.favorites, kv]);
+  const bridge = useMemo(() => props.bridge ?? createBridge(window), [props.bridge]);
+  const toonation = useToonation(bridge);
 
   // 합방 링크로 열렸으면 그 구성으로 시작하고, 원래 구성을 보관한다
   const [boot] = useState(() => {
@@ -70,6 +76,14 @@ export function App(props: Props) {
     const id = setInterval(() => setPopupClosed(!popupRef.current || popupRef.current.closed), POPUP_POLL_MS);
     return () => clearInterval(id);
   }, [popupCreator]);
+
+  // 불러오기 창을 열 때 투네이션 즐겨찾기를 (아직 없으면) 불러온다
+  const { refresh: refreshToonation } = toonation;
+  const toonStatus = toonation.state.status;
+  useEffect(() => {
+    if (pickerSlot !== null && (toonStatus === 'idle' || toonStatus === 'no-extension')) refreshToonation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerSlot]);
 
   const warning = donationWarning(popupCreator, popupClosed, selectedCreator);
 
@@ -147,7 +161,17 @@ export function App(props: Props) {
             dispatch({ type: 'assign', slot: pickerSlot, creator });
             setPickerSlot(null);
           }}
-        />
+        >
+          <ToonationSection
+            state={toonation.state}
+            onLogin={toonation.login}
+            onRefresh={toonation.refresh}
+            onPick={(creator) => {
+              dispatch({ type: 'assign', slot: pickerSlot, creator });
+              setPickerSlot(null);
+            }}
+          />
+        </FavoritesPicker>
       )}
       {confirming && (
         <ConfirmDialog
