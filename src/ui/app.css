@@ -1,0 +1,94 @@
+:root {
+  --bg: #121318;
+  --surface: #1c1e25;
+  --surface-2: #262932;
+  --line: #333744;
+  --text: #e8e9ee;
+  --muted: #8b8f9c;
+  --selected: #ff3b3b;
+  --donate: #00aeef;
+  --warn: #ffb020;
+  font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.app { display: flex; flex-direction: column; height: 100%; padding: 8px; gap: 8px; }
+
+/* GNB */
+.gnb { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--surface); border-radius: 8px; }
+.gnb__logo { font-weight: 700; margin-right: auto; }
+.gnb__layouts { display: flex; gap: 6px; }
+.layout-icon { width: 34px; height: 24px; padding: 3px; display: grid; gap: 2px; background: transparent; border: 1px solid var(--line); border-radius: 4px; }
+.layout-icon i { display: block; background: #555a66; border-radius: 1px; }
+.layout-icon[aria-pressed='true'] { border-color: var(--donate); }
+.layout-icon[aria-pressed='true'] i { background: var(--donate); }
+.layout-icon--single { grid-template-columns: 1fr; }
+.layout-icon--split2 { grid-template-columns: 1fr 1fr; }
+.layout-icon--oneTwo { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; grid-auto-flow: column; }
+.layout-icon--oneTwo i:nth-child(3) { grid-row: span 2; }
+.layout-icon--quad { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+.btn { border: 0; border-radius: 6px; padding: 6px 14px; font-weight: 600; }
+.btn--donate { background: var(--donate); color: #fff; }
+.btn--ghost { background: var(--surface-2); color: var(--text); }
+
+/* 그리드 */
+.tile-grid { flex: 1; min-height: 0; }
+.panel-inner { width: 100%; height: 100%; }
+.resize-handle { flex: 0 0 8px; position: relative; }
+.resize-handle::after { content: ''; position: absolute; inset: 0; margin: auto; width: 3px; height: 3px; border-radius: 2px; background: var(--line); }
+.resize-handle[data-panel-group-direction='horizontal']::after { height: 32px; }
+.resize-handle[data-panel-group-direction='vertical']::after { width: 32px; }
+.resize-handle[data-resize-handle-state='hover']::after,
+.resize-handle[data-resize-handle-state='drag']::after { background: var(--selected); }
+
+/* 칸 */
+.tile { position: relative; width: 100%; height: 100%; background: #000; border: 3px solid transparent; border-radius: 6px; overflow: hidden; }
+.tile--selected { border-color: var(--selected); }
+.tile--empty { background: var(--surface); display: flex; align-items: center; justify-content: center; }
+.tile__player { position: absolute; inset: 0; }
+.tile__player iframe { display: block; }
+.tile__bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px; background: linear-gradient(#000a, transparent); cursor: pointer; }
+.tile--empty .tile__bar { position: static; background: none; justify-content: center; }
+.tile__name { font-weight: 700; text-shadow: 0 1px 2px #000; }
+.tile__platform, .tile__donate-id { font-size: 12px; color: #ddd; text-shadow: 0 1px 2px #000; }
+.chip { border: 0; border-radius: 999px; padding: 4px 14px; background: #7a7d86; color: #fff; }
+.chip--small { padding: 2px 10px; font-size: 12px; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
+.badge--warn { background: var(--warn); color: #222; }
+.sound { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 0; background: #fff; font-size: 15px; }
+.sound--on { box-shadow: 0 0 0 2px var(--donate); }
+
+/* 하단 바 */
+.donation-bar { min-height: 40px; display: flex; align-items: center; gap: 14px; padding: 8px 12px; background: var(--surface); border-radius: 8px; color: var(--muted); font-size: 14px; }
+.donation-bar__target { color: var(--text); font-weight: 600; }
+.donation-bar__warning { color: #222; background: var(--warn); padding: 4px 10px; border-radius: 4px; font-weight: 600; }
+.donation-bar__message { color: var(--text); }
+
+/* 모달 */
+.modal-backdrop { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.modal { width: min(520px, 100%); max-height: 90vh; overflow: auto; background: var(--surface); border-radius: 10px; padding: 18px; }
+.modal--small { width: min(420px, 100%); }
+.modal h2 { margin: 0; font-size: 18px; }
+.modal h3 { margin: 16px 0 8px; font-size: 15px; }
+.modal__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.muted { color: var(--muted); }
+.fav-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.fav-list li { display: flex; gap: 6px; }
+.fav-item { flex: 1; text-align: left; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 6px; padding: 8px 10px; }
+.fav-item:hover { border-color: var(--donate); }
+.fav-form { display: flex; flex-direction: column; gap: 8px; }
+.fav-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.fav-form input, .fav-form select { padding: 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+.form-error { color: #ff6b6b; margin: 0; font-size: 13px; }
+.confirm-info { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
+.confirm-info dt { color: var(--muted); }
+.confirm-info dd { margin: 0; word-break: break-all; }
