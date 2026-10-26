@@ -16,7 +16,7 @@ vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data
 
 const noop = () => {};
 const gnbProps = { layout: 'quad' as const, onLayout: noop, canDonate: true, onDonate: noop, onShare: noop, sharedMode: false, onRestore: noop };
-const tileProps = { creator: null, selected: false, soundOn: true, onSelect: noop, onLoad: noop, onToggleSound: noop, onReady: noop, onAddFavorite: noop };
+const tileProps = { creator: null, selected: false, soundOn: true, onSelect: noop, onLoad: noop, onToggleSound: noop, onAddFavorite: noop };
 
 describe('Gnb', () => {
   test('레이아웃 버튼 4개와 현재 레이아웃 표시', () => {
@@ -171,3 +171,16 @@ describe('DonationBar', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
+
+describe('PlayerLayer', () => {
+  test('경계를 드래그하는 동안에는 플레이어가 포인터를 받지 않는다', async () => {
+    const { PlayerLayer } = await import('../../src/ui/PlayerLayer');
+    const state = { ...applyLayout(initialViewState, 'split2'), slots: [mkCreator(1), null] };
+    const ref = { current: null };
+    const { container, rerender } = render(<PlayerLayer state={state} stageRef={ref} slotEls={{ current: [] }} onReady={noop} dragging={false} />);
+    expect(container.firstChild).not.toHaveClass('player-layer--dragging');
+    rerender(<PlayerLayer state={state} stageRef={ref} slotEls={{ current: [] }} onReady={noop} dragging />);
+    expect(container.firstChild).toHaveClass('player-layer--dragging');
+  });
+});
+

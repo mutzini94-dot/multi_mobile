@@ -12,6 +12,7 @@ import { ToonationSection } from '../ui/ToonationSection';
 import { safeStorage, type KV } from '../storage/safeStorage';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DonationBar } from '../ui/DonationBar';
+import { PlayerLayer } from '../ui/PlayerLayer';
 import { FavoritesPicker } from '../ui/FavoritesPicker';
 import { Gnb } from '../ui/Gnb';
 import { Tile } from '../ui/Tile';
@@ -59,6 +60,9 @@ export function App(props: Props) {
   const [popupCreator, setPopupCreator] = useState<Creator | null>(null);
   const [popupClosed, setPopupClosed] = useState(true);
   const popupRef = useRef<Window | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const slotEls = useRef<(HTMLElement | null)[]>([]);
+  const [dragging, setDragging] = useState(false);
 
   // 플레이어 핸들: 칸 번호 + 크리에이터 키로 구분해, 칸 내용이 바뀌면 이전 핸들을 버린다
   const [handles, setHandles] = useState<Record<string, PlayerHandle>>({});
@@ -130,25 +134,37 @@ export function App(props: Props) {
         sharedMode={!!boot.shared}
         onRestore={() => boot.shared && dispatch({ type: 'replace', state: boot.shared })}
       />
-      <TileGrid
-        state={state}
-        onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
-        renderTile={(slot) => {
-          const creator = state.slots[slot] ?? null;
-          return (
-            <Tile
-              creator={creator}
-              selected={state.selected === slot}
-              soundOn={state.soundOn}
-              onSelect={() => dispatch({ type: 'select', slot })}
-              onLoad={() => setPickerSlot(slot)}
-              onToggleSound={() => dispatch({ type: 'toggleSound' })}
-              onReady={(h) => creator && setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
-              onAddFavorite={() => creator && setConfirmingFavorite(creator)}
-            />
-          );
-        }}
-      />
+      <div className="stage" ref={stageRef}>
+        <TileGrid
+          state={state}
+          onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
+          onDragging={setDragging}
+          renderTile={(slot) => {
+            const creator = state.slots[slot] ?? null;
+            return (
+              <Tile
+                creator={creator}
+                selected={state.selected === slot}
+                soundOn={state.soundOn}
+                onSelect={() => dispatch({ type: 'select', slot })}
+                onLoad={() => setPickerSlot(slot)}
+                onToggleSound={() => dispatch({ type: 'toggleSound' })}
+                playerSlotRef={(el) => {
+                  slotEls.current[slot] = el;
+                }}
+                onAddFavorite={() => creator && setConfirmingFavorite(creator)}
+              />
+            );
+          }}
+        />
+        <PlayerLayer
+          state={state}
+          stageRef={stageRef}
+          slotEls={slotEls}
+          dragging={dragging}
+          onReady={(slot, creator, h) => setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
+        />
+      </div>
       <DonationBar popupCreator={popupClosed ? null : popupCreator} warning={warning} message={message} />
       {pickerSlot !== null && (
         <FavoritesPicker

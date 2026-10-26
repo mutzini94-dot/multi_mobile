@@ -100,3 +100,11 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 .toon-section__login { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .fav-item--toon { display: flex; align-items: center; gap: 8px; }
 .fav-item__avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+
+/* 플레이어 레이어: 칸 자리 위에 절대 위치로 덮어 레이아웃이 바뀌어도 다시 로딩되지 않게 한다 */
+.stage { position: relative; flex: 1; min-height: 0; display: flex; }
+.stage > .tile-grid { flex: 1; }
+.player-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.player-layer__item { position: absolute; pointer-events: auto; overflow: hidden; }
+.tile__bar { z-index: 2; }
+.player-layer--dragging .player-layer__item { pointer-events: none; }

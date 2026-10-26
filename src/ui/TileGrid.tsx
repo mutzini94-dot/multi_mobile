@@ -6,15 +6,16 @@ interface Props {
   state: ViewState;
   renderTile(slot: number): ReactNode;
   onSizes(group: string, sizes: number[]): void;
+  onDragging?(dragging: boolean): void;
 }
 
-export function TileGrid({ state, renderTile, onSizes }: Props) {
+export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
   const size = (group: string, i: number, count: number) => state.sizes[group]?.[i] ?? 100 / count;
 
   const group = (id: string, direction: 'horizontal' | 'vertical', children: { node: ReactNode; col?: string }[]) => (
     <PanelGroup id={id} direction={direction} onLayout={(s) => onSizes(id, s)}>
       {children.map((c, i) => (
-        <PanelChild key={i} index={i} id={id} defaultSize={size(id, i, children.length)} col={c.col}>
+        <PanelChild key={i} index={i} id={id} defaultSize={size(id, i, children.length)} col={c.col} onDragging={onDragging}>
           {c.node}
         </PanelChild>
       ))}
@@ -50,10 +51,24 @@ export function TileGrid({ state, renderTile, onSizes }: Props) {
   );
 }
 
-function PanelChild({ index, id, defaultSize, col, children }: { index: number; id: string; defaultSize: number; col?: string; children: ReactNode }) {
+function PanelChild({
+  index,
+  id,
+  defaultSize,
+  col,
+  onDragging,
+  children,
+}: {
+  index: number;
+  id: string;
+  defaultSize: number;
+  col?: string;
+  onDragging?(dragging: boolean): void;
+  children: ReactNode;
+}) {
   return (
     <>
-      {index > 0 && <PanelResizeHandle className="resize-handle" />}
+      {index > 0 && <PanelResizeHandle className="resize-handle" onDragging={onDragging} />}
       <Panel id={`${id}-${index}`} order={index} defaultSize={defaultSize} minSize={15}>
         <div className="panel-inner" data-col={col}>
           {children}
