@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "멀티뷰 후원 연동",
+  "version": "0.1.0",
+  "description": "멀티뷰 후원 브라우저에서 투네이션 로그인과 즐겨찾기 목록을 불러옵니다.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["cookies", "storage", "declarativeNetRequestWithHostAccess"],
+  "host_permissions": ["https://toon.at/*", "https://www.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://localhost:5230/*", "http://127.0.0.1:5230/*"],
+      "js": ["content/bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

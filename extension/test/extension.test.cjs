@@ -1,0 +1,170 @@
+'use strict';
+// background.js / content/bridge.js 를 vm에서 가짜 chrome API·fetch·window로 실행해 확인한다.
+// 실행: node --test extension/test/
+const test = require('node:test');
+const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const ROOT = path.join(__dirname, '..');
+const UC = 'UC' + 'c'.repeat(22);
+// vm 컨텍스트에서 만든 객체는 프로토타입이 달라 deepStrictEqual 전에 평탄화한다
+const plain = (o) => (o === undefined ? undefined : JSON.parse(JSON.stringify(o)));
+
+function loadBackground(world) {
+  const listeners = {};
+  const on = (name) => ({ addListener: (fn) => (listeners[name] ||= []).push(fn) });
+  const rules = [];
+  const tabsCreated = [];
+  const local = {};
+  const chrome = {
+    runtime: { id: 'ext-id', onMessage: on('message') },
+    tabs: { create: async (o) => { tabsCreated.push(o); return { id: 9 }; } },
+    storage: {
+      local: {
+        get: async (k) => Object.fromEntries([].concat(k).filter((x) => x in local).map((x) => [x, structuredClone(local[x])])),
+        set: async (o) => Object.assign(local, structuredClone(o)),
+      },
+    },
+    cookies: {
+      // toon.at 세션 쿠키는 https://toon.at 파티션에만 있다
+      getAll: async (q) => (world.loggedIn && q.partitionKey ? [{ name: '__toonation_session_id__', value: 'SID', domain: '.toon.at', hostOnly: false, path: '/' }] : []),
+    },
+    declarativeNetRequest: {
+      updateSessionRules: async ({ removeRuleIds = [], addRules = [] }) => {
+        rules.splice(0, rules.length, ...rules.filter((r) => !removeRuleIds.includes(r.id)), ...addRules);
+      },
+    },
+  };
+  const json = (o) => ({ ok: true, status: 200, url: '', text: async () => JSON.stringify(o), clone() { return this; } });
+  const html = (s) => ({ ok: true, status: 200, url: '', text: async () => s, clone() { return this; } });
+  const fetch = async (url) => {
+    world.fetched.push(String(url));
+    if (url.includes('/dapi/donator/common')) return json({ Account: world.loggedIn ? { DisplayName: '나', TitleHash: 'h' } : null });
+    if (url.includes('/dapi/donator/favorites/')) {
+      if (!world.loggedIn) return html('<html>login</html>');
+      return json({ list: world.favorites, PageInfo: { PageCount: 1 } });
+    }
+    if (url.startsWith('https://www.youtube.com/@')) return html(`<link rel="canonical" href="https://www.youtube.com/channel/${UC}">`);
+    throw new Error(`unexpected fetch ${url}`);
+  };
+  const ctx = { chrome, fetch, console, URL, URLSearchParams, AbortController, setTimeout, clearTimeout, structuredClone, Promise };
+  ctx.self = ctx;
+  ctx.importScripts = (...files) => files.forEach((f) => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }));
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'background.js'), 'utf8'), ctx, { filename: 'background.js' });
+  const send = (msg, sender = { id: 'ext-id', tab: { id: 1 }, origin: 'http://localhost:5230' }) =>
+    new Promise((resolve) => {
+      const ret = listeners.message[0](msg, sender, (r) => resolve(plain(r)));
+      if (ret !== true) resolve(undefined);
+    });
+  return { send, rules, tabsCreated };
+}
+
+const world = (o = {}) => ({ loggedIn: false, favorites: [], fetched: [], ...o });
+
+test('status: 로그아웃 상태', async () => {
+  const { send } = loadBackground(world());
+  assert.deepStrictEqual(await send({ type: 'status' }), { ok: true, data: { account: null } });
+});
+
+test('status: 로그인 상태면 계정 이름, toon.at 요청에 세션 쿠키 규칙', async () => {
+  const { send, rules } = loadBackground(world({ loggedIn: true }));
+  const r = await send({ type: 'status' });
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.data.account.name, '나');
+  const rule = rules.find((x) => x.id === 1);
+  assert.ok(rule.action.requestHeaders.some((h) => h.header === 'cookie' && h.value === '__toonation_session_id__=SID'));
+  assert.deepStrictEqual(plain(rule.condition.initiatorDomains), ['ext-id']);
+});
+
+test('favorites: 필요한 필드만, 유튜브 핸들은 UC로 변환', async () => {
+  const { send } = loadBackground(world({
+    loggedIn: true,
+    favorites: [{ tag: 'tagA', name: 'A', profile_default: 'https://img/a.png', channel: [{ url: 'https://twitch.tv/aaaa' }, { url: 'https://www.youtube.com/@aa' }], secret: 'x' }],
+  }));
+  const r = await send({ type: 'favorites' });
+  assert.deepStrictEqual(r, {
+    ok: true,
+    data: [{ tag: 'tagA', name: 'A', profile: 'https://img/a.png', channels: [{ platform: 'twitch', key: 'aaaa' }, { platform: 'youtube', key: '@aa', ytId: UC }] }],
+  });
+});
+
+test('favorites: 로그아웃이면 NOT_LOGGED_IN', async () => {
+  const { send } = loadBackground(world());
+  assert.deepStrictEqual(await send({ type: 'favorites' }), { ok: false, error: 'NOT_LOGGED_IN' });
+});
+
+test('login: 공식 로그인 창을 연다', async () => {
+  const { send, tabsCreated } = loadBackground(world());
+  assert.deepStrictEqual(await send({ type: 'login' }), { ok: true, data: {} });
+  assert.deepStrictEqual(plain(tabsCreated), [{ url: 'https://toon.at/donator/login?callback=/donator' }]);
+});
+
+test('탭이 아닌 곳이나 다른 확장의 메시지는 무시', async () => {
+  const { send } = loadBackground(world({ loggedIn: true }));
+  assert.strictEqual(await send({ type: 'status' }, { id: 'ext-id' }), undefined);
+  assert.strictEqual(await send({ type: 'status' }, { id: 'other', tab: { id: 1 } }), undefined);
+});
+
+test('알 수 없는 요청', async () => {
+  const { send } = loadBackground(world());
+  assert.deepStrictEqual(await send({ type: 'cookies' }), { ok: false, error: 'UNKNOWN_REQUEST' });
+});
+
+// ---------------------------------------------------------------- content/bridge.js
+
+function loadBridge(response) {
+  const listeners = [];
+  const posted = [];
+  const sent = [];
+  const win = {
+    location: { origin: 'http://localhost:5230' },
+    addEventListener: (t, fn) => t === 'message' && listeners.push(fn),
+    postMessage: (data, origin) => posted.push({ data, origin }),
+  };
+  win.window = win;
+  const chrome = { runtime: { sendMessage: async (m) => { sent.push(m); return response; } } };
+  const ctx = vm.createContext({ window: win, location: win.location, chrome, Promise, String });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'content/bridge.js'), 'utf8'), ctx);
+  const dispatch = (ev) => listeners.forEach((fn) => fn(ev));
+  return { win, posted, sent, dispatch };
+}
+
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+test('bridge: 같은 페이지의 요청을 중계하고 응답을 돌려준다', async () => {
+  const b = loadBridge({ ok: true, data: { account: null } });
+  b.dispatch({ source: b.win, origin: 'http://localhost:5230', data: { source: 'mv-page', id: 'r1', type: 'status' } });
+  await tick();
+  assert.deepStrictEqual(plain(b.sent), [{ type: 'status' }]);
+  assert.deepStrictEqual(plain(b.posted), [{ data: { source: 'mv-ext', id: 'r1', ok: true, data: { account: null } }, origin: 'http://localhost:5230' }]);
+});
+
+test('bridge: 다른 창·다른 출처·모르는 요청은 무시', async () => {
+  const b = loadBridge({ ok: true, data: {} });
+  b.dispatch({ source: {}, origin: 'http://localhost:5230', data: { source: 'mv-page', id: 'a', type: 'status' } });
+  b.dispatch({ source: b.win, origin: 'https://evil.example', data: { source: 'mv-page', id: 'b', type: 'status' } });
+  b.dispatch({ source: b.win, origin: 'http://localhost:5230', data: { source: 'mv-page', id: 'c', type: 'cookies' } });
+  b.dispatch({ source: b.win, origin: 'http://localhost:5230', data: { source: 'mv-ext', id: 'd', type: 'status' } });
+  await tick();
+  assert.deepStrictEqual(b.sent, []);
+  assert.deepStrictEqual(b.posted, []);
+});
+
+test('bridge: 확장 오류는 ok:false로 돌려준다', async () => {
+  const ctxFail = loadBridge(null);
+  ctxFail.dispatch({ source: ctxFail.win, origin: 'http://localhost:5230', data: { source: 'mv-page', id: 'e', type: 'favorites' } });
+  await tick();
+  assert.deepStrictEqual(plain(ctxFail.posted[0].data), { source: 'mv-ext', id: 'e', ok: false, error: 'NO_RESPONSE' });
+});
+
+test('manifest: 필요한 권한만, 멀티뷰 주소에서만 중계', () => {
+  const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  assert.strictEqual(m.manifest_version, 3);
+  assert.deepStrictEqual(m.permissions.sort(), ['cookies', 'declarativeNetRequestWithHostAccess', 'storage']);
+  assert.deepStrictEqual(m.host_permissions.sort(), ['https://toon.at/*', 'https://www.youtube.com/*']);
+  assert.deepStrictEqual(m.content_scripts, [{ matches: ['http://localhost:5230/*', 'http://127.0.0.1:5230/*'], js: ['content/bridge.js'], run_at: 'document_start' }]);
+  assert.strictEqual(m.externally_connectable, undefined);
+});

@@ -8,5 +8,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['tests/setup.ts'],
+    include: ['tests/**/*.test.{ts,tsx}'], // extension/test 는 node --test로 따로 실행
   },
 });

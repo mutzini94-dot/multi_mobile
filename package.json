@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --port 5230 --strictPort",
     "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "test": "vitest run && node --test extension/test/extension.test.cjs",
+    "test:web": "vitest run",
+    "test:ext": "node --test extension/test/extension.test.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",
