@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/domain/types.ts","./src/storage/safestorage.ts","./tests/setup.ts","./tests/storage/safestorage.test.ts","./vite.config.ts"],"version":"5.6.3"}
