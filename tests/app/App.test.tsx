@@ -91,10 +91,34 @@ test('원래 구성으로: 레이아웃을 바꾼 뒤 링크 구성으로 복원
   expect(tiles()).toHaveLength(2);
 });
 
-test('링크 크리에이터를 즐겨찾기에 추가', () => {
+test('링크 크리에이터 즐겨찾기 추가는 확인 후 저장되고, 이후 후원은 확인 없이 열린다', () => {
+  const { favorites, win } = setup({ hash: encodeShare(linkState) });
+  fireEvent.click(screen.getByRole('button', { name: '즐겨찾기에 추가' }));
+  expect(favorites.list().map((c) => c.name)).not.toContain('L');
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인하고 추가' }));
+  expect(favorites.list().map((c) => c.name)).toContain('L');
+  fireEvent.click(within(tiles()[0] as HTMLElement).getByText('L'));
+  donate();
+  expect(win.open).toHaveBeenCalledTimes(1);
+});
+
+test('링크 크리에이터 즐겨찾기 추가에서 취소하면 저장하지 않는다', () => {
   const { favorites } = setup({ hash: encodeShare(linkState) });
   fireEvent.click(screen.getByRole('button', { name: '즐겨찾기에 추가' }));
-  expect(favorites.list().map((c) => c.name)).toContain('L');
+  const dialog = screen.getByRole('dialog');
+  expect(within(dialog).getByText(/후원 아이디가 donL가 맞는지 확인하세요/)).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: '취소' }));
+  expect(favorites.list().map((c) => c.name)).not.toContain('L');
+});
+
+test('같은 채널의 기존 즐겨찾기와 후원 아이디가 다르면 바뀐다는 사실을 보여준다', () => {
+  const evil: ViewState = { ...linkState, slots: [mkCreator(1, { name: 'A', donateId: 'evil' }), null] };
+  const { favorites } = setup({ hash: encodeShare(evil) });
+  fireEvent.click(screen.getByRole('button', { name: '즐겨찾기에 추가' }));
+  const dialog = screen.getByRole('dialog');
+  expect(within(dialog).getByText(/기존 즐겨찾기의 후원 아이디 donA가 evil로 바뀝니다/)).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: '확인하고 추가' }));
+  expect(favorites.list().find((c) => c.name === 'A')!.donateId).toBe('evil');
 });
 
 test("잘못된 #s= 해시는 '링크가 올바르지 않습니다'", () => {

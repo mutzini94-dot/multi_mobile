@@ -55,6 +55,7 @@ export function App(props: Props) {
   const [message, setMessage] = useState<string | null>(boot.error);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<Creator | null>(null);
+  const [confirmingFavorite, setConfirmingFavorite] = useState<Creator | null>(null);
   const [popupCreator, setPopupCreator] = useState<Creator | null>(null);
   const [popupClosed, setPopupClosed] = useState(true);
   const popupRef = useRef<Window | null>(null);
@@ -143,11 +144,7 @@ export function App(props: Props) {
               onLoad={() => setPickerSlot(slot)}
               onToggleSound={() => dispatch({ type: 'toggleSound' })}
               onReady={(h) => creator && setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
-              onAddFavorite={() => {
-                if (!creator) return;
-                favorites.add(creator);
-                setMessage(`${creator.name}을(를) 즐겨찾기에 추가했습니다`);
-              }}
+              onAddFavorite={() => creator && setConfirmingFavorite(creator)}
             />
           );
         }}
@@ -172,6 +169,23 @@ export function App(props: Props) {
             }}
           />
         </FavoritesPicker>
+      )}
+      {confirmingFavorite && (
+        // 링크로 받은 (채널, 후원 아이디) 짝은 즐겨찾기에 넣기 전에도 확인한다 (확인 없이 '직접 입력'으로 바뀌는 것을 막음)
+        <ConfirmDialog
+          creator={confirmingFavorite}
+          action="favorite"
+          replacingDonateId={
+            favorites.list().find((f) => f.key === confirmingFavorite.key && f.donateId !== confirmingFavorite.donateId)?.donateId
+          }
+          onCancel={() => setConfirmingFavorite(null)}
+          onConfirm={() => {
+            favorites.add(confirmingFavorite);
+            markConfirmed(confirmingFavorite, kv);
+            setMessage(`${confirmingFavorite.name}을(를) 즐겨찾기에 추가했습니다`);
+            setConfirmingFavorite(null);
+          }}
+        />
       )}
       {confirming && (
         <ConfirmDialog
