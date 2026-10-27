@@ -10,7 +10,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const tmpOut = path.join(process.env.MV_BUILD_DIR || os.tmpdir(), 'multiview-desktop-build');
 if (/[^\x00-\x7f]/.test(tmpOut)) {
-  console.error(`빌드 폴더는 ASCII 경로여야 합니다: ${tmpOut}\nMV_BUILD_DIR을 ASCII 경로로 지정하세요. 예: C:\build`);
+  console.error(`빌드 폴더는 ASCII 경로여야 합니다: ${tmpOut}\nMV_BUILD_DIR을 ASCII 경로로 지정하세요. 예: C:\\build`);
   process.exit(1);
 }
 if (!fs.existsSync(path.join(root, 'web', 'index.html'))) {
@@ -19,7 +19,7 @@ if (!fs.existsSync(path.join(root, 'web', 'index.html'))) {
 }
 
 fs.rmSync(tmpOut, { recursive: true, force: true });
-const args = ['--win', 'nsis', '--x64', `--config.directories.output="${tmpOut.replace(/\/g, '/')}"`, '--publish', 'never'];
+const args = ['--win', 'nsis', '--x64', `--config.directories.output="${tmpOut.replace(/\\/g, '/')}"`, '--publish', 'never'];
 execSync(`npx electron-builder ${args.join(' ')}`, { cwd: root, stdio: 'inherit' });
 
 const dist = path.join(root, 'dist');
