@@ -3,10 +3,18 @@ interface YTPlayer {
   mute(): void;
   unMute(): void;
   isMuted(): boolean;
+  setVolume(v: number): void;
+  pauseVideo(): void;
+  playVideo(): void;
 }
 interface TwitchPlayer {
   setMuted(muted: boolean): void;
   getMuted(): boolean;
+  setVolume(v: number): void; // 0~1
+  pause(): void;
+  play(): void;
+  setQuality(group: string): void;
+  getQualities?(): { group: string }[];
   addEventListener(event: string, cb: () => void): void;
 }
 interface Window {

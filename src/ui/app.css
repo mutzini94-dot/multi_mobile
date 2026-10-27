@@ -312,3 +312,4 @@ button:disabled { cursor: not-allowed; }
 .settings__actions { display: flex; gap: 8px; }
 .settings__file { display: inline-flex; align-items: center; cursor: pointer; }
 .settings__file input { display: none; }
+.tile__volume { width: 72px; accent-color: var(--primary); cursor: pointer; }

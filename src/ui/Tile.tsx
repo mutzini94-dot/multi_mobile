@@ -13,6 +13,9 @@ interface Props {
   locked?: boolean; // 호스트 칸·합방 시청 화면: 불러오기·삭제 불가
   badge?: string; // 예: '호스트'
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
+  audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
+  onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
+  volume?: { value: number; onChange(v: number): void }; // 여러 칸 동시 듣기: 칸별 볼륨
   // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 상단 바 어디든(버튼 제외)·⠿를 눌러 끈다
   dnd?: {
     slot: number;
@@ -26,8 +29,9 @@ interface Props {
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge, dnd }: Props) {
-  const audible = selected && soundOn;
+export function Tile(props: Props) {
+  const { creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge, dnd } = props;
+  const audible = props.audible ?? (selected && soundOn);
   return (
     <div
       className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
@@ -84,12 +88,26 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
               aria-label={audible ? '소리 끄기' : '소리 켜기'}
               onClick={(e) => {
                 e.stopPropagation();
-                if (selected) onToggleSound();
+                if (props.onSoundClick) props.onSoundClick();
+                else if (selected) onToggleSound();
                 else onSelect();
               }}
             >
               {audible ? '🔊' : '🔇'}
             </button>
+            {props.volume && (
+              <input
+                type="range"
+                className="tile__volume"
+                aria-label={`${creator.name} 볼륨`}
+                min={0}
+                max={100}
+                value={props.volume.value}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => props.volume!.onChange(Number(e.target.value))}
+              />
+            )}
             {onFullscreen && (
               <button
                 type="button"

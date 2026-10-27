@@ -4,7 +4,8 @@ import { markConfirmed, needsConfirm } from '../donate/confirmations';
 import { donationWarning, openDonationPopup } from '../donate/donation';
 import { localFavorites, type FavoritesSource } from '../favorites/favorites';
 import type { PlayerHandle } from '../players/types';
-import { useAudioFocus } from '../players/useAudioFocus';
+import { useAudioMix } from '../players/useAudioFocus';
+import { usePlaybackPolicy } from '../players/usePlaybackPolicy';
 import { buildJointUrl, decodeJoint, publicBase } from '../share/jointLink';
 import { loadHost, saveHost } from '../host/hostProfile';
 import type { CreatorInput } from '../domain/creatorInput';
@@ -139,7 +140,19 @@ export function App(props: Props) {
   const [handles, setHandles] = useState<Record<string, PlayerHandle>>({});
   const keys = useMemo(() => playerKeys(state.slots), [state.slots]);
   const handleList = useMemo(() => keys.map((k) => (k ? handles[k] ?? null : null)), [keys, handles]);
-  useAudioFocus(handleList, state.selected, state.soundOn);
+  // 소리·재생 (설정: 소리 방식·기본 볼륨·숨긴 칸 재생·낮은 화질)
+  const [mixMuted, setMixMuted] = useState<Record<string, boolean>>({}); // 여러 칸 동시 듣기: 칸별로 끈 소리
+  const [tileVolumes, setTileVolumes] = useState<Record<string, number>>({}); // 여러 칸 동시 듣기: 칸별 볼륨
+  const shown = visibleCount(state);
+  const mix = settings.soundMode === 'mix';
+  const audible = keys.map((k, i) => !!k && i < shown && state.soundOn && (mix ? !mixMuted[k] : i === state.selected));
+  const volumes = keys.map((k) => (k && mix ? tileVolumes[k] ?? settings.masterVolume : settings.masterVolume));
+  useAudioMix(handleList, audible, volumes);
+  usePlaybackPolicy(
+    handleList,
+    keys.map((_, i) => settings.hiddenSlotPlayback === 'pause' && i >= shown),
+    keys.map((_, i) => settings.lowQualityOthers && i !== state.selected),
+  );
 
   const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
   const stateRef = useRef(state);
@@ -370,6 +383,21 @@ export function App(props: Props) {
                     slotEls.current[slot] = el;
                   }}
                   locked={!!viewer || (!!hosting && slot === 0)}
+                  audible={audible[slot]}
+                  onSoundClick={
+                    mix && keys[slot]
+                      ? () => {
+                          const k = keys[slot]!;
+                          if (!state.soundOn) dispatch({ type: 'toggleSound' }); // 전체 소리가 꺼져 있으면 다시 켠다
+                          setMixMuted((m) => ({ ...m, [k]: state.soundOn ? !m[k] : false }));
+                        }
+                      : undefined
+                  }
+                  volume={
+                    mix && keys[slot]
+                      ? { value: tileVolumes[keys[slot]!] ?? settings.masterVolume, onChange: (v) => setTileVolumes((t) => ({ ...t, [keys[slot]!]: v })) }
+                      : undefined
+                  }
                   badge={hostSlot && creator ? '호스트' : undefined}
                   dnd={{
                     slot,

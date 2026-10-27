@@ -27,6 +27,14 @@ export function TwitchPlayer({ channel, onReady }: { channel: string; onReady: (
           onReadyRef.current({
             setMuted: (m) => player.setMuted(m),
             isMuted: () => player.getMuted(),
+            setVolume: (v) => player.setVolume(v / 100),
+            setPaused: (p) => (p ? player.pause() : player.play()),
+            setLowQuality: (low) => {
+              if (!low) return player.setQuality('auto');
+              // 가장 낮은 화질: 'auto'·'chunked'(원본)를 뺀 목록의 마지막 (트위치는 높은 화질부터 준다)
+              const groups = (player.getQualities?.() ?? []).map((q) => q.group).filter((g) => g && g !== 'auto' && g !== 'chunked');
+              if (groups.length) player.setQuality(groups[groups.length - 1]);
+            },
           });
         });
       })
