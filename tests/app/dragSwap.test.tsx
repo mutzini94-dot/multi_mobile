@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { useEffect } from 'react';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
@@ -100,7 +100,6 @@ test('끄는 동안 놓을 칸을 강조하고, 영상이 드래그를 가로채
   moveOver(2);
   expect(document.querySelector('.player-layer')).toHaveClass('player-layer--dragging');
   expect(tile(2)).toHaveClass('tile--drop');
-  expect(screen.getByText('A 옮기는 중')).toBeInTheDocument();
   moveOver(null);
   expect(tile(2)).not.toHaveClass('tile--drop');
   drop();
@@ -116,7 +115,7 @@ test('Esc로 끌기를 취소한다', () => {
   fireEvent.keyDown(window, { key: 'Escape' });
   drop();
   expect(within(tile(0)).getByText('A')).toBeInTheDocument();
-  expect(screen.queryByText('A 옮기는 중')).toBeNull();
+  expect(document.querySelector('.player-layer__item--floating')).toBeNull();
 });
 
 test('합방 중에는 1번 호스트 칸은 끌 수도, 그 자리에 놓을 수도 없다', () => {
@@ -192,5 +191,53 @@ describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
     drop();
     expect(within(tile(0)).getByText('나')).toBeInTheDocument();
     expect(within(tile(1)).getByText('A')).toBeInTheDocument();
+  });
+});
+
+describe('끄는 동안 작은 창 효과', () => {
+  const item = (key: string) => screen.getByTitle(`player-${key}`).closest('.player-layer__item') as HTMLElement;
+
+  test('끌기가 시작되면 그 방송이 작은 창으로 커서를 따라다니고, 원래 자리는 빈자리로 보인다', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    const iframeA = screen.getByTitle('player-twitch:chan_1');
+    startDrag(0);
+    moveOver(2); // 커서 (200, 200)
+    const a = item('twitch:chan_1');
+    expect(a).toHaveClass('player-layer__item--floating');
+    expect(a.style.width).toBe('260px');
+    expect(parseFloat(a.style.height)).toBeCloseTo(146.25, 1); // 크기를 모르면 16:9
+    // 커서를 가운데로 (jsdom에서 무대 위치는 0,0)
+    expect(a.style.left).toBe(`${200 - 130}px`);
+    expect(within(a).getByText('A')).toBeInTheDocument(); // 이름표
+    expect(item('twitch:chan_2')).not.toHaveClass('player-layer__item--floating');
+    expect(tile(0)).toHaveClass('tile--drag-source');
+    expect(screen.getByTitle('player-twitch:chan_1')).toBe(iframeA); // 다시 만들지 않음
+  });
+
+  test('놓으면 작은 창 효과가 끝나고 제자리로 들어가는 동안 부드럽게 움직인다', () => {
+    vi.useFakeTimers();
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    startDrag(0);
+    moveOver(1);
+    drop();
+    const a = item('twitch:chan_1');
+    expect(a).not.toHaveClass('player-layer__item--floating');
+    expect(a).toHaveClass('player-layer__item--settling');
+    expect(tile(0)).not.toHaveClass('tile--drag-source');
+    act(() => vi.advanceTimersByTime(400));
+    expect(item('twitch:chan_1')).not.toHaveClass('player-layer__item--settling');
+    vi.useRealTimers();
+  });
+
+  test('짧게 누르기만 하면 작은 창이 되지 않는다', () => {
+    setup();
+    pick(0, 'A');
+    startDrag(0);
+    expect(item('twitch:chan_1')).not.toHaveClass('player-layer__item--floating');
+    drop();
   });
 });

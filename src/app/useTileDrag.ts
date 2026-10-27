@@ -40,12 +40,13 @@ export function useTileDrag(
   onDrop: (from: number, to: number) => void,
   onTap: (slot: number) => void,
   canDropOn: (from: number, to: number) => boolean,
+  onCancel?: (from: number) => void,
 ) {
   const [press, setPress] = useState<Press | null>(null);
   const pressRef = useRef<Press | null>(null);
   pressRef.current = press;
-  const cb = useRef({ onDrop, onTap, canDropOn });
-  cb.current = { onDrop, onTap, canDropOn };
+  const cb = useRef({ onDrop, onTap, canDropOn, onCancel });
+  cb.current = { onDrop, onTap, canDropOn, onCancel };
 
   const pressing = press !== null;
   useEffect(() => {
@@ -63,10 +64,16 @@ export function useTileDrag(
         // 놓은 순간의 커서 위치로 다시 확인 (마지막 움직임 뒤 바로 놓은 경우)
         const to = dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) ?? p.over;
         if (to !== null && to !== p.from) cb.current.onDrop(p.from, to);
+        else cb.current.onCancel?.(p.from); // 놓을 곳이 아니면 제자리로
       } else if (p) cb.current.onTap(p.from);
       setPress(null);
     };
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && setPress(null);
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const p = pressRef.current;
+      if (p?.started) cb.current.onCancel?.(p.from);
+      setPress(null);
+    };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);

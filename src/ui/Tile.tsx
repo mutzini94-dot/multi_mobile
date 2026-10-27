@@ -19,6 +19,7 @@ interface Props {
     canDrag: boolean;
     canDrop: boolean; // 지금 끄는 칸을 이 칸에 놓을 수 있는지 (data-drop)
     over: boolean;
+    source: boolean; // 지금 끄고 있는 방송의 원래 자리
     onPress(e: PointerEvent): void;
   };
 }
@@ -29,7 +30,7 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
   const audible = selected && soundOn;
   return (
     <div
-      className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}`}
+      className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
       data-slot={dnd?.slot}
       data-drop={dnd?.canDrop ? '1' : undefined}
     >

@@ -266,7 +266,7 @@ function runSmoke(outDir) {
               title: document.title, tiles: document.querySelectorAll('.tile').length, href: location.href,
               names: [...document.querySelectorAll('.tile')].map((t) => t.querySelector('.tile__name')?.textContent || '-'),
               events: (window.__ev || []).slice(0, 40), plan: window.__plan || null,
-              jitter: (window.__jitter || []).slice(-60), jitterCount: (window.__jitter || []).length, sizes: window.__sizes || [], snap: window.__snap || [], over: window.__over || [],
+              jitter: (window.__jitter || []).slice(-60), jitterCount: (window.__jitter || []).length, sizes: window.__sizes || [], snap: window.__snap || [], over: window.__over || [], marks: [...document.querySelectorAll('.player-layer iframe')].map((f) => f.__mark || 'NEW'), floating: (() => { const el = document.querySelector('.player-layer__item--floating'); return el ? [el.style.left, el.style.top, el.style.width, el.style.height] : null; })(),
               selected: [...document.querySelectorAll('.tile')].findIndex((x) => x.classList.contains('tile--selected')),
               status: await window.multiviewDesktop.status() }))()`,
         )

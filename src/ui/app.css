@@ -257,9 +257,21 @@ button:disabled { cursor: not-allowed; }
 .tile--drop { box-shadow: 0 0 0 3px var(--primary), 0 0 0 8px rgba(81, 156, 255, 0.25); }
 .tile--drop.tile--empty { background: var(--primary-soft); }
 .app--dragging, .app--dragging * { user-select: none; cursor: grabbing !important; }
-.drag-ghost { position: fixed; z-index: 30; pointer-events: none; height: 30px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: var(--r-pill); background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); white-space: nowrap; }
 .tile__grip { touch-action: none; }
 
 /* 칸 어디를 잡아도 끌기: 위쪽 바, 영상 위 투명한 잡는 층(아래쪽 플레이어 조작 영역 56px는 비움) */
 .tile__bar--grab { cursor: grab; }
 .player-layer__grab { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; z-index: 1; cursor: grab; touch-action: none; }
+
+/* ---------- 끄는 동안 작은 창 효과 ---------- */
+/* 끄는 방송: 작은 창으로 줄어(크기만 부드럽게) 커서를 따라간다 */
+.player-layer__item--floating { z-index: 5; border-radius: var(--r-md); box-shadow: 0 0 0 3px var(--primary), 0 18px 42px rgba(13, 15, 16, 0.45); transform: rotate(-2deg) scale(1.02); transition: width 0.16s ease, height 0.16s ease, transform 0.16s ease; }
+.player-layer--dragging .player-layer__item--floating { opacity: 0.97; }
+.player-layer__item--floating .player-layer__highlight { display: none; }
+.player-layer__drag-label { position: absolute; left: 8px; bottom: 8px; z-index: 2; max-width: calc(100% - 16px); height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: var(--r-pill); background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--elev-2); }
+/* 놓은 직후: 제자리(새 칸)로 부드럽게 들어간다 */
+.player-layer__item--settling { transition: left 0.22s ease, top 0.22s ease, width 0.22s ease, height 0.22s ease; }
+/* 끄는 방송의 원래 자리 */
+.tile--drag-source { background: var(--primary-soft); outline: 2px dashed var(--primary); outline-offset: -2px; }
+.tile--drag-source .tile__bar { visibility: hidden; }
+.tile--drag-source::after { content: '옮기는 중'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--primary-press); font-size: 14px; font-weight: 700; }

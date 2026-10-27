@@ -83,11 +83,24 @@ export function App(props: Props) {
   const slotEls = useRef<(HTMLElement | null)[]>([]);
   const [dragging, setDragging] = useState(false); // 칸 경계 크기 조절 중
   // 칸 끌어서 자리 옮기기 (⠿를 눌러 끌고 다른 칸 위에서 놓기)
+  // 놓은 직후 제자리로 부드럽게 들어가는 칸들
+  const [settling, setSettling] = useState<number[]>([]);
+  const settleTimer = useRef<ReturnType<typeof setTimeout>>();
+  const settle = (slots: number[]) => {
+    setSettling(slots);
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => setSettling([]), 300);
+  };
+  useEffect(() => () => clearTimeout(settleTimer.current), []);
   const tileDrag = useTileDrag(
-    (from, to) => dispatch({ type: 'swap', from, to }),
+    (from, to) => {
+      dispatch({ type: 'swap', from, to });
+      settle([from, to]);
+    },
     (slot) => dispatch({ type: 'select', slot }), // 짧게 누름 = 그 칸 선택 (그 칸만 소리)
     // 합방 중 1번 호스트 칸 자리에는 놓을 수 없다
     (_from, to) => !((!!viewer || !!hosting) && to === 0),
+    (from) => settle([from]), // 취소: 제자리로
   );
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 합방 링크에는 담지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
@@ -254,11 +267,7 @@ export function App(props: Props) {
 
   return (
     <div className={`app${focusedCreator ? ' app--focus' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
-      {tileDrag.drag && state.slots[tileDrag.drag.from] && (
-        <div className="drag-ghost" style={{ left: tileDrag.drag.x + 14, top: tileDrag.drag.y + 14 }} aria-hidden="true">
-          {state.slots[tileDrag.drag.from]!.name} 옮기는 중
-        </div>
-      )}
+
       <Gnb
         layout={state.layout}
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
@@ -295,6 +304,7 @@ export function App(props: Props) {
                     canDrag: !!creator && !hostSlot,
                     canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot && !hostSlot,
                     over: tileDrag.drag?.over === slot,
+                    source: tileDrag.drag?.from === slot,
                     onPress: (e) => tileDrag.start(slot, e, { canDrag: !!creator && !hostSlot }),
                   }}
                   onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
@@ -344,6 +354,12 @@ export function App(props: Props) {
             stageRef={stageRef}
             slotEls={slotEls}
             dragging={dragging || tileDrag.drag !== null}
+            floating={
+              tileDrag.drag && state.slots[tileDrag.drag.from]
+                ? { slot: tileDrag.drag.from, x: tileDrag.drag.x, y: tileDrag.drag.y, name: state.slots[tileDrag.drag.from]!.name }
+                : null
+            }
+            settling={settling}
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
           />
         </div>
