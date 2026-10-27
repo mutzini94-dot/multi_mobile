@@ -256,3 +256,7 @@ button:disabled { cursor: not-allowed; }
 .app--dragging, .app--dragging * { user-select: none; cursor: grabbing !important; }
 .drag-ghost { position: fixed; z-index: 30; pointer-events: none; height: 30px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: var(--r-pill); background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); white-space: nowrap; }
 .tile__grip { touch-action: none; }
+
+/* 칸 어디를 잡아도 끌기: 위쪽 바, 영상 위 투명한 잡는 층(아래쪽 플레이어 조작 영역 56px는 비움) */
+.tile__bar--grab { cursor: grab; }
+.player-layer__grab { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; z-index: 1; cursor: grab; touch-action: none; }

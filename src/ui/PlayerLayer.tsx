@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import type { Creator, ViewState } from '../domain/types';
 import { playerKeys, visibleCount } from '../layout/layouts';
 import { StreamPlayer } from '../players/StreamPlayer';
@@ -20,6 +20,9 @@ interface Props {
   onSelectSlot?(slot: number): void; // 영상(iframe)을 클릭했을 때
   focused?: number | null; // 전체 화면으로 보는 칸
   focusEl?: RefObject<HTMLElement>; // 전체 화면 칸의 자리
+  // 영상 위의 잡는 층: 플레이어(iframe)가 마우스를 가져가므로 그 위에 투명한 층을 깔아 끌기·선택을 받는다.
+  // 아래쪽 플레이어 조작 영역은 비워 둔다.
+  onGrab?(slot: number, e: ReactPointerEvent): void;
 }
 
 const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
@@ -35,7 +38,7 @@ const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
  * 플레이어를 칸 번호 key로 한 번만 마운트하고, 레이아웃이 정한 칸 자리에 절대 위치로 덮는다.
  * 레이아웃을 바꿔도 iframe이 DOM에서 옮겨지지 않으므로 방송이 다시 로딩되지 않는다.
  */
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl }: Props) {
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
   const onSelectRef = useRef(onSelectSlot);
   onSelectRef.current = onSelectSlot;
@@ -105,6 +108,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
             <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} />
+            {onGrab && focused === null && !offscreen && <div className="player-layer__grab" onPointerDown={(e) => onGrab(slot, e)} />}
             {/* 선택 강조: iframe 위에 겹쳐 그려야 영상에 가려지지 않는다 (클릭은 통과) */}
             {state.selected === slot && <span className="player-layer__highlight" aria-hidden="true" />}
           </div>

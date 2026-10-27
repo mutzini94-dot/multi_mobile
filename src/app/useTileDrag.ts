@@ -7,38 +7,66 @@ export interface TileDragState {
   y: number;
 }
 
-/** 커서 아래에서 놓을 수 있는 칸 번호를 찾는다 (끄는 동안 플레이어 레이어는 포인터를 받지 않는다) */
-function dropSlotAt(x: number, y: number): number | null {
+interface Press extends TileDragState {
+  x0: number;
+  y0: number;
+  started: boolean; // 기준 거리 이상 움직여 끌기가 시작됨
+  canDrag: boolean; // false면 눌러도 선택만 (합방 호스트 칸 등)
+}
+
+/** 이만큼 움직여야 끌기로 본다 (그보다 작으면 짧게 누른 것 = 칸 선택) */
+export const DRAG_THRESHOLD = 6;
+
+/**
+ * 커서 아래 칸 중 놓을 수 있는 칸 번호 (끄는 동안 플레이어 레이어는 포인터를 받지 않는다).
+ * 놓을 수 있는지는 화면 표시(data-drop)가 아니라 규칙(canDropOn)으로 바로 판단한다 — 끌기가 시작되는 첫 움직임에도 맞게.
+ */
+function dropSlotAt(x: number, y: number, from: number, canDropOn: (from: number, to: number) => boolean): number | null {
   for (const el of document.elementsFromPoint?.(x, y) ?? []) {
-    const tile = el.closest<HTMLElement>('.tile[data-drop]');
-    if (tile && tile.dataset.slot !== undefined) return Number(tile.dataset.slot);
+    const tile = el.closest<HTMLElement>('.tile[data-slot]');
+    if (!tile) continue;
+    const to = Number(tile.dataset.slot);
+    return to !== from && canDropOn(from, to) ? to : null;
   }
   return null;
 }
 
 /**
- * 칸 끌어서 자리 옮기기. HTML5 drag & drop 대신 포인터 이벤트로 직접 처리한다
- * (버튼에서의 기본 드래그는 브라우저마다 다르고, 끌다가 글자가 선택되는 문제가 있다).
- * 놓으면 onDrop(from, to), Esc는 취소.
+ * 칸 끌어서 자리 옮기기. 칸 위쪽 바·⠿·영상 위 잡는 층 어디서든 누를 수 있다.
+ * 기준 거리 이상 움직이면 끌기(놓으면 onDrop), 그대로 떼면 짧게 누른 것(onTap = 그 칸 선택). Esc는 취소.
+ * HTML5 drag & drop 대신 포인터 이벤트로 직접 처리한다 (버튼에서의 기본 드래그는 동작이 브라우저마다 다르다).
  */
-export function useTileDrag(onDrop: (from: number, to: number) => void) {
-  const [drag, setDrag] = useState<TileDragState | null>(null);
-  const dragRef = useRef<TileDragState | null>(null);
-  dragRef.current = drag;
-  const onDropRef = useRef(onDrop);
-  onDropRef.current = onDrop;
+export function useTileDrag(
+  onDrop: (from: number, to: number) => void,
+  onTap: (slot: number) => void,
+  canDropOn: (from: number, to: number) => boolean,
+) {
+  const [press, setPress] = useState<Press | null>(null);
+  const pressRef = useRef<Press | null>(null);
+  pressRef.current = press;
+  const cb = useRef({ onDrop, onTap, canDropOn });
+  cb.current = { onDrop, onTap, canDropOn };
 
-  const active = drag !== null;
+  const pressing = press !== null;
   useEffect(() => {
-    if (!active) return;
+    if (!pressing) return;
     const move = (e: globalThis.PointerEvent) =>
-      setDrag((d) => d && { ...d, x: e.clientX, y: e.clientY, over: dropSlotAt(e.clientX, e.clientY) });
-    const up = () => {
-      const d = dragRef.current;
-      if (d && d.over !== null && d.over !== d.from) onDropRef.current(d.from, d.over);
-      setDrag(null);
+      setPress((p) => {
+        if (!p) return p;
+        const started = p.started || (p.canDrag && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) >= DRAG_THRESHOLD);
+        if (!started) return p;
+        return { ...p, started, x: e.clientX, y: e.clientY, over: dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) };
+      });
+    const up = (e: globalThis.PointerEvent) => {
+      const p = pressRef.current;
+      if (p?.started) {
+        // 놓은 순간의 커서 위치로 다시 확인 (마지막 움직임 뒤 바로 놓은 경우)
+        const to = dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) ?? p.over;
+        if (to !== null && to !== p.from) cb.current.onDrop(p.from, to);
+      } else if (p) cb.current.onTap(p.from);
+      setPress(null);
     };
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && setDrag(null);
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setPress(null);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
@@ -49,14 +77,16 @@ export function useTileDrag(onDrop: (from: number, to: number) => void) {
       window.removeEventListener('pointercancel', up);
       window.removeEventListener('keydown', key);
     };
-  }, [active]);
+  }, [pressing]);
 
-  const start = (from: number, e: PointerEvent) => {
+  const start = (from: number, e: PointerEvent, { canDrag = true }: { canDrag?: boolean } = {}) => {
     if (e.button > 0) return; // 왼쪽 버튼·터치만 (button이 없는 환경도 허용)
     e.preventDefault(); // 끌다가 글자가 선택되지 않게
     e.stopPropagation();
-    setDrag({ from, over: null, x: e.clientX, y: e.clientY });
+    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag });
   };
 
+  // 화면에는 실제로 끌기가 시작된 뒤에만 '끄는 중'으로 보인다
+  const drag: TileDragState | null = press?.started ? { from: press.from, over: press.over, x: press.x, y: press.y } : null;
   return { drag, start };
 }

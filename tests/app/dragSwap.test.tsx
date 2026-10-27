@@ -95,8 +95,10 @@ test('끄는 동안 놓을 칸을 강조하고, 영상이 드래그를 가로채
   setup();
   pick(0, 'A');
   startDrag(0);
-  expect(document.querySelector('.player-layer')).toHaveClass('player-layer--dragging');
+  // 누르기만 해서는 끌기가 아니다 (짧게 누르면 선택) — 기준 거리 이상 움직여야 시작
+  expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
   moveOver(2);
+  expect(document.querySelector('.player-layer')).toHaveClass('player-layer--dragging');
   expect(tile(2)).toHaveClass('tile--drop');
   expect(screen.getByText('A 옮기는 중')).toBeInTheDocument();
   moveOver(null);
@@ -128,4 +130,67 @@ test('합방 중에는 1번 호스트 칸은 끌 수도, 그 자리에 놓을 �
   drag(1, 2);
   expect(within(tile(1)).getByText('B')).toBeInTheDocument();
   expect(within(tile(2)).getByText('A')).toBeInTheDocument();
+});
+
+describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
+  const bar = (i: number) => tile(i).querySelector('.tile__bar') as HTMLElement;
+  const grab = (slot: number) => document.querySelector(`.player-layer__item[data-slot="${slot}"] .player-layer__grab`) as HTMLElement;
+  const pressAt = (el: HTMLElement) => fireEvent.pointerDown(el, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+  const nudge = (dx: number) => fireEvent.pointerMove(window, { pointerId: 1, clientX: 10 + dx, clientY: 10 });
+
+  test('위쪽 바(버튼이 아닌 곳)를 잡고 끌면 자리를 바꾼다', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    pressAt(bar(0));
+    moveOver(1);
+    drop();
+    expect(within(tile(0)).getByText('B')).toBeInTheDocument();
+    expect(within(tile(1)).getByText('A')).toBeInTheDocument();
+  });
+
+  test('영상 위의 잡는 층을 잡고 끌면 자리를 바꾼다', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    expect(grab(0)).not.toBeNull();
+    pressAt(grab(0));
+    moveOver(1);
+    drop();
+    expect(within(tile(1)).getByText('A')).toBeInTheDocument();
+  });
+
+  test('움직이지 않고 짧게 누르면 끌기가 아니라 그 칸 선택 (그 칸만 소리)', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B'); // 1번 칸이 선택된 상태
+    pressAt(grab(0));
+    nudge(3); // 기준(6px)보다 작은 흔들림
+    under = tile(1);
+    drop();
+    expect(within(tile(0)).getByText('A')).toBeInTheDocument();
+    expect(tile(0)).toHaveClass('tile--selected');
+    expect(within(tile(0)).getByRole('button', { name: '소리 끄기' })).toBeInTheDocument();
+    expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
+  });
+
+  test('바의 버튼을 누르는 것은 끌기를 시작하지 않는다', () => {
+    setup();
+    pick(0, 'A');
+    pressAt(within(tile(0)).getByRole('button', { name: '전체 화면' }));
+    moveOver(2);
+    expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
+    drop();
+  });
+
+  test('합방 중 호스트 칸은 영상을 눌러도 끌리지 않고 선택만 된다', () => {
+    setup({ savedHost: true });
+    fireEvent.click(screen.getByRole('button', { name: '합방 방송 개설' }));
+    pick(1, 'A');
+    pressAt(grab(0));
+    moveOver(1);
+    drop();
+    expect(within(tile(0)).getByText('나')).toBeInTheDocument();
+    expect(within(tile(1)).getByText('A')).toBeInTheDocument();
+  });
 });

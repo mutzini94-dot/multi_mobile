@@ -252,11 +252,21 @@ function runSmoke(outDir) {
       if (process.env.MV_SMOKE_SCRIPT) {
         await win.webContents.executeJavaScript(fs.readFileSync(process.env.MV_SMOKE_SCRIPT, 'utf8'), true).catch((e) => console.error('[smoke]', e));
         await new Promise((r) => setTimeout(r, Number(process.env.MV_SMOKE_WAIT) || 8000));
+        // 시나리오가 window.__mvInput에 남긴 실제 입력(마우스)을 보낸다: [{ type, x, y }, ...]
+        const input = await win.webContents.executeJavaScript('window.__mvInput || []').catch(() => []);
+        for (const ev of input) {
+          win.webContents.sendInputEvent({ button: 'left', clickCount: 1, ...ev });
+          await new Promise((r) => setTimeout(r, 40));
+        }
+        if (input.length) await new Promise((r) => setTimeout(r, 1000));
       }
       const result = await win.webContents
         .executeJavaScript(
           `(async () => ({ desktop: typeof window.multiviewDesktop, api: Object.keys(window.multiviewDesktop || {}).sort(),
               title: document.title, tiles: document.querySelectorAll('.tile').length, href: location.href,
+              names: [...document.querySelectorAll('.tile')].map((t) => t.querySelector('.tile__name')?.textContent || '-'),
+              events: (window.__ev || []).slice(0, 40), plan: window.__plan || null,
+              selected: [...document.querySelectorAll('.tile')].findIndex((x) => x.classList.contains('tile--selected')),
               status: await window.multiviewDesktop.status() }))()`,
         )
         .catch((e) => ({ error: String(e) }));

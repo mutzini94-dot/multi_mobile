@@ -13,13 +13,13 @@ interface Props {
   locked?: boolean; // 호스트 칸·합방 시청 화면: 불러오기·삭제 불가
   badge?: string; // 예: '호스트'
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
-  // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 잡는 곳은 상단 바의 ⠿ 버튼
+  // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 상단 바 어디든(버튼 제외)·⠿를 눌러 끈다
   dnd?: {
     slot: number;
     canDrag: boolean;
     canDrop: boolean; // 지금 끄는 칸을 이 칸에 놓을 수 있는지 (data-drop)
     over: boolean;
-    onGripPointerDown(e: PointerEvent): void;
+    onPress(e: PointerEvent): void;
   };
 }
 
@@ -35,7 +35,18 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
     >
       {creator && <div className="tile__player" ref={playerSlotRef} />}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
-      <div className="tile__bar" onClick={creator ? onSelect : undefined}>
+      <div
+        className={`tile__bar${creator && dnd?.canDrag ? ' tile__bar--grab' : ''}`}
+        onClick={creator ? onSelect : undefined}
+        onPointerDown={
+          creator && dnd
+            ? (e) => {
+                if ((e.target as HTMLElement).closest('button')) return; // 버튼은 버튼으로
+                dnd.onPress(e);
+              }
+            : undefined
+        }
+      >
         {!locked && (
           <button
             type="button"
@@ -57,7 +68,7 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
                 className="tile__grip"
                 aria-label="끌어서 자리 옮기기"
                 title="끌어서 다른 칸과 자리 바꾸기"
-                onPointerDown={dnd.onGripPointerDown}
+                onPointerDown={dnd.onPress}
                 onClick={(e) => e.stopPropagation()}
               >
                 ⠿

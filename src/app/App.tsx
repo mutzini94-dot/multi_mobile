@@ -83,7 +83,12 @@ export function App(props: Props) {
   const slotEls = useRef<(HTMLElement | null)[]>([]);
   const [dragging, setDragging] = useState(false); // 칸 경계 크기 조절 중
   // 칸 끌어서 자리 옮기기 (⠿를 눌러 끌고 다른 칸 위에서 놓기)
-  const tileDrag = useTileDrag((from, to) => dispatch({ type: 'swap', from, to }));
+  const tileDrag = useTileDrag(
+    (from, to) => dispatch({ type: 'swap', from, to }),
+    (slot) => dispatch({ type: 'select', slot }), // 짧게 누름 = 그 칸 선택 (그 칸만 소리)
+    // 합방 중 1번 호스트 칸 자리에는 놓을 수 없다
+    (_from, to) => !((!!viewer || !!hosting) && to === 0),
+  );
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 합방 링크에는 담지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
   const focusEl = useRef<HTMLDivElement>(null);
@@ -290,7 +295,7 @@ export function App(props: Props) {
                     canDrag: !!creator && !hostSlot,
                     canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot && !hostSlot,
                     over: tileDrag.drag?.over === slot,
-                    onGripPointerDown: (e) => tileDrag.start(slot, e),
+                    onPress: (e) => tileDrag.start(slot, e, { canDrag: !!creator && !hostSlot }),
                   }}
                   onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
                   onRemove={
@@ -334,6 +339,8 @@ export function App(props: Props) {
             focused={focusedCreator ? focused : null}
             focusEl={focusEl}
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}
+            // 합방 중 호스트 칸(1번)은 눌러도 선택만
+            onGrab={(slot, e) => tileDrag.start(slot, e, { canDrag: !((!!viewer || !!hosting) && slot === 0) })}
             stageRef={stageRef}
             slotEls={slotEls}
             dragging={dragging || tileDrag.drag !== null}
