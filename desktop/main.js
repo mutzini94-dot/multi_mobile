@@ -265,6 +265,12 @@ function runSmoke(outDir) {
       result.windowFullScreen = win.isFullScreen();
       fs.writeFileSync(path.join(outDir, 'smoke.png'), img.toPNG());
       result.donate = donate.state();
+      const dv = donate.view();
+      if (dv) {
+        result.donate.bounds = dv.getBounds();
+        result.donate.url = dv.webContents.getURL();
+        fs.writeFileSync(path.join(outDir, 'donate.png'), (await dv.webContents.capturePage()).toPNG());
+      }
       if (pipWin && !pipWin.isDestroyed()) {
         result.pip = { bounds: pipWin.getBounds(), alwaysOnTop: pipWin.isAlwaysOnTop() };
         fs.writeFileSync(path.join(outDir, 'pip.png'), (await pipWin.webContents.capturePage()).toPNG());

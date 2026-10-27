@@ -99,6 +99,8 @@ function createDonateController({ main, createView, createPipWindow, donateUrl, 
     setModalBounds,
     close,
     state: () => ({ open: !!view, mode, tag, name }),
+    /** 점검(스모크)용: 현재 후원 페이지 */
+    view: () => view,
     /** 메인 창이 사라졌을 때: PIP 창까지 정리 */
     dispose: () => close({ notify: false }),
   };

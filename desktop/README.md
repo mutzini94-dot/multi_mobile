@@ -5,7 +5,7 @@
 
 - **투네이션 로그인**: 불러오기 창의 **투네이션 로그인** → 앱이 공식 로그인 창(`toon.at/donator/login`)을 직접 띄웁니다. 로그인하면 창이 닫히고 즐겨찾기 목록이 나타납니다. 비밀번호는 다루지 않습니다(전용 세션 `persist:toonation`의 쿠키 세션 사용).
 - **즐겨찾기 → 칸**: 목록에서 크리에이터(채널)를 고르면 그 칸에 방송이 들어가고, 후원 대상은 투네이션 tag로 정해집니다.
-- **후원**: **후원하기** → 창이 오른쪽으로 넓어지며 후원 패널이 붙습니다. 로그인한 계정으로 바로 후원합니다. 패널의 ✕로 닫으면 창이 원래 크기로 돌아갑니다.
+- **후원**: **후원하기** → 앱 가운데 **모달** 후원창이 뜹니다. **PIP 모드**를 누르면 항상 위에 떠 있는 작은 창으로 옮겨져 방송을 보면서 후원할 수 있습니다(머리줄을 끌어 이동, "모달로"로 되돌리기). 모드를 바꿔도 입력 중인 내용은 유지되고, 로그인한 계정으로 바로 후원합니다.
 
 ## 실행
 
@@ -27,11 +27,12 @@ electron-builder의 7-Zip이 한글 경로를 다루지 못해 ASCII 임시 폴�
 
 | 파일 | 역할 |
 |---|---|
-| `main.js` | 메인 프로세스: 로컬 서버로 웹 화면 띄우기, 로그인 창, 후원 패널(WebContentsView), IPC |
+| `main.js` | 메인 프로세스: 로컬 서버로 웹 화면 띄우기, 로그인 창, 후원창(WebContentsView), IPC |
 | `preload.js` | 웹에 `window.multiviewDesktop` 노출 (`src/desktop/desktopApi.ts`) |
 | `lib/toonation.js`, `lib/platforms.js` | `toon-widget/src/main`에서 복사한 투네이션 클라이언트 (수정하지 말고 원본에서 다시 복사) |
 | `lib/staticServer.js` | 웹 빌드를 `http://localhost:<port>`로 제공 (트위치 임베드는 일반 도메인이 필요해 file:// 불가) |
-| `lib/windowMath.js` | 후원 패널 열고 닫을 때 창 크기 계산 |
+| `lib/donateController.js` | 후원창(모달·PIP) 자리 옮기기 |
+| `pip.html`, `pip-preload.js` | PIP 후원창 머리줄 (끌기 · 모달로 · 닫기) |
 | `lib/handlers.js` | status / login / favorites 처리 |
 
 ## 테스트·점검
