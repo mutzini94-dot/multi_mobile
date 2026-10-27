@@ -63,6 +63,23 @@ const handlers = {
     await chrome.tabs.create({ url: `${ORIGIN}/donator/login?callback=/donator` });
     return {};
   },
+  /** 투네이션 로그아웃: toon.at 쿠키를 지운다 (세션·로그인 쿠키는 https://toon.at 파티션에 있다) */
+  async logout() {
+    const partitionKey = { topLevelSite: 'https://toon.at' };
+    const [plain, partitioned] = await Promise.all([
+      chrome.cookies.getAll({ domain: 'toon.at' }),
+      chrome.cookies.getAll({ domain: 'toon.at', partitionKey }).catch(() => []),
+    ]);
+    const jobs = [...plain, ...partitioned].map((c) =>
+      chrome.cookies.remove({
+        url: `https://${c.domain.replace(/^\./, '')}${c.path || '/'}`,
+        name: c.name,
+        ...(c.partitionKey ? { partitionKey: c.partitionKey } : {}),
+      }),
+    );
+    await Promise.all(jobs);
+    return {};
+  },
   async favorites() {
     await ensureHeaderRules();
     const list = await client.getFavorites();

@@ -2,7 +2,7 @@
 // 멀티뷰 페이지 ↔ 연동 확장 중계. manifest의 matches(멀티뷰 주소)에서만 실행된다.
 // 페이지: window.postMessage({ source: 'mv-page', id, type }) → 확장 응답을 { source: 'mv-ext', id, ok, data | error }로 돌려준다.
 (() => {
-  const TYPES = ['status', 'login', 'favorites'];
+  const TYPES = ['status', 'login', 'logout', 'favorites'];
   const reply = (id, res) => window.postMessage({ source: 'mv-ext', id, ...res }, location.origin);
 
   window.addEventListener('message', (e) => {

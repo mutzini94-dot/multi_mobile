@@ -131,3 +131,17 @@ test('설정 창(설치형): 투네이션 로그아웃', async () => {
   expect(within(dlg).getByText('로그인하지 않음')).toBeInTheDocument();
   expect(desktop.logout).toHaveBeenCalled();
 });
+
+test('설정 창: 방송 시작 알림을 켜면 알림 권한을 묻는다', () => {
+  const requestPermission = vi.fn().mockResolvedValue('granted');
+  vi.stubGlobal('Notification', Object.assign(vi.fn(), { permission: 'default', requestPermission }));
+  try {
+    const { kv } = setup();
+    const dlg = openSettings();
+    fireEvent.click(within(dlg).getByLabelText('즐겨찾기 방송 시작 알림'));
+    expect(requestPermission).toHaveBeenCalled();
+    expect(JSON.parse(kv.get(SETTINGS_KEY)!).liveNotify).toBe(true);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

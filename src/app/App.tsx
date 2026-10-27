@@ -15,6 +15,7 @@ import { createBridge, type ToonationBridge } from '../toonation/bridge';
 import { desktopBridge, getDesktopApi, type DesktopApi, type DonateMode } from '../desktop/desktopApi';
 import { DonateModal } from '../ui/DonateModal';
 import { useToonation } from '../toonation/useToonation';
+import { showLiveNotification, useLiveWatch } from '../toonation/liveWatch';
 import { ToonationSection } from '../ui/ToonationSection';
 import { safeStorage, type KV } from '../storage/safeStorage';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -186,6 +187,26 @@ export function App(props: Props) {
     if (pickerSlot !== null && toonStatus !== 'waiting-login') refreshToonation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerSlot]);
+  // 설정: 라이브 자동 갱신 · 즐겨찾기 방송 시작 알림 (로그인 대기 중에는 그 확인을 방해하지 않는다)
+  useLiveWatch({
+    minutes: settings.liveRefreshMinutes,
+    active: !['idle', 'no-extension', 'logged-out', 'waiting-login'].includes(toonStatus),
+    refresh: refreshToonation,
+    creators: toonation.state.creators,
+    notifyOn: settings.liveNotify,
+    notify: showLiveNotification,
+  });
+  useEffect(() => {
+    // 자동 갱신을 켰는데 아직 한 번도 불러오지 않았으면 지금 불러와 기준 목록을 만든다
+    if (settings.liveRefreshMinutes > 0 && toonStatus === 'idle') refreshToonation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.liveRefreshMinutes]);
+  const changeSettings = (patch: Partial<typeof settings>) => {
+    // 방송 시작 알림을 켜면 알림 권한을 묻는다
+    const N = globalThis.Notification;
+    if (patch.liveNotify && N?.permission === 'default') Promise.resolve(N.requestPermission()).catch(() => {});
+    updateSettings(patch);
+  };
   // 설정 창을 열 때도 로그인 상태를 확인한다 (로그아웃 버튼)
   useEffect(() => {
     if (settingsOpen && toonStatus !== 'waiting-login') refreshToonation();
@@ -515,7 +536,7 @@ export function App(props: Props) {
       {settingsOpen && (
         <SettingsDialog
           settings={settings}
-          onChange={updateSettings}
+          onChange={changeSettings}
           desktop={!!desktop}
           host={hosting?.host ?? loadHost(kv)}
           onEditHost={() => setHostDialog('edit')}

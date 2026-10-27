@@ -18,6 +18,7 @@ function loadBackground(world) {
   const rules = [];
   const tabsCreated = [];
   const local = {};
+  const removed = [];
   const chrome = {
     runtime: { id: 'ext-id', onMessage: on('message') },
     tabs: { create: async (o) => { tabsCreated.push(o); return { id: 9 }; } },
@@ -29,7 +30,16 @@ function loadBackground(world) {
     },
     cookies: {
       // toon.at 세션 쿠키는 https://toon.at 파티션에만 있다
-      getAll: async (q) => (world.loggedIn && q.partitionKey ? [{ name: '__toonation_session_id__', value: 'SID', domain: '.toon.at', hostOnly: false, path: '/' }] : []),
+      getAll: async (q) => {
+        if (!world.loggedIn) return [];
+        if (q.partitionKey) return [{ name: '__toonation_session_id__', value: 'SID', domain: '.toon.at', hostOnly: false, path: '/', partitionKey: q.partitionKey }];
+        return q.domain === 'toon.at' ? [{ name: 'toon_login', value: 'T', domain: 'toon.at', hostOnly: true, path: '/donator' }] : [];
+      },
+      remove: async (d) => {
+        removed.push(d);
+        world.loggedIn = false;
+        return d;
+      },
     },
     declarativeNetRequest: {
       updateSessionRules: async ({ removeRuleIds = [], addRules = [] }) => {
@@ -63,7 +73,7 @@ function loadBackground(world) {
       const ret = listeners.message[0](msg, sender, (r) => resolve(plain(r)));
       if (ret !== true) resolve(undefined);
     });
-  return { send, rules, tabsCreated };
+  return { send, rules, tabsCreated, removed };
 }
 
 const world = (o = {}) => ({ loggedIn: false, favorites: [], fetched: [], twitchLive: false, ...o });
@@ -114,6 +124,17 @@ test('login: 공식 로그인 창을 연다', async () => {
   const { send, tabsCreated } = loadBackground(world());
   assert.deepStrictEqual(await send({ type: 'login' }), { ok: true, data: {} });
   assert.deepStrictEqual(plain(tabsCreated), [{ url: 'https://toon.at/donator/login?callback=/donator' }]);
+});
+
+test('logout: toon.at 로그인 쿠키(파티션 포함)를 지운다', async () => {
+  const w = world({ loggedIn: true });
+  const { send, removed } = loadBackground(w);
+  assert.deepStrictEqual(await send({ type: 'logout' }), { ok: true, data: {} });
+  assert.deepStrictEqual(plain(removed).sort((a, b) => a.name.localeCompare(b.name)), [
+    { url: 'https://toon.at/', name: '__toonation_session_id__', partitionKey: { topLevelSite: 'https://toon.at' } },
+    { url: 'https://toon.at/donator', name: 'toon_login' },
+  ]);
+  assert.deepStrictEqual(await send({ type: 'status' }), { ok: true, data: { account: null } });
 });
 
 test('탭이 아닌 곳이나 다른 확장의 메시지는 무시', async () => {
