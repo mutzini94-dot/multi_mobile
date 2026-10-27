@@ -44,3 +44,35 @@ test('저장값 중 검증을 통과하지 못하는 항목은 건너뛴다', ()
   ]));
   expect(localFavorites(kv).list().map((c) => c.name)).toEqual(['A']);
 });
+
+describe('즐겨찾기 관리', () => {
+  const three = () => {
+    const fav = localFavorites(memKV());
+    fav.add(creator({ key: 'twitch:aaaa', channel: 'aaaa', name: 'A' }));
+    fav.add(creator({ key: 'twitch:bbbb', channel: 'bbbb', name: 'B' }));
+    fav.add(creator({ key: 'twitch:cccc', channel: 'cccc', name: 'C' }));
+    return fav;
+  };
+
+  test('move: 위·아래로 한 칸씩, 끝에서는 그대로', () => {
+    const fav = three();
+    expect(fav.move('twitch:cccc', -1).map((c) => c.name)).toEqual(['A', 'C', 'B']);
+    expect(fav.move('twitch:aaaa', -1).map((c) => c.name)).toEqual(['A', 'C', 'B']);
+    expect(fav.move('twitch:aaaa', 1).map((c) => c.name)).toEqual(['C', 'A', 'B']);
+  });
+
+  test('내보내기 → 가져오기 (다른 PC로 옮기기): 검증을 통과한 항목만, 같은 채널은 덮어쓰기', () => {
+    const json = three().exportJson();
+    const other = localFavorites(memKV());
+    other.add(creator({ key: 'twitch:bbbb', channel: 'bbbb', name: '옛B' }));
+    expect(other.importJson(json)).toEqual({ ok: true, value: 3 });
+    expect(other.list().map((c) => c.name)).toEqual(['B', 'A', 'C']);
+  });
+
+  test('가져오기: 형식이 틀리면 오류, 잘못된 항목은 건너뛴다', () => {
+    const fav = localFavorites(memKV());
+    expect(fav.importJson('{bad').ok).toBe(false);
+    expect(fav.importJson('{"x":1}').ok).toBe(false);
+    expect(fav.importJson(JSON.stringify({ version: 1, favorites: [{ name: 'A', donateId: 'a1', platform: 'twitch', channel: 'aaaa' }, { name: 'X', donateId: '../x', platform: 'twitch', channel: 'xxxx' }] }))).toEqual({ ok: true, value: 1 });
+  });
+});
