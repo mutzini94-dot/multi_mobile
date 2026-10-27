@@ -33,8 +33,9 @@
   color: var(--ink);
   background: var(--stage);
 }
+/* 다크: 시스템이 다크이고 라이트로 고정하지 않았을 때, 또는 설정에서 다크로 고정했을 때 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --primary-soft: rgba(81, 156, 255, 0.16);
     --ink: #ffffff;
     --ink-sub: #aeb6bf;
@@ -48,6 +49,20 @@
     --elev-1: 0 6px 24px rgba(0, 0, 0, 0.5);
     --elev-2: 0 2px 12px rgba(0, 0, 0, 0.4);
   }
+}
+:root[data-theme="dark"] {
+  --primary-soft: rgba(81, 156, 255, 0.16);
+  --ink: #ffffff;
+  --ink-sub: #aeb6bf;
+  --ink-mute: #838a93;
+  --canvas: #141619;
+  --surface: #212529;
+  --surface-2: #1b1e22;
+  --line: #343a40;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --stage: #0d0f10;
+  --elev-1: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --elev-2: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -275,3 +290,25 @@ button:disabled { cursor: not-allowed; }
 .tile--drag-source { background: var(--primary-soft); outline: 2px dashed var(--primary); outline-offset: -2px; }
 .tile--drag-source .tile__bar { visibility: hidden; }
 .tile--drag-source::after { content: '옮기는 중'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--primary-press); font-size: 14px; font-weight: 700; }
+
+/* ---------- 설정 창 ---------- */
+.gnb__settings { font-size: 18px; }
+.settings { width: min(620px, 100%); }
+.settings__section { padding: 14px 0; border-top: 1px solid var(--line); }
+.settings__section:first-of-type { border-top: 0; padding-top: 0; }
+.settings__section h3 { margin: 0 0 8px; font-size: 14px; color: var(--ink-sub); }
+.settings__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; font-size: 14px; }
+.settings__row > span { display: flex; flex-direction: column; gap: 2px; }
+.settings__row small { font-size: 12px; }
+.settings__row select, .settings__row input:not([type]), .settings__row input[type='text'] { width: 260px; max-width: 55%; height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--canvas); color: var(--ink); font: inherit; font-size: 13px; }
+.settings__row input[type='range'] { width: 220px; accent-color: var(--primary); }
+.settings__row--toggle input { appearance: none; width: 40px; height: 22px; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; flex: none; transition: background 0.15s; }
+.settings__row--toggle input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: var(--elev-2); transition: left 0.15s; }
+.settings__row--toggle input:checked { background: var(--primary); }
+.settings__row--toggle input:checked::after { left: 21px; }
+.settings__favs { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings__favs li { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+.settings__favs li > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings__actions { display: flex; gap: 8px; }
+.settings__file { display: inline-flex; align-items: center; cursor: pointer; }
+.settings__file input { display: none; }

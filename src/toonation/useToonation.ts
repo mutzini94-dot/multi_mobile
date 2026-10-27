@@ -104,5 +104,16 @@ export function useToonation(bridge: ToonationBridge, { pollMs = 2000, maxWaitMs
     }, pollMs);
   }, [loadFavorites, pollMs, maxWaitMs]);
 
-  return { state, refresh, login };
+  /** 투네이션 로그아웃 (설치형: 앱의 로그인 세션 삭제, 확장: toon.at 로그인 쿠키 삭제) */
+  const logout = useCallback(async () => {
+    stopPolling();
+    try {
+      await bridgeRef.current.request('logout');
+      set({ ...IDLE, status: 'logged-out' });
+    } catch (e) {
+      set((prev) => ({ ...prev, status: 'error', error: (e as Error).message }));
+    }
+  }, []);
+
+  return { state, refresh, login, logout };
 }

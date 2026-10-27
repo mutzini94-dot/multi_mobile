@@ -14,11 +14,14 @@ export interface DonateBounds {
 export interface DesktopApi {
   status(): Promise<DesktopResult<{ account: ToonationAccount | null }>>;
   login(): Promise<DesktopResult<object>>;
+  logout(): Promise<DesktopResult<object>>;
   favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
   openDonate(target: { tag: string; name: string }): void;
   closeDonate(): void;
   setDonateBounds(rect: DonateBounds): void;
   setDonateMode(mode: DonateMode): void;
+  fillDonate(amount: number): void; // 빠른 후원: 후원창의 금액만 채운다
+  setAlwaysOnTop(on: boolean): void;
   onDonateClosed(cb: () => void): () => void;
   onDonateMode(cb: (mode: DonateMode) => void): () => void;
 }
@@ -35,7 +38,7 @@ export function getDesktopApi(win: Window): DesktopApi | null {
 export function desktopBridge(api: DesktopApi): ToonationBridge {
   return {
     async request<T>(type: BridgeRequest): Promise<T> {
-      const res = await (type === 'status' ? api.status() : type === 'login' ? api.login() : api.favorites());
+      const res = await (type === 'status' ? api.status() : type === 'login' ? api.login() : type === 'logout' ? api.logout() : api.favorites());
       if (!res || !res.ok) throw new Error(res && !res.ok ? res.error : 'NO_RESPONSE');
       return res.data as T;
     },

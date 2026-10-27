@@ -3,6 +3,9 @@ import { desktopBridge, getDesktopApi, type DesktopApi } from '../../src/desktop
 const api = (over: Partial<DesktopApi> = {}): DesktopApi => ({
   status: vi.fn().mockResolvedValue({ ok: true, data: { account: { name: '나' } } }),
   login: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+  logout: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+  fillDonate: vi.fn(),
+  setAlwaysOnTop: vi.fn(),
   favorites: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   openDonate: vi.fn(),
   closeDonate: vi.fn(),

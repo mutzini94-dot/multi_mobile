@@ -25,6 +25,8 @@ import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
 import { playerKeys, visibleCount } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
+import { useSettings } from '../settings/settings';
+import { SettingsDialog } from '../ui/SettingsDialog';
 import { useTileDrag } from './useTileDrag';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
@@ -58,6 +60,19 @@ export function App(props: Props) {
     [props.bridge, desktop],
   );
   const toonation = useToonation(bridge);
+  const [settings, updateSettings] = useSettings(kv);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 테마: 시스템을 따르거나 라이트·다크로 고정
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.theme === 'system') delete root.dataset.theme;
+    else root.dataset.theme = settings.theme;
+  }, [settings.theme]);
+  // 설치형: 창 항상 위
+  useEffect(() => {
+    desktop?.setAlwaysOnTop?.(settings.alwaysOnTop);
+  }, [desktop, settings.alwaysOnTop]);
 
   // 합방 URL(#j=)로 열렸으면 시청자 화면: 그 구성으로 시작하고, 후원은 항상 호스트에게
   const [boot] = useState(() => {
@@ -142,6 +157,11 @@ export function App(props: Props) {
     if (pickerSlot !== null && toonStatus !== 'waiting-login') refreshToonation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerSlot]);
+  // 설정 창을 열 때도 로그인 상태를 확인한다 (로그아웃 버튼)
+  useEffect(() => {
+    if (settingsOpen && toonStatus !== 'waiting-login') refreshToonation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsOpen]);
 
   const enterFullscreen = (slot: number) => {
     dispatch({ type: 'select', slot });
@@ -226,7 +246,8 @@ export function App(props: Props) {
     const r = saveHost(kv, input);
     if (!r.ok) return r;
     if (hostDialog === 'open') beginHosting(r.value);
-    else {
+    else if (hosting) {
+      // 합방 중이면 1번 칸 호스트도 바꾼다 (설정 창에서 수정한 경우는 저장만)
       dispatch({ type: 'assign', slot: 0, creator: r.value });
       setHosting((h) => h && { ...h, host: r.value });
     }
@@ -246,6 +267,18 @@ export function App(props: Props) {
     kv.set(PUBLIC_BASE_KEY, base);
     if (hosting) setHosting({ ...hosting, url: jointUrl(hosting.host, base) });
     return null;
+  };
+  const exportFavorites = (json: string) => {
+    try {
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'multiview-favorites.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setMessage('내보내기에 실패했습니다');
+    }
   };
   const onCopyUrl = async (url: string) => {
     try {
@@ -274,6 +307,7 @@ export function App(props: Props) {
         canDonate={!!donateTarget}
         onDonate={onDonate}
         joint={gnbJoint}
+        onSettings={() => setSettingsOpen(true)}
       />
       <div className="app__body">
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
@@ -404,6 +438,22 @@ export function App(props: Props) {
             }}
           />
         </FavoritesPicker>
+      )}
+      {settingsOpen && (
+        <SettingsDialog
+          settings={settings}
+          onChange={updateSettings}
+          desktop={!!desktop}
+          host={hosting?.host ?? loadHost(kv)}
+          onEditHost={() => setHostDialog('edit')}
+          publicBase={kv.get(PUBLIC_BASE_KEY) ?? ''}
+          onSavePublicBase={onApplyBase}
+          toonationAccount={toonation.state.account?.name ?? null}
+          onLogout={toonation.logout}
+          favorites={favorites}
+          onExportFavorites={exportFavorites}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
       {hostDialog && (
         <HostProfileDialog

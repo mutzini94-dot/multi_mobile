@@ -14,7 +14,7 @@ export interface ToonationAccount {
   profile?: string;
 }
 
-export type BridgeRequest = 'status' | 'login' | 'favorites';
+export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites';
 
 export interface ToonationBridge {
   request<T = unknown>(type: BridgeRequest): Promise<T>;

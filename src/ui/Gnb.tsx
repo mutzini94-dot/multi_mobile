@@ -23,9 +23,10 @@ interface Props {
   canDonate: boolean;
   onDonate(): void;
   joint: GnbJoint;
+  onSettings?(): void;
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, joint }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings }: Props) {
   return (
     <header className="gnb">
       {joint.kind === 'viewer' ? (
@@ -89,6 +90,11 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, joint }: Props) {
             </button>
           )}
         </>
+      )}
+      {onSettings && (
+        <button type="button" className="btn btn--icon gnb__settings" aria-label="설정" title="설정" onClick={onSettings}>
+          ⚙
+        </button>
       )}
       <button type="button" className="btn btn--donate" disabled={!canDonate} onClick={onDonate}>
         후원하기
