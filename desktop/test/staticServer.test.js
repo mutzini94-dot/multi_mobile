@@ -53,3 +53,25 @@ test('GET/HEAD 외의 요청은 405', async () => {
     await srv.close();
   }
 });
+
+test('원하는 포트로 열고, 이미 쓰는 중이면 빈 포트로 대신 연다', async () => {
+  const root = fixture();
+  const a = await startStaticServer(root, { port: 0 });
+  try {
+    const b = await startStaticServer(root, { port: a.port }); // 같은 포트 → 쓰는 중
+    try {
+      assert.notStrictEqual(b.port, a.port);
+      assert.strictEqual((await fetch(`http://127.0.0.1:${b.port}/`)).status, 200);
+    } finally {
+      await b.close();
+    }
+    const freePort = a.port;
+    await a.close();
+    const c = await startStaticServer(root, { port: freePort }); // 비었으면 그 포트 그대로
+    assert.strictEqual(c.port, freePort);
+    await c.close();
+  } catch (e) {
+    await a.close().catch(() => {});
+    throw e;
+  }
+});

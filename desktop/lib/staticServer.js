@@ -30,7 +30,9 @@ function resolveSafe(root, urlPath) {
   return file === root || file.startsWith(root + path.sep) ? file : null;
 }
 
-function startStaticServer(rootDir) {
+// port: 원하는 포트 (설치형은 고정 포트를 써야 localStorage가 실행마다 유지된다 — 저장소는 포트까지 포함한 주소별).
+// 이미 쓰는 중이면 빈 포트로 대신 연다.
+function startStaticServer(rootDir, { port = 0 } = {}) {
   const root = path.resolve(rootDir);
   const server = http.createServer((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -52,16 +54,34 @@ function startStaticServer(rootDir) {
       else fs.createReadStream(file).pipe(res);
     });
   });
-  return new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      resolve({
-        host: '127.0.0.1',
-        port: server.address().port,
-        close: () => new Promise((r) => server.close(() => r())),
-      });
+  const listen = (p) =>
+    new Promise((resolve, reject) => {
+      const onError = (e) => {
+        server.off('listening', onListening);
+        reject(e);
+      };
+      const onListening = () => {
+        server.off('error', onError);
+        resolve();
+      };
+      server.once('error', onError);
+      server.once('listening', onListening);
+      server.listen(p, '127.0.0.1');
     });
-  });
+  return listen(port)
+    .catch((e) => {
+      if (e && e.code === 'EADDRINUSE' && port !== 0) return listen(0);
+      throw e;
+    })
+    .then(() => ({
+      host: '127.0.0.1',
+      port: server.address().port,
+      close: () =>
+        new Promise((r) => {
+          server.closeAllConnections?.(); // 열린 keep-alive 연결 때문에 닫기가 늦어지지 않게
+          server.close(() => r());
+        }),
+    }));
 }
 
 module.exports = { startStaticServer };

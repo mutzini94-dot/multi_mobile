@@ -12,6 +12,7 @@ const { ToonationClient, ORIGIN } = require('./lib/toonation');
 const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
 const { createDonateController } = require('./lib/donateController');
+const { createPrefs } = require('./lib/prefs');
 const { createHandlers } = require('./lib/handlers');
 
 const APP_NAME = '멀티뷰 후원';
@@ -38,6 +39,7 @@ let ses = null;
 let client = null;
 let loginWin = null;
 let server = null;
+let prefs = null; // 설치형 전용 설정 (lib/prefs.js)
 let donate = null; // 후원창 컨트롤러 (lib/donateController.js)
 
 const send = (channel, payload) => win && !win.isDestroyed() && win.webContents.send(channel, payload);
@@ -293,6 +295,12 @@ function runSmoke(outDir) {
 }
 
 app.whenReady().then(async () => {
+  prefs = createPrefs(path.join(app.getPath('userData'), 'prefs.json'), {
+    port: 47230,
+    alwaysOnTop: false,
+    windowBounds: null,
+    pipBounds: null,
+  });
   ses = session.fromPartition(PARTITION);
   // toon-widget과 같은 정직한 Electron UA (Cloudflare Turnstile이 UA와 client hints를 비교한다).
   const ua = `${WEBKIT_UA} MultiviewDonate/${app.getVersion()} Chrome/${process.versions.chrome} Electron/${process.versions.electron} Safari/537.36`;
@@ -303,7 +311,9 @@ app.whenReady().then(async () => {
 
   let url = DEV_URL;
   if (!DEV) {
-    server = await startStaticServer(path.join(__dirname, 'web'));
+    // 고정 포트: localStorage(즐겨찾기·내 방송 정보·설정)는 포트까지 포함한 주소별이라 실행마다 같은 포트여야 유지된다
+    server = await startStaticServer(path.join(__dirname, 'web'), { port: prefs.get('port') });
+    if (server.port !== prefs.get('port')) prefs.set('port', server.port);
     url = `http://localhost:${server.port}/`;
   }
   createWindow(url);
@@ -316,4 +326,7 @@ app.on('second-instance', () => {
 });
 
 app.on('window-all-closed', () => app.quit());
-app.on('will-quit', () => server && server.close());
+app.on('will-quit', () => {
+  if (prefs) prefs.flush();
+  if (server) server.close();
+});
