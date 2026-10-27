@@ -1,0 +1,6 @@
+/* Pretendard (SIL Open Font License 1.1, github.com/orioncactus/pretendard) — bundled so the 투네이션 skin
+   renders the same on PCs without the font installed. A locally installed copy is preferred. */
+@font-face { font-family: 'Pretendard'; font-weight: 400; font-display: swap; src: local('Pretendard Regular'), local('Pretendard-Regular'), url('Pretendard-Regular.otf') format('opentype'); }
+@font-face { font-family: 'Pretendard'; font-weight: 500; font-display: swap; src: local('Pretendard Medium'), local('Pretendard-Medium'), url('Pretendard-Medium.otf') format('opentype'); }
+@font-face { font-family: 'Pretendard'; font-weight: 600; font-display: swap; src: local('Pretendard SemiBold'), local('Pretendard-SemiBold'), url('Pretendard-SemiBold.otf') format('opentype'); }
+@font-face { font-family: 'Pretendard'; font-weight: 700 900; font-display: swap; src: local('Pretendard Bold'), local('Pretendard-Bold'), url('Pretendard-Bold.otf') format('opentype'); }
