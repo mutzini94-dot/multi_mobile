@@ -50,3 +50,22 @@ test('오류면 메시지와 다시 시도', async () => {
   await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
   expect(onRefresh).toHaveBeenCalled();
 });
+
+test('라이브 중인 크리에이터는 LIVE 표시, 방송 제목, 시청자 수를 보여준다', () => {
+  const live = mkCreator(1, { source: 'toonation', name: 'A', live: { title: '방송 중', viewers: 1234 } });
+  const off = mkCreator(2, { source: 'toonation', name: 'B' });
+  render(<ToonationSection {...props({ status: 'ready', account: { name: '나' }, creators: [live, off] })} />);
+  const items = screen.getAllByRole('listitem');
+  expect(items[0]).toHaveTextContent('LIVE');
+  expect(items[0]).toHaveTextContent('방송 중');
+  expect(items[0]).toHaveTextContent('1,234명');
+  expect(items[1]).not.toHaveTextContent('LIVE');
+  expect(screen.getByText('라이브 1명')).toBeInTheDocument();
+});
+
+test('목록을 갱신하는 동안에도 이전 목록을 보여준다', () => {
+  const c = mkCreator(1, { source: 'toonation', name: 'A' });
+  render(<ToonationSection {...props({ status: 'checking', account: { name: '나' }, creators: [c] })} />);
+  expect(screen.getByRole('button', { name: /^A · Twitch/ })).toBeInTheDocument();
+  expect(screen.getByText('갱신 중…')).toBeInTheDocument();
+});

@@ -49,6 +49,27 @@ describe('favoritesFromToonation', () => {
   });
 });
 
+describe('favoritesFromToonation 라이브', () => {
+  test('라이브 여부·제목·시청자 수를 옮기고, 라이브 중인 채널을 맨 위로 (나머지 순서는 유지)', () => {
+    const out = favoritesFromToonation([
+      { tag: 'a', name: 'A', profile: '', channels: [{ platform: 'twitch', key: 'aaaa', live: false }] },
+      { tag: 'b', name: 'B', profile: '', channels: [{ platform: 'twitch', key: 'bbbb' }] },
+      { tag: 'c', name: 'C', profile: '', channels: [{ platform: 'twitch', key: 'cccc', live: true, title: '방송 중', viewers: 12 }] },
+      { tag: 'd', name: 'D', profile: '', channels: [{ platform: 'twitch', key: 'dddd', live: true, title: '', viewers: 3 }] },
+    ]);
+    expect(out.map((c) => c.name)).toEqual(['C', 'D', 'A', 'B']);
+    expect(out[0].live).toEqual({ title: '방송 중', viewers: 12 });
+    expect(out[2].live).toBeUndefined();
+  });
+
+  test('제목이 너무 길면 100자로 자르고, 시청자 수가 숫자가 아니면 0', () => {
+    const out = favoritesFromToonation([
+      { tag: 'c', name: 'C', profile: '', channels: [{ platform: 'twitch', key: 'cccc', live: true, title: 'x'.repeat(300), viewers: 'many' as unknown as number }] },
+    ]);
+    expect(out[0].live).toEqual({ title: 'x'.repeat(100), viewers: 0 });
+  });
+});
+
 describe('createBridge', () => {
   /** 확장 content script 흉내: mv-page 요청에 mv-ext로 응답 */
   function fakeExtension(win: Window, handler: (type: string) => unknown) {

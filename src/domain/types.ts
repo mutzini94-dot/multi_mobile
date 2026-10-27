@@ -8,6 +8,7 @@ export interface Creator {
   channel: string; // 유튜브: UC... 채널 ID, 트위치: 소문자 로그인명
   source: 'manual' | 'link' | 'toonation'; // toonation: 투네이션 계정 즐겨찾기(검증됨)
   profile?: string; // 프로필 이미지 URL (투네이션 즐겨찾기만)
+  live?: { title: string; viewers: number }; // 라이브 중일 때만 (투네이션 즐겨찾기를 불러온 시점 기준)
 }
 
 export type LayoutKind = 'single' | 'split2' | 'oneTwo' | 'quad';

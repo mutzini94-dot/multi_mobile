@@ -100,7 +100,8 @@ export function App(props: Props) {
   const { refresh: refreshToonation } = toonation;
   const toonStatus = toonation.state.status;
   useEffect(() => {
-    if (pickerSlot !== null && (toonStatus === 'idle' || toonStatus === 'no-extension')) refreshToonation();
+    // 열 때마다 새로 가져와 라이브 상태를 갱신한다 (로그인 대기 중에는 그 확인을 방해하지 않는다)
+    if (pickerSlot !== null && toonStatus !== 'waiting-login') refreshToonation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerSlot]);
 

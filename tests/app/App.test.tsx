@@ -208,4 +208,16 @@ describe('투네이션 즐겨찾기 연동', () => {
     fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
     expect(await screen.findByRole('button', { name: '투네이션 로그인' })).toBeInTheDocument();
   });
+
+  test('불러오기 창을 열 때마다 목록(라이브 상태)을 새로 가져온다', async () => {
+    const kv = safeStorage(undefined);
+    const b = bridge({ name: '나' });
+    render(<App favorites={localFavorites(kv)} kv={kv} bridge={b} win={{ open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator }} />);
+    fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
+    await screen.findByRole('button', { name: /^투네A · Twitch/ });
+    fireEvent.click(screen.getByRole('button', { name: '닫기' }));
+    fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' }));
+    await screen.findByRole('button', { name: /^투네A · Twitch/ });
+    expect(vi.mocked(b.request).mock.calls.filter(([t]) => t === 'favorites')).toHaveLength(2);
+  });
 });

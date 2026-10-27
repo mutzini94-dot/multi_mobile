@@ -6,7 +6,7 @@ export interface ToonationFavorite {
   tag: string;
   name: string;
   profile: string;
-  channels: { platform: string; key: string | null; ytId?: string }[];
+  channels: { platform: string; key: string | null; ytId?: string; live?: boolean; title?: string; viewers?: number }[];
 }
 
 export interface ToonationAccount {
@@ -20,7 +20,10 @@ export interface ToonationBridge {
   request<T = unknown>(type: BridgeRequest): Promise<T>;
 }
 
-/** 즐겨찾기를 유튜브·트위치 채널마다 한 줄의 Creator로 바꾼다. 치지직과 변환되지 않은 유튜브 핸들은 뺀다. */
+/**
+ * 즐겨찾기를 유튜브·트위치 채널마다 한 줄의 Creator로 바꾼다. 치지직과 변환되지 않은 유튜브 핸들은 뺀다.
+ * 라이브 중인 채널을 맨 위로 올리고, 나머지는 투네이션 즐겨찾기 순서를 유지한다.
+ */
 export function favoritesFromToonation(list: ToonationFavorite[]): Creator[] {
   const out: Creator[] = [];
   for (const f of Array.isArray(list) ? list : []) {
@@ -35,11 +38,12 @@ export function favoritesFromToonation(list: ToonationFavorite[]): Creator[] {
         'manual',
       );
       if (r.ok && !out.some((c) => c.key === r.value.key && c.donateId === r.value.donateId)) {
-        out.push({ ...r.value, source: 'toonation', ...(profile ? { profile } : {}) });
+        const live = ch.live ? { title: String(ch.title ?? '').slice(0, 100), viewers: Number.isFinite(Number(ch.viewers)) ? Number(ch.viewers) : 0 } : undefined;
+        out.push({ ...r.value, source: 'toonation', ...(profile ? { profile } : {}), ...(live ? { live } : {}) });
       }
     }
   }
-  return out;
+  return [...out.filter((c) => c.live), ...out.filter((c) => !c.live)];
 }
 
 let seq = 0;

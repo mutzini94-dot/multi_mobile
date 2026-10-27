@@ -86,3 +86,22 @@ describe('login', () => {
     expect(bridge.request.mock.calls.length).toBe(calls);
   });
 });
+
+test('다시 불러오는 동안 이전 목록을 유지한다', async () => {
+  let resolveFav: (v: unknown) => void = () => {};
+  let calls = 0;
+  const bridge = fakeBridge({
+    status: () => ({ account: { name: '나' } }),
+    favorites: () => (++calls === 1 ? [fav] : new Promise((r) => (resolveFav = r))),
+  });
+  const { result } = renderHook(() => useToonation(bridge));
+  await act(async () => { await result.current.refresh(); });
+  expect(result.current.state.creators).toHaveLength(1);
+  let p: Promise<void> = Promise.resolve();
+  act(() => { p = result.current.refresh(); });
+  await act(async () => {});
+  expect(result.current.state.status).toBe('loading');
+  expect(result.current.state.creators).toHaveLength(1);
+  await act(async () => { resolveFav([]); await p; });
+  expect(result.current.state.creators).toHaveLength(0);
+});

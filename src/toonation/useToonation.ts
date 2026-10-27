@@ -39,10 +39,10 @@ export function useToonation(bridge: ToonationBridge, { pollMs = 2000, maxWaitMs
     };
   }, []);
 
-  const set = (s: ToonationState) => alive.current && setState(s);
+  const set = (s: ToonationState | ((prev: ToonationState) => ToonationState)) => alive.current && setState(s);
 
   const loadFavorites = useCallback(async (account: ToonationAccount) => {
-    set({ status: 'loading', account, creators: [] });
+    set((prev) => ({ status: 'loading', account, creators: prev.creators })); // 갱신하는 동안 이전 목록 유지
     try {
       const list = await bridgeRef.current.request<ToonationFavorite[]>('favorites');
       set({ status: 'ready', account, creators: favoritesFromToonation(list) });
@@ -56,7 +56,7 @@ export function useToonation(bridge: ToonationBridge, { pollMs = 2000, maxWaitMs
   /** 확장 설치·로그인 여부를 확인하고, 로그인 상태면 즐겨찾기를 불러온다. */
   const refresh = useCallback(async () => {
     stopPolling();
-    set({ ...IDLE, status: 'checking' });
+    set((prev) => ({ ...prev, status: 'checking', error: undefined }));
     let account: ToonationAccount | null;
     try {
       account = (await bridgeRef.current.request<{ account: ToonationAccount | null }>('status')).account;
