@@ -242,3 +242,5 @@ button:disabled { cursor: not-allowed; }
 .share-url__ok { margin: 8px 0 0; color: var(--success); font-size: 13px; font-weight: 600; }
 .share-url__note { font-size: 13px; }
 .gnb:has(.gnb__target) .gnb__logo { margin-right: 0; }
+.tile--locked.tile--empty::before { display: none; }
+.tile--locked.tile--empty .tile__bar { margin-top: 0; }

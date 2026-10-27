@@ -19,7 +19,7 @@ const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge }: Props) {
   const audible = selected && soundOn;
   return (
-    <div className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}`}>
+    <div className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}`}>
       {creator && <div className="tile__player" ref={playerSlotRef} />}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
       <div className="tile__bar" onClick={creator ? onSelect : undefined}>
