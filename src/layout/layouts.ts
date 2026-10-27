@@ -4,10 +4,25 @@ export const SLOT_COUNT: Record<LayoutKind, number> = { single: 1, split2: 2, on
 
 export const LAYOUT_LABEL: Record<LayoutKind, string> = { single: '1화면', split2: '2분할', oneTwo: '1+2', quad: '4분할' };
 
-/** 칸 수에 맞게 자르거나 null로 채운다. 넘치는 방송은 버린다. */
+/** 칸은 항상 MAX_SLOTS개를 보관하고, 레이아웃은 그중 앞의 몇 칸을 보여줄지만 정한다. */
+export const MAX_SLOTS = 4;
+
+export function visibleCount(state: Pick<ViewState, 'layout'>): number {
+  return SLOT_COUNT[state.layout];
+}
+
+export function visibleSlots(state: ViewState): (ViewState['slots'][number])[] {
+  return state.slots.slice(0, visibleCount(state));
+}
+
+/**
+ * 레이아웃만 바꾼다. 화면에서 빠지는 칸의 방송은 지우지 않고 보관해 두었다가(숨김·음소거)
+ * 다시 칸을 늘리면 그대로 보여준다. 칸 크기 비율은 레이아웃별로 따로 기억한다(TileGrid가 레이아웃별 키 사용).
+ * 선택된 칸이 숨겨지면 선택을 푼다 (숨은 방송에서 소리가 나지 않게).
+ */
 export function applyLayout(state: ViewState, layout: LayoutKind): ViewState {
   const count = SLOT_COUNT[layout];
-  const slots = Array.from({ length: count }, (_, i) => state.slots[i] ?? null);
+  const slots = Array.from({ length: MAX_SLOTS }, (_, i) => state.slots[i] ?? null);
   const selected = state.selected !== null && state.selected < count ? state.selected : null;
-  return { ...state, layout, slots, selected, sizes: {} };
+  return { ...state, layout, slots, selected };
 }

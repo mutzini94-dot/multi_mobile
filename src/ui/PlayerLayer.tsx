@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react';
 import type { Creator, ViewState } from '../domain/types';
+import { visibleCount } from '../layout/layouts';
 import { StreamPlayer } from '../players/StreamPlayer';
 import type { PlayerHandle } from '../players/types';
 
@@ -88,14 +89,16 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
     <div className={`player-layer${dragging ? ' player-layer--dragging' : ''}`}>
       {state.slots.map((creator, slot) => {
         if (!creator) return null;
-        const r = rects[slot] ?? { left: 0, top: 0, width: 0, height: 0 };
+        // 레이아웃에서 빠진 칸: 지우지 않고 숨겨 둔다 (다시 칸을 늘리면 다시 불러오지 않고 보인다)
+        const offscreen = slot >= visibleCount(state);
+        const r = (!offscreen && rects[slot]) || { left: 0, top: 0, width: 0, height: 0 };
         return (
           <div
             key={`${slot}:${creator.key}`}
             className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}`}
             data-slot={slot}
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
-            style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: focused !== null && focused !== slot ? 'hidden' : undefined }}
+            style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
             <StreamPlayer creator={creator} onReady={(h) => onReady(slot, creator, h)} />
             {/* 선택 강조: iframe 위에 겹쳐 그려야 영상에 가려지지 않는다 (클릭은 통과) */}

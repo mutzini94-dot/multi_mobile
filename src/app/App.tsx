@@ -19,6 +19,7 @@ import { FavoritesPicker } from '../ui/FavoritesPicker';
 import { Gnb } from '../ui/Gnb';
 import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
+import { visibleCount } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
@@ -134,7 +135,7 @@ export function App(props: Props) {
       document.removeEventListener('fullscreenchange', onChange);
     };
   }, [focused, exitFullscreen]);
-  const focusedCreator = focused !== null ? state.slots[focused] ?? null : null;
+  const focusedCreator = focused !== null && focused < visibleCount(state) ? state.slots[focused] ?? null : null;
   useEffect(() => {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);

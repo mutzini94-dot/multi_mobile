@@ -41,6 +41,12 @@ test('buildShareUrl은 기존 hash를 교체', () => {
   expect(url.startsWith('http://localhost:5230/?a=1#s=')).toBe(true);
 });
 
+test('링크에는 보이는 칸만 담고, 읽을 때 4칸으로 채운다', () => {
+  const hidden: ViewState = { layout: 'split2', slots: [mkCreator(1), mkCreator(2), mkCreator(3), null], sizes: {}, selected: null, soundOn: true };
+  const out = decodeShare(encodeShare(hidden))!;
+  expect(out.slots.map((c) => c?.name ?? null)).toEqual(['크리에이터1', '크리에이터2', null, null]);
+});
+
 test("'#s='로 시작하지 않으면 null", () => expect(decodeShare('#x=abc')).toBeNull());
 test('base64가 깨지면 null', () => expect(decodeShare('#s=@@@')).toBeNull());
 test('JSON이 아니면 null', () => expect(decodeShare('#s=' + btoa('nope'))).toBeNull());

@@ -1,5 +1,5 @@
 import { initialViewState, viewReducer } from '../../src/app/viewState';
-import { applyLayout, SLOT_COUNT } from '../../src/layout/layouts';
+import { applyLayout, SLOT_COUNT, MAX_SLOTS, visibleSlots } from '../../src/layout/layouts';
 import { mkCreator } from '../helpers/fixtures';
 import type { ViewState } from '../../src/domain/types';
 
@@ -15,14 +15,21 @@ test('SLOT_COUNT', () => {
   expect(SLOT_COUNT).toEqual({ single: 1, split2: 2, oneTwo: 3, quad: 4 });
 });
 
-test('quad→split2: 앞 2칸만 남는다', () => {
+test('quad→split2: 보이는 칸은 앞 2칸, 나머지 방송은 지우지 않고 보관', () => {
   const s = applyLayout(full, 'split2');
-  expect(s.slots).toEqual([mkCreator(1), mkCreator(2)]);
+  expect(visibleSlots(s)).toEqual([mkCreator(1), mkCreator(2)]);
+  expect(s.slots).toEqual(full.slots);
 });
 
-test('split2→quad: 기존 칸 유지, 뒤는 null', () => {
-  const s = applyLayout(applyLayout(full, 'split2'), 'quad');
-  expect(s.slots).toEqual([mkCreator(1), mkCreator(2), null, null]);
+test('quad→single→quad: 방송이 그대로 돌아온다 (초기화되지 않음)', () => {
+  const s = applyLayout(applyLayout(full, 'single'), 'quad');
+  expect(s.slots).toEqual(full.slots);
+});
+
+test('MAX_SLOTS와 칸 수가 모자란 상태는 null로 채움', () => {
+  expect(MAX_SLOTS).toBe(4);
+  const s = applyLayout({ ...full, slots: [mkCreator(1)] }, 'quad');
+  expect(s.slots).toEqual([mkCreator(1), null, null, null]);
 });
 
 test('선택된 칸(3번)이 사라지면 selected는 null', () => {
@@ -33,8 +40,14 @@ test('선택된 칸이 남으면 selected 유지', () => {
   expect(applyLayout({ ...full, selected: 1 }, 'split2').selected).toBe(1);
 });
 
-test('레이아웃을 바꾸면 sizes는 {}로 초기화', () => {
-  expect(applyLayout(full, 'quad').sizes).toEqual({});
+test('레이아웃을 바꿔도 칸 크기 비율은 유지 (레이아웃별로 따로 기억)', () => {
+  expect(applyLayout(full, 'split2').sizes).toEqual({ root: [30, 70] });
+});
+
+test('숨겨진 칸에는 assign·select 하지 않는다', () => {
+  const s = applyLayout(full, 'split2');
+  expect(viewReducer({ ...s, selected: 0 }, { type: 'select', slot: 3 }).selected).toBe(0);
+  expect(viewReducer(s, { type: 'assign', slot: 3, creator: mkCreator(9) })).toBe(s);
 });
 
 test('initialViewState', () => {

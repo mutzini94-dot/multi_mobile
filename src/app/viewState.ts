@@ -1,5 +1,5 @@
 import type { Creator, LayoutKind, ViewState } from '../domain/types';
-import { applyLayout } from '../layout/layouts';
+import { applyLayout, visibleCount } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
   layout: 'quad',
@@ -18,7 +18,8 @@ export type ViewAction =
   | { type: 'setSizes'; group: string; sizes: number[] }
   | { type: 'replace'; state: ViewState };
 
-const inRange = (state: ViewState, slot: number) => Number.isInteger(slot) && slot >= 0 && slot < state.slots.length;
+// 지금 보이는 칸만 바꿀 수 있다
+const inRange = (state: ViewState, slot: number) => Number.isInteger(slot) && slot >= 0 && slot < visibleCount(state);
 
 export function viewReducer(state: ViewState, action: ViewAction): ViewState {
   switch (action.type) {

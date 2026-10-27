@@ -1,6 +1,6 @@
 import { makeCreator, type CreatorInput } from '../domain/creatorInput';
 import type { Creator, LayoutKind, ViewState } from '../domain/types';
-import { SLOT_COUNT } from '../layout/layouts';
+import { MAX_SLOTS, SLOT_COUNT, visibleSlots } from '../layout/layouts';
 
 const PREFIX = '#s=';
 
@@ -28,7 +28,8 @@ export function encodeShare(state: ViewState): string {
     v: 1,
     layout: state.layout,
     sizes: state.sizes,
-    slots: state.slots.map((c) => (c ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel } : null)),
+    // 보이는 칸만 담는다 (레이아웃을 줄여 숨겨 둔 방송은 공유하지 않음)
+    slots: visibleSlots(state).map((c) => (c ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel } : null)),
   };
   return PREFIX + toBase64Url(JSON.stringify(payload));
 }
@@ -72,5 +73,6 @@ export function decodeShare(hash: string): ViewState | null {
     if (!r.ok) return null;
     slots.push(r.value);
   }
+  while (slots.length < MAX_SLOTS) slots.push(null);
   return { layout, slots, sizes: cleanSizes(p.sizes), selected: null, soundOn: true };
 }

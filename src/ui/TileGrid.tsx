@@ -10,10 +10,12 @@ interface Props {
 }
 
 export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
-  const size = (group: string, i: number, count: number) => state.sizes[group]?.[i] ?? 100 / count;
+  // 칸 크기 비율은 레이아웃별로 기억한다 (예: 'quad:root')
+  const sizeKey = (id: string) => `${state.layout}:${id}`;
+  const size = (group: string, i: number, count: number) => state.sizes[sizeKey(group)]?.[i] ?? 100 / count;
 
   const group = (id: string, direction: 'horizontal' | 'vertical', children: { node: ReactNode; col?: string }[]) => (
-    <PanelGroup id={id} direction={direction} onLayout={(s) => onSizes(id, s)}>
+    <PanelGroup id={id} direction={direction} onLayout={(s) => onSizes(sizeKey(id), s)}>
       {children.map((c, i) => (
         <PanelChild key={i} index={i} id={id} defaultSize={size(id, i, children.length)} col={c.col} onDragging={onDragging}>
           {c.node}
