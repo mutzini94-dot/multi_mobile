@@ -22,6 +22,10 @@ const DEV_URL = 'http://localhost:5230/';
 const ICON = path.join(__dirname, 'build', 'icon.png');
 const DONATE_TAG_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
+// 별도 프로필(설정·로그인)로 설치된 앱 옆에서 한 벌 더 실행: `--profile=<폴더>` (toon-widget과 같음)
+const profileArg = process.argv.find((a) => a.startsWith('--profile='));
+if (profileArg) app.setPath('userData', path.resolve(profileArg.slice('--profile='.length)));
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
@@ -224,7 +228,7 @@ function runSmoke(outDir) {
   win.webContents.once('did-finish-load', () => {
     setTimeout(async () => {
       if (process.env.MV_SMOKE_SCRIPT) {
-        await win.webContents.executeJavaScript(fs.readFileSync(process.env.MV_SMOKE_SCRIPT, 'utf8')).catch((e) => console.error('[smoke]', e));
+        await win.webContents.executeJavaScript(fs.readFileSync(process.env.MV_SMOKE_SCRIPT, 'utf8'), true).catch((e) => console.error('[smoke]', e));
         await new Promise((r) => setTimeout(r, Number(process.env.MV_SMOKE_WAIT) || 8000));
       }
       const result = await win.webContents
@@ -236,6 +240,7 @@ function runSmoke(outDir) {
         .catch((e) => ({ error: String(e) }));
       const img = await win.webContents.capturePage();
       fs.mkdirSync(outDir, { recursive: true });
+      result.windowFullScreen = win.isFullScreen();
       fs.writeFileSync(path.join(outDir, 'smoke.png'), img.toPNG());
       if (donate) {
         result.donate = { url: donate.view.webContents.getURL(), bounds: donate.view.getBounds(), window: win.getBounds() };

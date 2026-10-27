@@ -9,11 +9,12 @@ interface Props {
   onToggleSound(): void;
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onAddFavorite(): void;
+  onFullscreen?(): void;
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onAddFavorite }: Props) {
+export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onAddFavorite, onFullscreen }: Props) {
   const audible = selected && soundOn;
   return (
     <div className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}`}>
@@ -62,6 +63,20 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
             >
               {audible ? '🔊' : '🔇'}
             </button>
+            {onFullscreen && (
+              <button
+                type="button"
+                className="sound"
+                aria-label="전체 화면"
+                title="전체 화면"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFullscreen();
+                }}
+              >
+                ⛶
+              </button>
+            )}
           </>
         )}
       </div>

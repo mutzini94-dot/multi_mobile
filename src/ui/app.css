@@ -115,3 +115,16 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 .donate-panel__head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .donate-panel__title { font-weight: 700; }
 .donate-panel__body { flex: 1; background: #fff; }
+
+/* 칸 전체 화면: 그리드는 숨기고(플레이어는 계속 재생) 한 칸이 무대 전체를 채운다 */
+.stage--focus .tile-grid { visibility: hidden; }
+.focus-view { position: absolute; inset: 0; background: #000; border-radius: 6px; }
+.focus-view__player { position: absolute; inset: 0; }
+.focus-view__bar { justify-content: flex-end; }
+.focus-view__bar .tile__name { margin-right: auto; }
+.tile__bar .sound + .sound { margin-left: 0; }
+:fullscreen .app { padding: 0; }
+
+/* 전체 화면에서는 위쪽 메뉴를 숨기고, 아래 바는 알림이 있을 때만 */
+.app--focus > .gnb { display: none; }
+.app--focus > .donation-bar:empty { display: none; }

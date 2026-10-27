@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type MutableRefObject, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react';
 import type { Creator, ViewState } from '../domain/types';
 import { StreamPlayer } from '../players/StreamPlayer';
 import type { PlayerHandle } from '../players/types';
@@ -16,6 +16,9 @@ interface Props {
   slotEls: MutableRefObject<(HTMLElement | null)[]>; // 칸마다 플레이어가 놓일 자리(Tile의 .tile__player)
   onReady(slot: number, creator: Creator, h: PlayerHandle): void;
   dragging?: boolean; // 칸 경계를 드래그하는 동안: iframe이 포인터를 삼키지 않게 한다
+  onSelectSlot?(slot: number): void; // 영상(iframe)을 클릭했을 때
+  focused?: number | null; // 전체 화면으로 보는 칸
+  focusEl?: RefObject<HTMLElement>; // 전체 화면 칸의 자리
 }
 
 const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
@@ -31,8 +34,31 @@ const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
  * 플레이어를 칸 번호 key로 한 번만 마운트하고, 레이아웃이 정한 칸 자리에 절대 위치로 덮는다.
  * 레이아웃을 바꿔도 iframe이 DOM에서 옮겨지지 않으므로 방송이 다시 로딩되지 않는다.
  */
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false }: Props) {
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
+  const onSelectRef = useRef(onSelectSlot);
+  onSelectRef.current = onSelectSlot;
+
+  // 영상 클릭 감지: iframe은 클릭 이벤트를 넘겨주지 않지만, 클릭하면 포커스가 iframe으로 옮겨가며 window가 blur된다.
+  // 포커스를 가진 iframe의 칸을 선택하고, 포커스를 페이지로 되돌려 다음 클릭도 감지한다.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onBlur = () => {
+      timer = setTimeout(() => {
+        const el = document.activeElement;
+        if (!el || el.tagName !== 'IFRAME') return;
+        const item = el.closest<HTMLElement>('.player-layer__item[data-slot]');
+        if (!item) return;
+        onSelectRef.current?.(Number(item.dataset.slot));
+        (el as HTMLElement).blur();
+      }, 0);
+    };
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('blur', onBlur);
+      clearTimeout(timer);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -41,8 +67,10 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
       const s = stage.getBoundingClientRect();
       const next: Record<number, Rect> = {};
       slotEls.current.forEach((el, i) => {
-        if (!el || !el.isConnected) return;
-        const r = el.getBoundingClientRect();
+        // 전체 화면 칸은 전체 화면 자리에 놓는다
+        const target = focused === i && focusEl?.current ? focusEl.current : el;
+        if (!target || !target.isConnected) return;
+        const r = target.getBoundingClientRect();
         next[i] = { left: r.left - s.left, top: r.top - s.top, width: r.width, height: r.height };
       });
       setRects((prev) => (sameRects(prev, next) ? prev : next));
@@ -52,8 +80,9 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
     const ro = new ResizeObserver(measure);
     if (stageRef.current) ro.observe(stageRef.current);
     slotEls.current.forEach((el) => el && ro.observe(el));
+    if (focusEl?.current) ro.observe(focusEl.current);
     return () => ro.disconnect();
-  }, [state.layout, state.slots, state.sizes, stageRef, slotEls]);
+  }, [state.layout, state.slots, state.sizes, stageRef, slotEls, focused, focusEl]);
 
   return (
     <div className={`player-layer${dragging ? ' player-layer--dragging' : ''}`}>
@@ -61,7 +90,13 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         if (!creator) return null;
         const r = rects[slot] ?? { left: 0, top: 0, width: 0, height: 0 };
         return (
-          <div key={`${slot}:${creator.key}`} className="player-layer__item" style={{ left: r.left, top: r.top, width: r.width, height: r.height }}>
+          <div
+            key={`${slot}:${creator.key}`}
+            className="player-layer__item"
+            data-slot={slot}
+            // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
+            style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: focused !== null && focused !== slot ? 'hidden' : undefined }}
+          >
             <StreamPlayer creator={creator} onReady={(h) => onReady(slot, creator, h)} />
           </div>
         );

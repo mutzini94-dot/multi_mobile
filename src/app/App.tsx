@@ -70,6 +70,9 @@ export function App(props: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const slotEls = useRef<(HTMLElement | null)[]>([]);
   const [dragging, setDragging] = useState(false);
+  // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 합방 링크에는 담지 않는다)
+  const [focused, setFocused] = useState<number | null>(null);
+  const focusEl = useRef<HTMLDivElement>(null);
 
   // 플레이어 핸들: 칸 번호 + 크리에이터 키로 구분해, 칸 내용이 바뀌면 이전 핸들을 버린다
   const [handles, setHandles] = useState<Record<string, PlayerHandle>>({});
@@ -100,6 +103,33 @@ export function App(props: Props) {
     if (pickerSlot !== null && (toonStatus === 'idle' || toonStatus === 'no-extension')) refreshToonation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerSlot]);
+
+  const enterFullscreen = (slot: number) => {
+    dispatch({ type: 'select', slot });
+    setFocused(slot);
+    // 브라우저(설치형은 창) 전체 화면도 함께. 지원하지 않거나 거부되면 앱 안에서만 크게 본다
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  const exitFullscreen = useCallback(() => {
+    setFocused(null);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (focused === null) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && exitFullscreen();
+    // 브라우저 전체 화면을 Esc로 빠져나오면 keydown 대신 fullscreenchange만 온다
+    const onChange = () => !document.fullscreenElement && setFocused(null);
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('fullscreenchange', onChange);
+    };
+  }, [focused, exitFullscreen]);
+  const focusedCreator = focused !== null ? state.slots[focused] ?? null : null;
+  useEffect(() => {
+    if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
+  }, [focused, focusedCreator, exitFullscreen]);
 
   const warning = donationWarning(popupCreator, popupClosed, selectedCreator);
 
@@ -144,7 +174,7 @@ export function App(props: Props) {
   };
 
   return (
-    <div className="app">
+    <div className={`app${focusedCreator ? ' app--focus' : ''}`}>
       <Gnb
         layout={state.layout}
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
@@ -155,7 +185,7 @@ export function App(props: Props) {
         onRestore={() => boot.shared && dispatch({ type: 'replace', state: boot.shared })}
       />
       <div className="app__body">
-        <div className="stage" ref={stageRef}>
+        <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
           <TileGrid
             state={state}
             onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
@@ -174,12 +204,38 @@ export function App(props: Props) {
                     slotEls.current[slot] = el;
                   }}
                   onAddFavorite={() => creator && setConfirmingFavorite(creator)}
+                  onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
                 />
               );
             }}
           />
+          {focusedCreator && (
+            <section className="focus-view" aria-label={`${focusedCreator.name} 전체 화면`}>
+              <div className="focus-view__player" ref={focusEl} />
+              <div className="tile__bar focus-view__bar">
+                <span className="tile__name">{focusedCreator.name}</span>
+                <button
+                  type="button"
+                  className={`sound${state.soundOn ? ' sound--on' : ''}`}
+                  aria-label={state.soundOn ? '소리 끄기' : '소리 켜기'}
+                  onClick={() => dispatch({ type: 'toggleSound' })}
+                >
+                  {state.soundOn ? '🔊' : '🔇'}
+                </button>
+                <button type="button" className="btn btn--donate" onClick={onDonate}>
+                  후원하기
+                </button>
+                <button type="button" className="btn btn--ghost" aria-label="전체 화면 종료" onClick={exitFullscreen}>
+                  전체 화면 종료 (Esc)
+                </button>
+              </div>
+            </section>
+          )}
           <PlayerLayer
             state={state}
+            focused={focusedCreator ? focused : null}
+            focusEl={focusEl}
+            onSelectSlot={(slot) => dispatch({ type: 'select', slot })}
             stageRef={stageRef}
             slotEls={slotEls}
             dragging={dragging}
