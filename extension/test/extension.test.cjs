@@ -46,6 +46,10 @@ function loadBackground(world) {
       if (!world.loggedIn) return html('<html>login</html>');
       return json({ list: world.favorites, PageInfo: { PageCount: 1 } });
     }
+    if (url === 'https://gql.twitch.tv/gql') {
+      return json({ data: { users: [{ login: 'aaaa', displayName: 'A', stream: world.twitchLive ? { title: '방송 중', viewersCount: 120 } : null }] } });
+    }
+    if (url.startsWith('https://www.youtube.com/channel/') && url.endsWith('/live')) return html('<html></html>');
     if (url.startsWith('https://www.youtube.com/@')) return html(`<link rel="canonical" href="https://www.youtube.com/channel/${UC}">`);
     throw new Error(`unexpected fetch ${url}`);
   };
@@ -62,7 +66,7 @@ function loadBackground(world) {
   return { send, rules, tabsCreated };
 }
 
-const world = (o = {}) => ({ loggedIn: false, favorites: [], fetched: [], ...o });
+const world = (o = {}) => ({ loggedIn: false, favorites: [], fetched: [], twitchLive: false, ...o });
 
 test('status: 로그아웃 상태', async () => {
   const { send } = loadBackground(world());
@@ -87,8 +91,18 @@ test('favorites: 필요한 필드만, 유튜브 핸들은 UC로 변환', async (
   const r = await send({ type: 'favorites' });
   assert.deepStrictEqual(r, {
     ok: true,
-    data: [{ tag: 'tagA', name: 'A', profile: 'https://img/a.png', channels: [{ platform: 'twitch', key: 'aaaa' }, { platform: 'youtube', key: '@aa', ytId: UC }] }],
+    data: [{ tag: 'tagA', name: 'A', profile: 'https://img/a.png', channels: [{ platform: 'twitch', key: 'aaaa', live: false }, { platform: 'youtube', key: '@aa', ytId: UC, live: false }] }],
   });
+});
+
+test('favorites: 라이브 중인 채널에 제목·시청자 수를 붙인다', async () => {
+  const { send } = loadBackground(world({
+    loggedIn: true,
+    twitchLive: true,
+    favorites: [{ tag: 'tagA', name: 'A', channel: [{ url: 'https://twitch.tv/aaaa' }] }],
+  }));
+  const r = await send({ type: 'favorites' });
+  assert.deepStrictEqual(r.data[0].channels, [{ platform: 'twitch', key: 'aaaa', live: true, title: '방송 중', viewers: 120 }]);
 });
 
 test('favorites: 로그아웃이면 NOT_LOGGED_IN', async () => {
@@ -164,7 +178,7 @@ test('manifest: 필요한 권한만, 멀티뷰 주소에서만 중계', () => {
   const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   assert.strictEqual(m.manifest_version, 3);
   assert.deepStrictEqual(m.permissions.sort(), ['cookies', 'declarativeNetRequestWithHostAccess', 'storage']);
-  assert.deepStrictEqual(m.host_permissions.sort(), ['https://toon.at/*', 'https://www.youtube.com/*']);
+  assert.deepStrictEqual(m.host_permissions.sort(), ['https://gql.twitch.tv/*', 'https://toon.at/*', 'https://www.youtube.com/*']);
   assert.deepStrictEqual(m.content_scripts, [{ matches: ['http://localhost:5230/*', 'http://127.0.0.1:5230/*'], js: ['content/bridge.js'], run_at: 'document_start' }]);
   assert.strictEqual(m.externally_connectable, undefined);
 });

@@ -2,7 +2,7 @@
 // 웹(window.multiviewDesktop)의 요청 처리. 예외 대신 { ok, data | error }로 돌려준다.
 const { NotLoggedInError } = require('./toonation');
 
-function createHandlers({ client, openLogin, resolveYouTube }) {
+function createHandlers({ client, openLogin, resolveYouTube, checkLive = async () => new Map() }) {
   const wrap = (fn) => async () => {
     try {
       return { ok: true, data: await fn() };
@@ -33,6 +33,15 @@ function createHandlers({ client, openLogin, resolveYouTube }) {
           channels.push(ch);
         }
         out.push({ tag: f.tag, name: f.name, profile: f.profile, channels });
+      }
+      // 라이브 여부 (유튜브·트위치만). 조회가 실패해도 목록은 돌려준다
+      const refs = out.flatMap((f) => f.channels).filter((c) => (c.platform === 'twitch' || c.platform === 'youtube') && c.key);
+      const live = refs.length ? await checkLive(refs.map(({ platform, key }) => ({ platform, key }))).catch(() => new Map()) : new Map();
+      for (const c of refs) {
+        const s = live.get(`${c.platform}:${c.key}`);
+        if (!s) continue;
+        c.live = !!s.live;
+        if (s.live) Object.assign(c, { title: s.title || '', viewers: Number(s.viewers) || 0 });
       }
       return out;
     }),

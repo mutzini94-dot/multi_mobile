@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell } = require('electron');
 const { ToonationClient, ORIGIN } = require('./lib/toonation');
-const { youtubeChannelId } = require('./lib/platforms');
+const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
 const { widenForPanel, restoreFromPanel } = require('./lib/windowMath');
 const { createHandlers } = require('./lib/handlers');
@@ -212,6 +212,7 @@ function wireIpc() {
     client,
     openLogin,
     resolveYouTube: (key) => youtubeChannelId(key).then((r) => r.channelId || ''),
+    checkLive,
   });
   const fromWin = (e) => win && e.sender === win.webContents;
   for (const name of ['status', 'login', 'favorites']) {

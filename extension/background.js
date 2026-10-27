@@ -11,7 +11,7 @@ self.window = self; // lib/가 모듈을 window에 붙인다
 importScripts('lib/native.js', 'lib/platforms.js', 'lib/toonation.js');
 
 const { ToonationClient, NotLoggedInError, ORIGIN } = Toonation;
-const { youtubeChannelId } = Platforms;
+const { youtubeChannelId, checkLive } = Platforms;
 const client = new ToonationClient(null);
 
 // fetch로는 Referer·Cookie를 정할 수 없고 워커 요청에는 Origin: chrome-extension://…가 붙는다.
@@ -34,7 +34,7 @@ async function ensureHeaderRules() {
         id: 2,
         priority: 1,
         action: { type: 'modifyHeaders', requestHeaders: [{ header: 'origin', operation: 'remove' }] },
-        condition: { requestDomains: ['www.youtube.com'], initiatorDomains: [chrome.runtime.id], tabIds: [-1], resourceTypes: ['xmlhttprequest', 'other'] },
+        condition: { requestDomains: ['www.youtube.com', 'gql.twitch.tv'], initiatorDomains: [chrome.runtime.id], tabIds: [-1], resourceTypes: ['xmlhttprequest', 'other'] },
       },
     ],
   });
@@ -68,12 +68,22 @@ const handlers = {
     const list = await client.getFavorites();
     await resolveYouTubeHandles(list);
     // 페이지에는 필요한 필드만 넘긴다
-    return list.map((f) => ({
+    const out = list.map((f) => ({
       tag: f.tag,
       name: f.name,
       profile: f.profile,
       channels: f.channels.map((c) => ({ platform: c.platform, key: c.key, ...(c.ytId ? { ytId: c.ytId } : {}) })),
     }));
+    // 라이브 여부 (유튜브·트위치만). 조회가 실패해도 목록은 돌려준다
+    const refs = out.flatMap((f) => f.channels).filter((c) => (c.platform === 'twitch' || c.platform === 'youtube') && c.key);
+    const live = refs.length ? await checkLive(refs.map(({ platform, key }) => ({ platform, key }))).catch(() => new Map()) : new Map();
+    for (const c of refs) {
+      const s = live.get(`${c.platform}:${c.key}`);
+      if (!s) continue;
+      c.live = !!s.live;
+      if (s.live) Object.assign(c, { title: s.title || '', viewers: Number(s.viewers) || 0 });
+    }
+    return out;
   },
 };
 
