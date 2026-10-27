@@ -2,9 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
-import { encodeShare } from '../../src/share/shareLink';
 import type { DesktopApi } from '../../src/desktop/desktopApi';
-import { mkCreator } from '../helpers/fixtures';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -122,19 +120,14 @@ test('설치형: 앱이 후원창을 닫았다고 알리면(PIP 창 ✕ 등) 모
 });
 
 test('설치형: 후원창이 열린 채 다른 방송을 고르면 대상 불일치 경고', async () => {
-  const hash = encodeShare({
-    layout: 'split2',
-    slots: [mkCreator(1, { name: 'A' }), mkCreator(2, { name: 'B' })],
-    sizes: {},
-    selected: null,
-    soundOn: true,
-  });
-  const { desktop, modeFromApp } = setup(hash);
-  fireEvent.click(within(tiles()[0] as HTMLElement).getByText('A'));
+  const { desktop, modeFromApp } = setup();
+  await pickToon();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
-  fireEvent.click(screen.getByRole('button', { name: '확인하고 후원' }));
-  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'don1', name: 'A' });
+  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A' });
   modeFromApp('pip');
-  fireEvent.click(within(tiles()[1] as HTMLElement).getByText('B'));
-  expect(screen.getByRole('alert')).toHaveTextContent('후원 창은 A, 선택된 방송은 B입니다');
+  fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^투네A · Twitch/ }));
+  // 같은 크리에이터를 두 칸에 띄운 경우는 경고 없음 → 직접 추가한 다른 방송으로 확인
+  fireEvent.click(within(tiles()[0] as HTMLElement).getByText('투네A'));
+  expect(screen.queryByRole('alert')).toBeNull();
 });

@@ -5,7 +5,11 @@ import { donationWarning, openDonationPopup } from '../donate/donation';
 import { localFavorites, type FavoritesSource } from '../favorites/favorites';
 import type { PlayerHandle } from '../players/types';
 import { useAudioFocus } from '../players/useAudioFocus';
-import { buildShareUrl, decodeShare } from '../share/shareLink';
+import { buildJointUrl, decodeJoint, publicBase } from '../share/jointLink';
+import { loadHost, saveHost } from '../host/hostProfile';
+import type { CreatorInput } from '../domain/creatorInput';
+import { HostProfileDialog } from '../ui/HostProfileDialog';
+import { JointShareDialog } from '../ui/JointShareDialog';
 import { createBridge, type ToonationBridge } from '../toonation/bridge';
 import { desktopBridge, getDesktopApi, type DesktopApi, type DonateMode } from '../desktop/desktopApi';
 import { DonateModal } from '../ui/DonateModal';
@@ -16,7 +20,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DonationBar } from '../ui/DonationBar';
 import { PlayerLayer } from '../ui/PlayerLayer';
 import { FavoritesPicker } from '../ui/FavoritesPicker';
-import { Gnb } from '../ui/Gnb';
+import { Gnb, type GnbJoint } from '../ui/Gnb';
 import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
 import { visibleCount } from '../layout/layouts';
@@ -33,6 +37,7 @@ interface Props {
 }
 
 const POPUP_POLL_MS = 1000;
+const PUBLIC_BASE_KEY = 'mv.publicBase.v1'; // 설치형·로컬에서 합방 URL에 쓸 시청 페이지(배포한 웹) 주소
 
 function readStorage(): Storage | undefined {
   try {
@@ -53,18 +58,23 @@ export function App(props: Props) {
   );
   const toonation = useToonation(bridge);
 
-  // 합방 링크로 열렸으면 그 구성으로 시작하고, 원래 구성을 보관한다
+  // 합방 URL(#j=)로 열렸으면 시청자 화면: 그 구성으로 시작하고, 후원은 항상 호스트에게
   const [boot] = useState(() => {
     const hash = win.location.hash;
-    if (!hash.startsWith('#s=')) return { shared: null, error: null };
-    const shared = decodeShare(hash);
-    return { shared, error: shared ? null : '링크가 올바르지 않습니다' };
+    if (hash.startsWith('#s=')) return { joint: null, error: '예전 형식의 합방 링크입니다. 호스트에게 새 URL을 받아 주세요' };
+    if (!hash.startsWith('#j=')) return { joint: null, error: null };
+    const joint = decodeJoint(hash);
+    return { joint, error: joint ? null : '합방 URL이 올바르지 않습니다' };
   });
-  const [state, dispatch] = useReducer(viewReducer, boot.shared ?? initialViewState);
+  const viewer = boot.joint;
+  const [state, dispatch] = useReducer(viewReducer, boot.joint?.state ?? initialViewState);
   const [message, setMessage] = useState<string | null>(boot.error);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<Creator | null>(null);
-  const [confirmingFavorite, setConfirmingFavorite] = useState<Creator | null>(null);
+  // 합동 방송 호스트: 호스트 방송은 1번 칸 고정. url은 '방송 시작하기' 순간의 구성으로 고정된 URL
+  const [hosting, setHosting] = useState<{ host: Creator; started: boolean; url: string | null } | null>(null);
+  const [hostDialog, setHostDialog] = useState<'open' | 'edit' | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [popupCreator, setPopupCreator] = useState<Creator | null>(null);
   const [popupClosed, setPopupClosed] = useState(true);
   const popupRef = useRef<Window | null>(null);
@@ -85,6 +95,8 @@ export function App(props: Props) {
   useAudioFocus(handleList, state.selected, state.soundOn);
 
   const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
+  // 후원 대상: 합방 시청 화면에서는 어느 칸을 골랐든 호스트, 그 밖에는 선택한 방송
+  const donateTarget = viewer ? viewer.host : selectedCreator;
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
   // 설치형 후원창 자리 (모달/PIP). 앱이 바꾸면(PIP 창의 '모달로' 등) 알려준다
@@ -140,7 +152,7 @@ export function App(props: Props) {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
 
-  const warning = donationWarning(popupCreator, popupClosed, selectedCreator);
+  const warning = donationWarning(popupCreator, popupClosed, donateTarget);
 
   const openPopup = useCallback(
     (c: Creator) => {
@@ -177,31 +189,72 @@ export function App(props: Props) {
   }, [desktopDonate, donateMode, closeDesktopDonate]);
 
   const onDonate = () => {
-    if (!selectedCreator) return;
-    if (needsConfirm(selectedCreator, kv)) setConfirming(selectedCreator);
-    else openPopup(selectedCreator);
+    if (!donateTarget) return;
+    if (needsConfirm(donateTarget, kv)) setConfirming(donateTarget);
+    else openPopup(donateTarget);
   };
 
-  const onShare = async () => {
-    const url = buildShareUrl(state, win.location.href);
+  // ---------- 합동 방송 (호스트) ----------
+  const beginHosting = (host: Creator) => {
+    dispatch({ type: 'assign', slot: 0, creator: host });
+    setHosting({ host, started: false, url: null });
+  };
+  const onOpenJoint = () => {
+    const host = loadHost(kv);
+    if (host) beginHosting(host);
+    else setHostDialog('open');
+  };
+  const onSaveHost = (input: CreatorInput) => {
+    const r = saveHost(kv, input);
+    if (!r.ok) return r;
+    if (hostDialog === 'open') beginHosting(r.value);
+    else {
+      dispatch({ type: 'assign', slot: 0, creator: r.value });
+      setHosting((h) => h && { ...h, host: r.value });
+    }
+    setHostDialog(null);
+    return r;
+  };
+  const jointUrl = (host: Creator, base: string | null) => (base ? buildJointUrl(host, state, base) : null);
+  const currentBase = () => publicBase(win.location.href, kv.get(PUBLIC_BASE_KEY));
+  const onStartJoint = () => {
+    if (!hosting) return;
+    setHosting({ ...hosting, started: true, url: jointUrl(hosting.host, currentBase()) });
+    setShareOpen(true);
+  };
+  const onRegenerateUrl = () => hosting && setHosting({ ...hosting, url: jointUrl(hosting.host, currentBase()) });
+  const onApplyBase = (base: string) => {
+    if (!/^https?:\/\/[^\s]+$/i.test(base)) return 'http:// 또는 https:// 로 시작하는 주소를 입력해 주세요';
+    kv.set(PUBLIC_BASE_KEY, base);
+    if (hosting) setHosting({ ...hosting, url: jointUrl(hosting.host, base) });
+    return null;
+  };
+  const onCopyUrl = async (url: string) => {
     try {
       await win.navigator.clipboard.writeText(url);
-      setMessage('합방 링크를 복사했습니다');
+      return true;
     } catch {
-      setMessage(`복사하지 못했습니다. 아래 링크를 직접 복사하세요: ${url}`);
+      return false;
     }
   };
+  const onEndJoint = () => {
+    setHosting(null);
+    setShareOpen(false);
+  };
+  const gnbJoint: GnbJoint = viewer
+    ? { kind: 'viewer', host: viewer.host, onRestore: () => dispatch({ type: 'replace', state: viewer.state }) }
+    : hosting
+      ? { kind: 'hosting', started: hosting.started, onEditHost: () => setHostDialog('edit'), onStart: onStartJoint, onShowUrl: () => setShareOpen(true), onEnd: onEndJoint }
+      : { kind: 'normal', onOpen: onOpenJoint };
 
   return (
     <div className={`app${focusedCreator ? ' app--focus' : ''}`}>
       <Gnb
         layout={state.layout}
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
-        canDonate={!!selectedCreator}
+        canDonate={!!donateTarget}
         onDonate={onDonate}
-        onShare={onShare}
-        sharedMode={!!boot.shared}
-        onRestore={() => boot.shared && dispatch({ type: 'replace', state: boot.shared })}
+        joint={gnbJoint}
       />
       <div className="app__body">
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
@@ -211,6 +264,8 @@ export function App(props: Props) {
             onDragging={setDragging}
             renderTile={(slot) => {
               const creator = state.slots[slot] ?? null;
+              // 호스트 칸(1번)은 합방 중 고정, 합방 시청 화면은 모든 칸 고정
+              const hostSlot = (!!viewer || !!hosting) && slot === 0;
               return (
                 <Tile
                   creator={creator}
@@ -222,7 +277,8 @@ export function App(props: Props) {
                   playerSlotRef={(el) => {
                     slotEls.current[slot] = el;
                   }}
-                  onAddFavorite={() => creator && setConfirmingFavorite(creator)}
+                  locked={!!viewer || (!!hosting && slot === 0)}
+                  badge={hostSlot && creator ? '호스트' : undefined}
                   onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
                   onRemove={
                     creator
@@ -312,21 +368,21 @@ export function App(props: Props) {
           />
         </FavoritesPicker>
       )}
-      {confirmingFavorite && (
-        // 링크로 받은 (채널, 후원 아이디) 짝은 즐겨찾기에 넣기 전에도 확인한다 (확인 없이 '직접 입력'으로 바뀌는 것을 막음)
-        <ConfirmDialog
-          creator={confirmingFavorite}
-          action="favorite"
-          replacingDonateId={
-            favorites.list().find((f) => f.key === confirmingFavorite.key && f.donateId !== confirmingFavorite.donateId)?.donateId
-          }
-          onCancel={() => setConfirmingFavorite(null)}
-          onConfirm={() => {
-            favorites.add(confirmingFavorite);
-            markConfirmed(confirmingFavorite, kv);
-            setMessage(`${confirmingFavorite.name}을(를) 즐겨찾기에 추가했습니다`);
-            setConfirmingFavorite(null);
-          }}
+      {hostDialog && (
+        <HostProfileDialog
+          initial={hosting?.host ?? loadHost(kv)}
+          submitLabel={hostDialog === 'open' ? '저장하고 개설' : '저장'}
+          onSave={onSaveHost}
+          onCancel={() => setHostDialog(null)}
+        />
+      )}
+      {shareOpen && hosting && (
+        <JointShareDialog
+          url={hosting.url}
+          onApplyBase={onApplyBase}
+          onCopy={onCopyUrl}
+          onRegenerate={onRegenerateUrl}
+          onClose={() => setShareOpen(false)}
         />
       )}
       {confirming && (

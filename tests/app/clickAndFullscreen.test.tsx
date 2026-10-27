@@ -2,7 +2,6 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
-import { encodeShare } from '../../src/share/shareLink';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
 
@@ -12,23 +11,25 @@ vi.mock('../../src/players/StreamPlayer', () => ({
 }));
 
 const noBridge: ToonationBridge = { request: () => Promise.reject(new Error('NO_EXTENSION')) };
-const linkHash = encodeShare({
-  layout: 'quad',
-  slots: [mkCreator(1, { name: 'A' }), mkCreator(2, { name: 'B' }), null, null],
-  sizes: {},
-  selected: null,
-  soundOn: true,
-});
 
 function setup() {
   const kv = safeStorage(undefined);
+  const favorites = localFavorites(kv);
+  favorites.add(mkCreator(1, { name: 'A' }));
+  favorites.add(mkCreator(2, { name: 'B' }));
   const win = {
     open: vi.fn(() => ({ closed: false }) as unknown as Window),
     screen: { availWidth: 1920, availHeight: 1040 } as Screen,
-    location: { hash: linkHash, href: 'http://x/' } as Location,
+    location: { hash: '', href: 'http://x/' } as Location,
     navigator: {} as Navigator,
   };
-  render(<App favorites={localFavorites(kv)} kv={kv} win={win} bridge={noBridge} desktop={null} />);
+  render(<App favorites={favorites} kv={kv} win={win} bridge={noBridge} desktop={null} />);
+  // 1·2번 칸에 A·B를 불러오고 1번 칸을 선택한 상태에서 시작
+  for (const [slot, name] of [[0, 'A'], [1, 'B']] as const) {
+    fireEvent.click(within(document.querySelectorAll('.tile')[slot] as HTMLElement).getByRole('button', { name: '불러오기' }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name} ·`) }));
+  }
+  fireEvent.click(within(document.querySelectorAll('.tile')[0] as HTMLElement).getByText('A'));
   return { win };
 }
 
@@ -119,7 +120,6 @@ describe('칸 전체 화면', () => {
     expect(document.querySelector('.app')).toHaveClass('app--focus');
     const focus = screen.getByRole('region', { name: 'B 전체 화면' });
     fireEvent.click(within(focus).getByRole('button', { name: '후원하기' }));
-    fireEvent.click(screen.getByRole('button', { name: '확인하고 후원' })); // 링크로 받은 크리에이터라 확인을 거친다
     expect(win.open).toHaveBeenCalledWith('https://toon.at/donate/don2', 'mv-donate', expect.any(String));
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(document.querySelector('.app')).not.toHaveClass('app--focus');

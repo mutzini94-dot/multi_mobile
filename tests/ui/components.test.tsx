@@ -15,8 +15,8 @@ import { mkCreator } from '../helpers/fixtures';
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
 const noop = () => {};
-const gnbProps = { layout: 'quad' as const, onLayout: noop, canDonate: true, onDonate: noop, onShare: noop, sharedMode: false, onRestore: noop };
-const tileProps = { creator: null, selected: false, soundOn: true, onSelect: noop, onLoad: noop, onToggleSound: noop, onAddFavorite: noop };
+const gnbProps = { layout: 'quad' as const, onLayout: noop, canDonate: true, onDonate: noop, joint: { kind: 'normal' as const, onOpen: noop } };
+const tileProps = { creator: null, selected: false, soundOn: true, onSelect: noop, onLoad: noop, onToggleSound: noop };
 
 describe('Gnb', () => {
   test('레이아웃 버튼 4개와 현재 레이아웃 표시', () => {
@@ -34,17 +34,27 @@ describe('Gnb', () => {
     render(<Gnb {...gnbProps} canDonate={false} />);
     expect(screen.getByRole('button', { name: '후원하기' })).toBeDisabled();
   });
-  test('sharedMode일 때만 원래 구성으로', () => {
-    const { rerender } = render(<Gnb {...gnbProps} />);
-    expect(screen.queryByRole('button', { name: '원래 구성으로' })).toBeNull();
-    rerender(<Gnb {...gnbProps} sharedMode />);
-    expect(screen.getByRole('button', { name: '원래 구성으로' })).toBeInTheDocument();
+  test('일반: 합방 방송 개설', async () => {
+    const onOpen = vi.fn();
+    render(<Gnb {...gnbProps} joint={{ kind: 'normal', onOpen }} />);
+    await userEvent.click(screen.getByRole('button', { name: '합방 방송 개설' }));
+    expect(onOpen).toHaveBeenCalled();
   });
-  test('합방 링크 만들기 클릭 시 onShare', async () => {
-    const onShare = vi.fn();
-    render(<Gnb {...gnbProps} onShare={onShare} />);
-    await userEvent.click(screen.getByRole('button', { name: '합방 링크 만들기' }));
-    expect(onShare).toHaveBeenCalled();
+  test('호스트: 시작 전에는 방송 시작하기, 시작 후에는 방송 URL', () => {
+    const h = { kind: 'hosting' as const, started: false, onEditHost: noop, onStart: noop, onShowUrl: noop, onEnd: noop };
+    const { rerender } = render(<Gnb {...gnbProps} joint={h} />);
+    expect(screen.getByText('합방 준비 중')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '방송 시작하기' })).toBeInTheDocument();
+    rerender(<Gnb {...gnbProps} joint={{ ...h, started: true }} />);
+    expect(screen.getByText('합방 방송 중')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '방송 URL' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '합방 방송 개설' })).toBeNull();
+  });
+  test('시청자: 합방 제목과 후원 대상, 원래 구성으로', () => {
+    render(<Gnb {...gnbProps} joint={{ kind: 'viewer', host: mkCreator(9, { name: '호스트님', donateId: 'hostTag' }), onRestore: noop }} />);
+    expect(screen.getByText('호스트님의 합방')).toBeInTheDocument();
+    expect(screen.getByLabelText('후원 대상')).toHaveTextContent('toon.at/donate/hostTag');
+    expect(screen.getByRole('button', { name: '원래 구성으로' })).toBeInTheDocument();
   });
 });
 
@@ -59,16 +69,11 @@ describe('Tile', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} selected />);
     expect(container.firstChild).toHaveClass('tile--selected');
   });
-  test('link 출처는 검증되지 않음 배지와 후원 아이디', () => {
-    render(<Tile {...tileProps} creator={mkCreator(1, { source: 'link', donateId: 'abc' })} />);
-    expect(screen.getByText('검증되지 않음')).toBeInTheDocument();
-    expect(screen.getByText('후원 아이디: abc')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '즐겨찾기에 추가' })).toBeInTheDocument();
-  });
-  test('manual이면 배지 없음', () => {
-    render(<Tile {...tileProps} creator={mkCreator(1)} />);
-    expect(screen.queryByText('검증되지 않음')).toBeNull();
-    expect(screen.queryByRole('button', { name: '즐겨찾기에 추가' })).toBeNull();
+  test('잠긴 칸(호스트·시청 화면)은 불러오기·삭제가 없고 배지를 단다', () => {
+    render(<Tile {...tileProps} creator={mkCreator(1)} locked badge="호스트" onRemove={noop} />);
+    expect(screen.queryByRole('button', { name: '불러오기' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '방송 삭제' })).toBeNull();
+    expect(screen.getByText('호스트')).toBeInTheDocument();
   });
   test('사운드 버튼 라벨', () => {
     const { rerender } = render(<Tile {...tileProps} creator={mkCreator(1)} selected soundOn />);
@@ -151,7 +156,7 @@ describe('ConfirmDialog', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog creator={mkCreator(1, { source: 'link', donateId: 'abc' })} onConfirm={onConfirm} onCancel={onCancel} />);
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/이 방송\(채널\)의 후원 아이디가 abc가 맞는지 확인하세요/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/후원 아이디가 abc가 맞는지/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: '확인하고 후원' }));
     expect(onConfirm).toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: '취소' }));
