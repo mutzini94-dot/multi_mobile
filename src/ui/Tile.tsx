@@ -1,4 +1,4 @@
-import type { DragEvent } from 'react';
+import type { PointerEvent } from 'react';
 import type { Creator } from '../domain/types';
 
 interface Props {
@@ -13,16 +13,13 @@ interface Props {
   locked?: boolean; // 호스트 칸·합방 시청 화면: 불러오기·삭제 불가
   badge?: string; // 예: '호스트'
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
-  // 끌어서 자리 옮기기 (HTML5 drag & drop). 잡는 곳은 상단 바의 ⠿ 버튼
+  // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 잡는 곳은 상단 바의 ⠿ 버튼
   dnd?: {
+    slot: number;
     canDrag: boolean;
-    canDrop: boolean;
+    canDrop: boolean; // 지금 끄는 칸을 이 칸에 놓을 수 있는지 (data-drop)
     over: boolean;
-    onDragStart(e: DragEvent): void;
-    onDragEnd(): void;
-    onDragOver(e: DragEvent): void;
-    onDragLeave(): void;
-    onDrop(e: DragEvent): void;
+    onGripPointerDown(e: PointerEvent): void;
   };
 }
 
@@ -33,9 +30,8 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
   return (
     <div
       className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}`}
-      onDragOver={dnd?.canDrop ? dnd.onDragOver : undefined}
-      onDragLeave={dnd?.canDrop ? dnd.onDragLeave : undefined}
-      onDrop={dnd?.canDrop ? dnd.onDrop : undefined}
+      data-slot={dnd?.slot}
+      data-drop={dnd?.canDrop ? '1' : undefined}
     >
       {creator && <div className="tile__player" ref={playerSlotRef} />}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
@@ -61,9 +57,7 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
                 className="tile__grip"
                 aria-label="끌어서 자리 옮기기"
                 title="끌어서 다른 칸과 자리 바꾸기"
-                draggable
-                onDragStart={dnd.onDragStart}
-                onDragEnd={dnd.onDragEnd}
+                onPointerDown={dnd.onGripPointerDown}
                 onClick={(e) => e.stopPropagation()}
               >
                 ⠿

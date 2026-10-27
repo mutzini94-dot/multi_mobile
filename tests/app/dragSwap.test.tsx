@@ -37,16 +37,27 @@ const pick = (slot: number, name: string) => {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name} ·`) }));
 };
 
-/** HTML5 드래그: 칸의 잡는 곳(⠿)을 끌어 다른 칸에 놓는다 */
+/** 포인터 드래그: 칸의 잡는 곳(⠿)을 눌러 끌고 다른 칸 위에서 놓는다 (jsdom은 레이아웃이 없어 커서 아래 칸을 흉내) */
+let under: Element | null = null;
+beforeEach(() => {
+  under = null;
+  (document as unknown as { elementsFromPoint: (x: number, y: number) => Element[] }).elementsFromPoint = () => (under ? [under] : []);
+});
+const grip = (i: number) => within(tile(i)).getByRole('button', { name: '끌어서 자리 옮기기' });
+function startDrag(from: number) {
+  fireEvent.pointerDown(grip(from), { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+}
+function moveOver(to: number | null) {
+  under = to === null ? null : tile(to);
+  fireEvent.pointerMove(window, { pointerId: 1, clientX: 200, clientY: 200 });
+}
+function drop() {
+  fireEvent.pointerUp(window, { pointerId: 1, clientX: 200, clientY: 200 });
+}
 function drag(from: number, to: number) {
-  const store: Record<string, string> = {};
-  const dataTransfer = { setData: (k: string, v: string) => (store[k] = v), getData: (k: string) => store[k] ?? '', effectAllowed: '', dropEffect: '', types: [] as string[] };
-  const handle = within(tile(from)).getByRole('button', { name: '끌어서 자리 옮기기' });
-  fireEvent.dragStart(handle, { dataTransfer });
-  dataTransfer.types = Object.keys(store);
-  fireEvent.dragOver(tile(to), { dataTransfer });
-  fireEvent.drop(tile(to), { dataTransfer });
-  fireEvent.dragEnd(handle, { dataTransfer });
+  startDrag(from);
+  moveOver(to);
+  drop();
 }
 
 test('칸을 끌어 다른 칸에 놓으면 두 방송이 자리를 바꾼다', () => {
@@ -83,15 +94,27 @@ test('빈 칸에 놓으면 그 칸으로 옮겨 간다', () => {
 test('끄는 동안 놓을 칸을 강조하고, 영상이 드래그를 가로채지 않게 플레이어 레이어를 잠근다', () => {
   setup();
   pick(0, 'A');
-  const store: Record<string, string> = {};
-  const dataTransfer = { setData: (k: string, v: string) => (store[k] = v), getData: (k: string) => store[k] ?? '', effectAllowed: '', dropEffect: '', types: [] as string[] };
-  fireEvent.dragStart(within(tile(0)).getByRole('button', { name: '끌어서 자리 옮기기' }), { dataTransfer });
+  startDrag(0);
   expect(document.querySelector('.player-layer')).toHaveClass('player-layer--dragging');
-  fireEvent.dragOver(tile(2), { dataTransfer });
+  moveOver(2);
   expect(tile(2)).toHaveClass('tile--drop');
-  fireEvent.dragEnd(within(tile(0)).getByRole('button', { name: '끌어서 자리 옮기기' }), { dataTransfer });
-  expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
+  expect(screen.getByText('A 옮기는 중')).toBeInTheDocument();
+  moveOver(null);
   expect(tile(2)).not.toHaveClass('tile--drop');
+  drop();
+  expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
+  expect(within(tile(0)).getByText('A')).toBeInTheDocument();
+});
+
+test('Esc로 끌기를 취소한다', () => {
+  setup();
+  pick(0, 'A');
+  startDrag(0);
+  moveOver(3);
+  fireEvent.keyDown(window, { key: 'Escape' });
+  drop();
+  expect(within(tile(0)).getByText('A')).toBeInTheDocument();
+  expect(screen.queryByText('A 옮기는 중')).toBeNull();
 });
 
 test('합방 중에는 1번 호스트 칸은 끌 수도, 그 자리에 놓을 수도 없다', () => {

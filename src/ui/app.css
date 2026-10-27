@@ -253,3 +253,6 @@ button:disabled { cursor: not-allowed; }
 .player-layer--dragging .player-layer__item { opacity: 0.55; }
 .tile--drop { box-shadow: 0 0 0 3px var(--primary), 0 0 0 8px rgba(81, 156, 255, 0.25); }
 .tile--drop.tile--empty { background: var(--primary-soft); }
+.app--dragging, .app--dragging * { user-select: none; cursor: grabbing !important; }
+.drag-ghost { position: fixed; z-index: 30; pointer-events: none; height: 30px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: var(--r-pill); background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); white-space: nowrap; }
+.tile__grip { touch-action: none; }

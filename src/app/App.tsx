@@ -25,6 +25,7 @@ import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
 import { playerKeys, visibleCount } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
+import { useTileDrag } from './useTileDrag';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
 
@@ -81,9 +82,8 @@ export function App(props: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const slotEls = useRef<(HTMLElement | null)[]>([]);
   const [dragging, setDragging] = useState(false); // 칸 경계 크기 조절 중
-  // 칸 끌어서 자리 옮기기: 끄는 칸과, 지금 놓으려는 칸
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const [dropOver, setDropOver] = useState<number | null>(null);
+  // 칸 끌어서 자리 옮기기 (⠿를 눌러 끌고 다른 칸 위에서 놓기)
+  const tileDrag = useTileDrag((from, to) => dispatch({ type: 'swap', from, to }));
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 합방 링크에는 담지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
   const focusEl = useRef<HTMLDivElement>(null);
@@ -248,7 +248,12 @@ export function App(props: Props) {
       : { kind: 'normal', onOpen: onOpenJoint };
 
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
+      {tileDrag.drag && state.slots[tileDrag.drag.from] && (
+        <div className="drag-ghost" style={{ left: tileDrag.drag.x + 14, top: tileDrag.drag.y + 14 }} aria-hidden="true">
+          {state.slots[tileDrag.drag.from]!.name} 옮기는 중
+        </div>
+      )}
       <Gnb
         layout={state.layout}
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
@@ -280,32 +285,12 @@ export function App(props: Props) {
                   locked={!!viewer || (!!hosting && slot === 0)}
                   badge={hostSlot && creator ? '호스트' : undefined}
                   dnd={{
+                    slot,
                     // 합방 중에는 1번 호스트 칸은 고정
                     canDrag: !!creator && !hostSlot,
-                    canDrop: dragFrom !== null && dragFrom !== slot && !hostSlot,
-                    over: dropOver === slot,
-                    onDragStart: (e) => {
-                      e.dataTransfer.setData('text/x-mv-slot', String(slot));
-                      e.dataTransfer.effectAllowed = 'move';
-                      setDragFrom(slot);
-                    },
-                    onDragEnd: () => {
-                      setDragFrom(null);
-                      setDropOver(null);
-                    },
-                    onDragOver: (e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dropOver !== slot) setDropOver(slot);
-                    },
-                    onDragLeave: () => setDropOver((o) => (o === slot ? null : o)),
-                    onDrop: (e) => {
-                      e.preventDefault();
-                      const from = dragFrom ?? Number(e.dataTransfer.getData('text/x-mv-slot'));
-                      if (Number.isInteger(from)) dispatch({ type: 'swap', from, to: slot });
-                      setDragFrom(null);
-                      setDropOver(null);
-                    },
+                    canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot && !hostSlot,
+                    over: tileDrag.drag?.over === slot,
+                    onGripPointerDown: (e) => tileDrag.start(slot, e),
                   }}
                   onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
                   onRemove={
@@ -351,7 +336,7 @@ export function App(props: Props) {
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}
             stageRef={stageRef}
             slotEls={slotEls}
-            dragging={dragging || dragFrom !== null}
+            dragging={dragging || tileDrag.drag !== null}
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
           />
         </div>
