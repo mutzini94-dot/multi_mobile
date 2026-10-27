@@ -52,6 +52,9 @@
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+/* 화면 크기에 꼭 맞는 레이아웃이라 문서 스크롤바는 쓰지 않는다. 절대 위치로 덮는 플레이어가 1px만 넘쳐도
+   스크롤바가 생겼다 사라지며 크기 재측정과 맞물려 화면이 떨린다 (전체 화면에서 매 프레임 반복되던 문제) */
+html, body { overflow: hidden; }
 body { background: var(--stage); }
 button { font: inherit; cursor: pointer; color: inherit; }
 button:disabled { cursor: not-allowed; }
