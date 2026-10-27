@@ -7,10 +7,12 @@ interface Props {
   onClose(): void;
   onPip(): void;
   onBounds(rect: DonateBounds): void; // 설치형 앱이 후원 페이지(WebContentsView)를 본문 자리에 놓는다
+  amounts?: number[]; // 빠른 후원 금액: 누르면 후원 페이지의 금액 칸만 채운다
+  onFill?(amount: number): void;
 }
 
 /** 설치형 전용: 앱 가운데 모달 후원창의 틀. 후원 페이지 자체는 앱이 본문 자리에 덮어 그린다. */
-export function DonateModal({ creator, onClose, onPip, onBounds }: Props) {
+export function DonateModal({ creator, onClose, onPip, onBounds, amounts = [], onFill }: Props) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const onBoundsRef = useRef(onBounds);
   onBoundsRef.current = onBounds;
@@ -38,6 +40,15 @@ export function DonateModal({ creator, onClose, onPip, onBounds }: Props) {
       <div className="donate-modal" role="dialog" aria-label="후원창" onClick={(e) => e.stopPropagation()}>
         <div className="donate-modal__head">
           <span className="donate-modal__title">{creator.name}에게 후원</span>
+          {onFill &&
+            amounts.map((n) => {
+              const label = n.toLocaleString('ko-KR');
+              return (
+                <button key={n} type="button" className="btn btn--ghost btn--sm donate-modal__amount" aria-label={`${label}원 채우기`} onClick={() => onFill(n)}>
+                  {label}
+                </button>
+              );
+            })}
           <button type="button" className="btn btn--ghost btn--sm" onClick={onPip} title="항상 위에 떠 있는 작은 창으로 보기">
             PIP 모드
           </button>

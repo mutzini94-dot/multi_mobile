@@ -22,6 +22,8 @@
         font: inherit; font-size: 12px; font-weight: 600; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer;
       }
       button:hover { background: #f4f7fa; }
+      #amounts { display: flex; gap: 4px; flex: none; }
+      #amounts button { padding: 0 8px; color: var(--primary); }
       #close { width: 26px; padding: 0; box-shadow: none; color: var(--ink-sub); font-size: 14px; }
       #close:hover { background: var(--live); color: #fff; }
     </style>
@@ -31,6 +33,7 @@
       <span class="dot"></span>
       <span id="title"></span>
       <span class="tag">PIP</span>
+      <span id="amounts"></span>
       <button id="modal" title="앱 화면 가운데 모달로 보기">모달로</button>
       <button id="close" title="후원창 닫기" aria-label="후원창 닫기">✕</button>
     </header>
@@ -42,6 +45,21 @@
       };
       setTitle(new URLSearchParams(location.search).get('title'));
       window.mvPip.onTitle(setTitle);
+      // 빠른 후원 금액: 누르면 후원 페이지의 금액 칸만 채운다 (후원 버튼은 직접)
+      const amountsEl = document.getElementById('amounts');
+      const setAmounts = (list) => {
+        amountsEl.replaceChildren(
+          ...list.filter((n) => Number.isInteger(n) && n > 0).map((n) => {
+            const b = document.createElement('button');
+            b.textContent = n.toLocaleString('ko-KR');
+            b.title = `${b.textContent}원 채우기`;
+            b.addEventListener('click', () => window.mvPip.fill(n));
+            return b;
+          }),
+        );
+      };
+      setAmounts((new URLSearchParams(location.search).get('amounts') || '').split(',').filter(Boolean).map(Number));
+      window.mvPip.onAmounts(setAmounts);
       document.getElementById('modal').addEventListener('click', () => window.mvPip.toModal());
       document.getElementById('close').addEventListener('click', () => window.mvPip.close());
     </script>

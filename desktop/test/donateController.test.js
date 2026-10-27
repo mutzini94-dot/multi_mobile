@@ -129,3 +129,16 @@ test('잘못된 모드·열리지 않은 상태의 요청은 무시', () => {
   ctrl.setMode('fullscreen');
   assert.strictEqual(ctrl.state().mode, 'modal');
 });
+
+test('open에 모드를 주면 그 모드로 연다 (설정: 후원창 기본 모드), 없으면 마지막 모드', () => {
+  const { ctrl, main, pips, views } = setup();
+  ctrl.open('tagA', 'A', 'pip');
+  assert.strictEqual(ctrl.state().mode, 'pip');
+  assert.deepStrictEqual(pips[0].children, [views[0]]);
+  ctrl.open('tagB', 'B', 'modal'); // 열려 있는 PIP에서 모달로 옮겨 연다
+  assert.strictEqual(ctrl.state().mode, 'modal');
+  assert.deepStrictEqual(main.children, [views[0]]);
+  ctrl.close();
+  ctrl.open('tagA', 'A'); // 모드 없음 → 마지막(modal)
+  assert.strictEqual(ctrl.state().mode, 'modal');
+});

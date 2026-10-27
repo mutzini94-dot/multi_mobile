@@ -13,6 +13,8 @@ const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
 const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
+const { restoreBounds } = require('./lib/windowBounds');
+const { fillAmountScript } = require('./lib/donateFill');
 const { createHandlers } = require('./lib/handlers');
 
 const APP_NAME = '멀티뷰 후원';
@@ -142,15 +144,20 @@ function createDonateView() {
 
 // PIP: 테두리 없는 작은 창, 항상 위. 얇은 머리줄(pip.html: 끌어서 옮기기 · 모달로 · 닫기) 아래에 후원 페이지를 붙인다.
 let pipWin = null;
+let quickAmounts = []; // 빠른 후원 금액 (웹의 설정 → PIP 머리줄)
 function createPipWindow({ title, onClosed, onResize }) {
   const area = screen.getDisplayMatching(win.getBounds()).workArea;
   const width = 420;
   const height = Math.min(760, area.height - 48);
+  // 지난번 PIP 위치·크기 (지금 연결된 화면 안일 때만)
+  const b = restoreBounds(
+    prefs.get('pipBounds'),
+    screen.getAllDisplays().map((d) => d.workArea),
+    { x: area.x + area.width - width - 24, y: area.y + area.height - height - 24, width, height },
+    { width: 340, height: 420 },
+  );
   const w = new BrowserWindow({
-    x: area.x + area.width - width - 24,
-    y: area.y + area.height - height - 24,
-    width,
-    height,
+    ...b,
     minWidth: 340,
     minHeight: 420,
     frame: false,
@@ -164,8 +171,11 @@ function createPipWindow({ title, onClosed, onResize }) {
     webPreferences: { preload: path.join(__dirname, 'pip-preload.js'), contextIsolation: true, sandbox: true },
   });
   w.setAlwaysOnTop(true, 'floating');
-  w.loadFile(path.join(__dirname, 'pip.html'), { query: { title } });
+  w.loadFile(path.join(__dirname, 'pip.html'), { query: { title, amounts: quickAmounts.join(',') } });
   w.on('resize', onResize);
+  const remember = () => !w.isDestroyed() && prefs.set('pipBounds', w.getBounds());
+  w.on('moved', remember);
+  w.on('resized', remember);
   w.on('closed', () => {
     if (pipWin === w) pipWin = null;
     onClosed();
@@ -182,9 +192,16 @@ function createPipWindow({ title, onClosed, onResize }) {
 // ---------------------------------------------------------------- 메인 창
 
 function createWindow(url) {
+  const primary = screen.getPrimaryDisplay().workArea;
+  const fallback = {
+    width: Math.min(1400, primary.width),
+    height: Math.min(860, primary.height),
+    x: primary.x + Math.max(0, Math.round((primary.width - 1400) / 2)),
+    y: primary.y + Math.max(0, Math.round((primary.height - 860) / 2)),
+  };
+  const bounds = restoreBounds(prefs.get('windowBounds'), screen.getAllDisplays().map((d) => d.workArea), fallback, { width: 720, height: 480 });
   win = new BrowserWindow({
-    width: 1400,
-    height: 860,
+    ...bounds,
     minWidth: 720,
     minHeight: 480,
     title: APP_NAME,
@@ -208,6 +225,15 @@ function createWindow(url) {
   win.webContents.on('did-start-navigation', (_e, _u, inPage, isMain) => {
     if (isMain && !inPage) donate && donate.close({ notify: false }); // 화면을 새로 읽으면 후원창도 처음부터
   });
+  if (prefs.get('windowMaximized')) win.maximize();
+  if (prefs.get('alwaysOnTop')) win.setAlwaysOnTop(true); // 웹의 설정이 읽히기 전에도 지난 상태로
+  // 창 위치·크기 기억 (최대화·전체 화면일 때는 그 전 크기를 남긴다)
+  const remember = () => {
+    if (!win || win.isDestroyed()) return;
+    prefs.set('windowMaximized', win.isMaximized());
+    if (!win.isMaximized() && !win.isFullScreen() && !win.isMinimized()) prefs.set('windowBounds', win.getBounds());
+  };
+  for (const ev of ['moved', 'resized', 'maximize', 'unmaximize']) win.on(ev, remember);
   win.on('closed', () => {
     if (donate) donate.dispose(); // PIP 창도 함께 닫는다
     win = null;
@@ -230,15 +256,43 @@ function wireIpc() {
     openLogin,
     resolveYouTube: (key) => youtubeChannelId(key).then((r) => r.channelId || ''),
     checkLive,
+    // 투네이션 로그아웃: toon-widget과 같이 로그아웃 요청 후 이 세션의 저장값(쿠키 등)을 지운다
+    logout: async () => {
+      await ses.fetch(`${ORIGIN}/dapi/logout/1`, { credentials: 'include' }).catch(() => {});
+      await ses.clearStorageData();
+    },
   });
   const fromWin = (e) => win && e.sender === win.webContents;
-  for (const name of ['status', 'login', 'favorites']) {
+  for (const name of ['status', 'login', 'logout', 'favorites']) {
     ipcMain.handle(`mv:${name}`, (e) => (fromWin(e) ? handlers[name]() : { ok: false, error: 'FORBIDDEN' }));
   }
   const fromPip = (e) => pipWin && !pipWin.isDestroyed() && e.sender === pipWin.webContents;
   ipcMain.on('mv:donate:open', (e, t) => {
     if (!fromWin(e) || !t || !DONATE_TAG_RE.test(String(t.tag))) return;
-    donate.open(String(t.tag), String(t.name || '').slice(0, 30));
+    if (Array.isArray(t.amounts)) {
+      quickAmounts = t.amounts.filter((n) => Number.isInteger(n) && n >= 1 && n <= 10_000_000).slice(0, 6);
+      if (pipWin && !pipWin.isDestroyed()) pipWin.webContents.send('mv:pip:amounts', quickAmounts);
+    }
+    // 설정의 후원창 기본 모드 ('modal' | 'pip'), 없으면 마지막 모드
+    donate.open(String(t.tag), String(t.name || '').slice(0, 30), t.mode === 'modal' || t.mode === 'pip' ? t.mode : undefined);
+  });
+  // 빠른 후원: 후원 페이지의 금액 칸만 채운다 (메인 창의 모달 머리줄 또는 PIP 머리줄에서)
+  ipcMain.on('mv:donate:fill', (e, amount) => {
+    if (!(fromWin(e) || fromPip(e))) return;
+    const v = donate.view();
+    if (!v) return;
+    let code;
+    try {
+      code = fillAmountScript(Number(amount));
+    } catch {
+      return;
+    }
+    v.webContents.executeJavaScript(code).catch(() => {});
+  });
+  ipcMain.on('mv:window:alwaysOnTop', (e, on) => {
+    if (!fromWin(e)) return;
+    win.setAlwaysOnTop(!!on);
+    prefs.set('alwaysOnTop', !!on);
   });
   ipcMain.on('mv:donate:close', (e) => fromWin(e) && donate.close({ notify: false }));
   ipcMain.on('mv:donate:bounds', (e, r) => fromWin(e) && donate.setModalBounds(r));
@@ -300,6 +354,7 @@ app.whenReady().then(async () => {
     alwaysOnTop: false,
     windowBounds: null,
     pipBounds: null,
+    windowMaximized: false,
   });
   ses = session.fromPartition(PARTITION);
   // toon-widget과 같은 정직한 Electron UA (Cloudflare Turnstile이 UA와 client hints를 비교한다).

@@ -8,7 +8,7 @@ vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data
 
 const tFav = { tag: 'tagT', name: '투네A', profile: '', channels: [{ platform: 'twitch', key: 'toon_a' }] };
 
-function setup(hash = '') {
+function setup(hash = '', settings?: object) {
   let closedCb: (() => void) | null = null;
   let modeCb: ((m: 'modal' | 'pip') => void) | null = null;
   const desktop: DesktopApi = {
@@ -32,6 +32,7 @@ function setup(hash = '') {
     }),
   };
   const kv = safeStorage(undefined);
+  if (settings) kv.set('mv.settings.v1', JSON.stringify(settings));
   const win = {
     open: vi.fn(),
     screen: {} as Screen,
@@ -68,7 +69,7 @@ test('설치형: 후원하기는 팝업 대신 앱 가운데 모달 후원창을
   await pickToon();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
   expect(win.open).not.toHaveBeenCalled();
-  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A' });
+  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A', amounts: [1000, 5000, 10000] });
   const dialog = donateDialog()!;
   expect(within(dialog).getByText('투네A에게 후원')).toBeInTheDocument();
   expect(desktop.setDonateBounds).toHaveBeenCalled();
@@ -126,11 +127,28 @@ test('설치형: 후원창이 열린 채 다른 방송을 고르면 대상 불�
   const { desktop, modeFromApp } = setup();
   await pickToon();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
-  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A' });
+  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A', amounts: [1000, 5000, 10000] });
   modeFromApp('pip');
   fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' }));
   fireEvent.click(await screen.findByRole('button', { name: /^투네A · Twitch/ }));
   // 같은 크리에이터를 두 칸에 띄운 경우는 경고 없음 → 직접 추가한 다른 방송으로 확인
   fireEvent.click(within(tiles()[0] as HTMLElement).getByText('투네A'));
   expect(screen.queryByRole('alert')).toBeNull();
+});
+
+test('설치형: 설정의 후원창 기본 모드(PIP)로 열고, 모달은 띄우지 않는다', async () => {
+  const { desktop } = setup('', { donateMode: 'pip', quickAmounts: [2000] });
+  await pickToon();
+  fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
+  expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A', mode: 'pip', amounts: [2000] });
+  expect(donateDialog()).toBeNull();
+  expect(screen.getByRole('status', { name: 'PIP 후원창' })).toBeInTheDocument();
+});
+
+test('설치형: 모달 후원창의 빠른 후원 금액을 누르면 금액만 채운다', async () => {
+  const { desktop } = setup();
+  await pickToon();
+  fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
+  fireEvent.click(within(donateDialog()!).getByRole('button', { name: '5,000원 채우기' }));
+  expect(desktop.fillDonate).toHaveBeenCalledWith(5000);
 });

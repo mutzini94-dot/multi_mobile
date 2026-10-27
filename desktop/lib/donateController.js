@@ -56,12 +56,17 @@ function createDonateController({ main, createView, createPipWindow, donateUrl, 
     send('mv:donate:mode', mode);
   }
 
-  function open(nextTag, nextName) {
+  // wantMode: 설정의 후원창 기본 모드 ('modal' | 'pip'). 없으면 마지막으로 쓴 모드
+  function open(nextTag, nextName, wantMode) {
     tag = nextTag;
     name = nextName;
+    const target = wantMode === 'modal' || wantMode === 'pip' ? wantMode : mode;
     if (!view) {
       view = createView();
-      attach(mode);
+      attach(target);
+    } else if (target !== mode) {
+      detach();
+      attach(target);
     } else if (mode === 'pip' && pip && !pip.isDestroyed()) {
       pip.setTitle(titleOf(name));
       pip.focus();

@@ -84,3 +84,10 @@ test('favorites: 라이브 조회가 실패해도 목록은 돌려준다', async
   assert.strictEqual(r.ok, true);
   assert.deepStrictEqual(r.data[0].channels, [{ platform: 'twitch', key: 'aaaa' }]);
 });
+
+test('logout: 투네이션 로그아웃을 요청하고 결과를 돌려준다', async () => {
+  let called = 0;
+  const h = createHandlers({ client: fakeClient(), openLogin: () => {}, resolveYouTube: async () => '', logout: async () => { called++; } });
+  assert.deepStrictEqual(await h.logout(), { ok: true, data: {} });
+  assert.strictEqual(called, 1);
+});

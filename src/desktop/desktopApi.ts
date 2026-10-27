@@ -16,7 +16,8 @@ export interface DesktopApi {
   login(): Promise<DesktopResult<object>>;
   logout(): Promise<DesktopResult<object>>;
   favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
-  openDonate(target: { tag: string; name: string }): void;
+  /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */
+  openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[] }): void;
   closeDonate(): void;
   setDonateBounds(rect: DonateBounds): void;
   setDonateMode(mode: DonateMode): void;

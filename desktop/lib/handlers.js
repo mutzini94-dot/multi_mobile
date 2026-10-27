@@ -2,7 +2,7 @@
 // 웹(window.multiviewDesktop)의 요청 처리. 예외 대신 { ok, data | error }로 돌려준다.
 const { NotLoggedInError } = require('./toonation');
 
-function createHandlers({ client, openLogin, resolveYouTube, checkLive = async () => new Map() }) {
+function createHandlers({ client, openLogin, resolveYouTube, checkLive = async () => new Map(), logout = async () => {} }) {
   const wrap = (fn) => async () => {
     try {
       return { ok: true, data: await fn() };
@@ -17,6 +17,10 @@ function createHandlers({ client, openLogin, resolveYouTube, checkLive = async (
     }),
     login: wrap(async () => {
       openLogin();
+      return {};
+    }),
+    logout: wrap(async () => {
+      await logout();
       return {};
     }),
     favorites: wrap(async () => {
