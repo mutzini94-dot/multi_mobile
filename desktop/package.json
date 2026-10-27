@@ -11,7 +11,7 @@
     "build:web": "npm run build --prefix .. -- --outDir desktop/web --emptyOutDir",
     "start": "npm run build:web && electron .",
     "dev": "electron . --dev",
-    "test": "node --test test/staticServer.test.js test/windowMath.test.js test/handlers.test.js",
+    "test": "node --test test/staticServer.test.js test/handlers.test.js test/donateController.test.js",
     "dist": "npm run build:web && node scripts/dist.js"
   },
   "build": {
@@ -25,6 +25,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "pip.html",
+      "pip-preload.js",
       "lib/**/*",
       "web/**/*",
       "package.json"

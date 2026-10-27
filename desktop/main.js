@@ -2,7 +2,7 @@
 // 멀티뷰 후원 — 설치형(Electron). toon-widget(투네이션 후원 위젯)과 같은 방식:
 //   - 전용 세션(persist:toonation)에서 공식 로그인 창을 띄우고, 같은 세션으로 계정·즐겨찾기를 가져온다
 //     (비밀번호는 다루지 않는다)
-//   - 후원은 창 오른쪽을 넓혀 붙이는 패널(WebContentsView, 같은 로그인 세션)로 연다
+//   - 후원창(WebContentsView, 같은 로그인 세션)은 메인 창 가운데 모달 또는 항상 위 PIP 창으로 띄운다
 //   - 멀티뷰 화면은 웹 빌드(desktop/web)를 http://localhost:<port>로 띄운다 (트위치 임베드의 parent 제약)
 // 개발: `npm run dev` 는 vite 개발 서버(http://localhost:5230)를 띄운 상태에서 실행한다.
 const path = require('path');
@@ -11,12 +11,11 @@ const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell } =
 const { ToonationClient, ORIGIN } = require('./lib/toonation');
 const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
-const { widenForPanel, restoreFromPanel } = require('./lib/windowMath');
+const { createDonateController } = require('./lib/donateController');
 const { createHandlers } = require('./lib/handlers');
 
 const APP_NAME = '멀티뷰 후원';
 const PARTITION = 'persist:toonation';
-const PANEL_W = 448; // 웹의 .donate-panel 폭(440) + 간격(8)
 const DEV = process.argv.includes('--dev');
 const DEV_URL = 'http://localhost:5230/';
 const ICON = path.join(__dirname, 'build', 'icon.png');
@@ -39,7 +38,7 @@ let ses = null;
 let client = null;
 let loginWin = null;
 let server = null;
-let donate = null; // { view, shift, tag }
+let donate = null; // 후원창 컨트롤러 (lib/donateController.js)
 
 const send = (channel, payload) => win && !win.isDestroyed() && win.webContents.send(channel, payload);
 
@@ -127,46 +126,55 @@ const DONATE_ONLY_CSS = `
   .ScreenContent:has(#baselayout) { margin-top: 0 !important; }
 `;
 
-function openDonate(tag) {
-  if (!win || !DONATE_TAG_RE.test(tag)) return;
-  if (!donate) {
-    const view = new WebContentsView({ webPreferences: { partition: PARTITION, contextIsolation: true, sandbox: true } });
-    view.setBackgroundColor('#ffffff');
-    if (typeof view.setBorderRadius === 'function') view.setBorderRadius(6);
-    allowPopups(view.webContents);
-    useGoogleUa(view.webContents);
-    view.webContents.on('dom-ready', () => {
-      if (/^https:\/\/toon\.at\/donate\//.test(view.webContents.getURL())) view.webContents.insertCSS(DONATE_ONLY_CSS).catch(() => {});
-    });
-    view.setBounds({ x: 0, y: 0, width: 0, height: 0 }); // 웹이 패널 자리를 알려주면 놓는다
-    win.contentView.addChildView(view);
-    let shift = { x: 0, width: 0 };
-    if (!win.isMaximized() && !win.isFullScreen()) {
-      const b = win.getBounds();
-      const next = widenForPanel(b, screen.getDisplayMatching(b).workArea, PANEL_W);
-      shift = next.shift;
-      win.setBounds(next.bounds);
-    }
-    donate = { view, shift };
-  }
-  donate.tag = tag;
-  donate.view.webContents.loadURL(client.donateUrl(tag));
+function createDonateView() {
+  const view = new WebContentsView({ webPreferences: { partition: PARTITION, contextIsolation: true, sandbox: true } });
+  view.setBackgroundColor('#ffffff');
+  if (typeof view.setBorderRadius === 'function') view.setBorderRadius(8);
+  allowPopups(view.webContents);
+  useGoogleUa(view.webContents);
+  view.webContents.on('dom-ready', () => {
+    if (/^https:\/\/toon\.at\/donate\//.test(view.webContents.getURL())) view.webContents.insertCSS(DONATE_ONLY_CSS).catch(() => {});
+  });
+  return view;
 }
 
-function setDonateBounds(r) {
-  if (!donate || !r) return;
-  const n = (v) => Math.max(0, Math.round(Number(v) || 0));
-  donate.view.setBounds({ x: n(r.x), y: n(r.y), width: n(r.width), height: n(r.height) });
-}
-
-function closeDonate({ notify = true } = {}) {
-  if (!donate) return;
-  const d = donate;
-  donate = null;
-  win.contentView.removeChildView(d.view);
-  if (typeof d.view.webContents.close === 'function') d.view.webContents.close();
-  if (d.shift.width && !win.isMaximized() && !win.isFullScreen()) win.setBounds(restoreFromPanel(win.getBounds(), d.shift));
-  if (notify) send('mv:donate:closed');
+// PIP: 테두리 없는 작은 창, 항상 위. 얇은 머리줄(pip.html: 끌어서 옮기기 · 모달로 · 닫기) 아래에 후원 페이지를 붙인다.
+let pipWin = null;
+function createPipWindow({ title, onClosed, onResize }) {
+  const area = screen.getDisplayMatching(win.getBounds()).workArea;
+  const width = 420;
+  const height = Math.min(760, area.height - 48);
+  const w = new BrowserWindow({
+    x: area.x + area.width - width - 24,
+    y: area.y + area.height - height - 24,
+    width,
+    height,
+    minWidth: 340,
+    minHeight: 420,
+    frame: false,
+    resizable: true,
+    maximizable: false,
+    fullscreenable: false,
+    alwaysOnTop: true,
+    title,
+    icon: ICON,
+    backgroundColor: '#ffffff',
+    webPreferences: { preload: path.join(__dirname, 'pip-preload.js'), contextIsolation: true, sandbox: true },
+  });
+  w.setAlwaysOnTop(true, 'floating');
+  w.loadFile(path.join(__dirname, 'pip.html'), { query: { title } });
+  w.on('resize', onResize);
+  w.on('closed', () => {
+    if (pipWin === w) pipWin = null;
+    onClosed();
+  });
+  const setTitle = w.setTitle.bind(w);
+  w.setTitle = (t) => {
+    setTitle(t);
+    if (!w.isDestroyed()) w.webContents.send('mv:pip:title', t);
+  };
+  pipWin = w;
+  return w;
 }
 
 // ---------------------------------------------------------------- 메인 창
@@ -196,11 +204,18 @@ function createWindow(url) {
     }
   });
   win.webContents.on('did-start-navigation', (_e, _u, inPage, isMain) => {
-    if (isMain && !inPage) closeDonate({ notify: false }); // 화면을 새로 읽으면 패널 상태도 처음부터
+    if (isMain && !inPage) donate && donate.close({ notify: false }); // 화면을 새로 읽으면 후원창도 처음부터
   });
   win.on('closed', () => {
+    if (donate) donate.dispose(); // PIP 창도 함께 닫는다
     win = null;
-    donate = null;
+  });
+  donate = createDonateController({
+    main: win,
+    createView: createDonateView,
+    createPipWindow,
+    donateUrl: (tag) => client.donateUrl(tag),
+    send,
   });
   win.loadURL(url);
   if (process.env.MV_SMOKE_OUT) runSmoke(process.env.MV_SMOKE_OUT);
@@ -218,9 +233,15 @@ function wireIpc() {
   for (const name of ['status', 'login', 'favorites']) {
     ipcMain.handle(`mv:${name}`, (e) => (fromWin(e) ? handlers[name]() : { ok: false, error: 'FORBIDDEN' }));
   }
-  ipcMain.on('mv:donate:open', (e, t) => fromWin(e) && t && openDonate(String(t.tag)));
-  ipcMain.on('mv:donate:close', (e) => fromWin(e) && closeDonate({ notify: false }));
-  ipcMain.on('mv:donate:bounds', (e, r) => fromWin(e) && setDonateBounds(r));
+  const fromPip = (e) => pipWin && !pipWin.isDestroyed() && e.sender === pipWin.webContents;
+  ipcMain.on('mv:donate:open', (e, t) => {
+    if (!fromWin(e) || !t || !DONATE_TAG_RE.test(String(t.tag))) return;
+    donate.open(String(t.tag), String(t.name || '').slice(0, 30));
+  });
+  ipcMain.on('mv:donate:close', (e) => fromWin(e) && donate.close({ notify: false }));
+  ipcMain.on('mv:donate:bounds', (e, r) => fromWin(e) && donate.setModalBounds(r));
+  ipcMain.on('mv:donate:mode', (e, m) => (fromWin(e) || fromPip(e)) && donate.setMode(m));
+  ipcMain.on('mv:pip:close', (e) => fromPip(e) && donate.close());
 }
 
 // MV_SMOKE_OUT=<폴더>: 화면이 뜬 뒤 상태와 스크린샷을 남기고 종료 (자동 점검용)
@@ -243,9 +264,10 @@ function runSmoke(outDir) {
       fs.mkdirSync(outDir, { recursive: true });
       result.windowFullScreen = win.isFullScreen();
       fs.writeFileSync(path.join(outDir, 'smoke.png'), img.toPNG());
-      if (donate) {
-        result.donate = { url: donate.view.webContents.getURL(), bounds: donate.view.getBounds(), window: win.getBounds() };
-        fs.writeFileSync(path.join(outDir, 'donate.png'), (await donate.view.webContents.capturePage()).toPNG());
+      result.donate = donate.state();
+      if (pipWin && !pipWin.isDestroyed()) {
+        result.pip = { bounds: pipWin.getBounds(), alwaysOnTop: pipWin.isAlwaysOnTop() };
+        fs.writeFileSync(path.join(outDir, 'pip.png'), (await pipWin.webContents.capturePage()).toPNG());
       }
       fs.writeFileSync(path.join(outDir, 'smoke.json'), JSON.stringify(result, null, 2));
       app.quit();

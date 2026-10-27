@@ -18,8 +18,13 @@ export interface DesktopApi {
   openDonate(target: { tag: string; name: string }): void;
   closeDonate(): void;
   setDonateBounds(rect: DonateBounds): void;
+  setDonateMode(mode: DonateMode): void;
   onDonateClosed(cb: () => void): () => void;
+  onDonateMode(cb: (mode: DonateMode) => void): () => void;
 }
+
+/** 후원창 자리: 앱 가운데 모달 또는 항상 위 PIP 창 */
+export type DonateMode = 'modal' | 'pip';
 
 export function getDesktopApi(win: Window): DesktopApi | null {
   const api = (win as Window & { multiviewDesktop?: DesktopApi }).multiviewDesktop;

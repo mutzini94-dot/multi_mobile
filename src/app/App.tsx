@@ -7,8 +7,8 @@ import type { PlayerHandle } from '../players/types';
 import { useAudioFocus } from '../players/useAudioFocus';
 import { buildShareUrl, decodeShare } from '../share/shareLink';
 import { createBridge, type ToonationBridge } from '../toonation/bridge';
-import { desktopBridge, getDesktopApi, type DesktopApi } from '../desktop/desktopApi';
-import { DonatePanel } from '../ui/DonatePanel';
+import { desktopBridge, getDesktopApi, type DesktopApi, type DonateMode } from '../desktop/desktopApi';
+import { DonateModal } from '../ui/DonateModal';
 import { useToonation } from '../toonation/useToonation';
 import { ToonationSection } from '../ui/ToonationSection';
 import { safeStorage, type KV } from '../storage/safeStorage';
@@ -86,9 +86,16 @@ export function App(props: Props) {
   const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
+  // 설치형 후원창 자리 (모달/PIP). 앱이 바꾸면(PIP 창의 '모달로' 등) 알려준다
+  const [donateMode, setDonateMode] = useState<DonateMode>('modal');
   useEffect(() => {
     if (!desktop) return;
-    return desktop.onDonateClosed(() => setPopupClosed(true));
+    const offClosed = desktop.onDonateClosed(() => setPopupClosed(true));
+    const offMode = desktop.onDonateMode(setDonateMode);
+    return () => {
+      offClosed();
+      offMode();
+    };
   }, [desktop]);
   useEffect(() => {
     if (!popupCreator || desktop) return;
@@ -156,7 +163,17 @@ export function App(props: Props) {
     },
     [win, desktop],
   );
-  const panelCreator = desktop && popupCreator && !popupClosed ? popupCreator : null;
+  const desktopDonate = desktop && popupCreator && !popupClosed ? popupCreator : null;
+  const closeDesktopDonate = useCallback(() => {
+    desktop?.closeDonate();
+    setPopupClosed(true);
+  }, [desktop]);
+  useEffect(() => {
+    if (!desktopDonate || donateMode !== 'modal') return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeDesktopDonate();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [desktopDonate, donateMode, closeDesktopDonate]);
 
   const onDonate = () => {
     if (!selectedCreator) return;
@@ -252,18 +269,28 @@ export function App(props: Props) {
             onReady={(slot, creator, h) => setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
           />
         </div>
-        {panelCreator && desktop && (
-          <DonatePanel
-            creator={panelCreator}
-            onBounds={(r) => desktop.setDonateBounds(r)}
-            onClose={() => {
-              desktop.closeDonate();
-              setPopupClosed(true);
-            }}
-          />
-        )}
       </div>
-      <DonationBar popupCreator={popupClosed ? null : popupCreator} warning={warning} message={message} />
+      <DonationBar popupCreator={popupClosed || desktopDonate ? null : popupCreator} warning={warning} message={message}>
+        {desktopDonate && donateMode === 'pip' && (
+          <span className="pip-status" role="status" aria-label="PIP 후원창">
+            <span className="pip-status__text">PIP 창에서 후원 중: {desktopDonate.name}</span>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => desktop?.setDonateMode('modal')}>
+              모달로 보기
+            </button>
+            <button type="button" className="btn btn--icon" aria-label="후원창 닫기" onClick={closeDesktopDonate}>
+              ✕
+            </button>
+          </span>
+        )}
+      </DonationBar>
+      {desktopDonate && donateMode === 'modal' && (
+        <DonateModal
+          creator={desktopDonate}
+          onBounds={(r) => desktop?.setDonateBounds(r)}
+          onPip={() => desktop?.setDonateMode('pip')}
+          onClose={closeDesktopDonate}
+        />
+      )}
       {pickerSlot !== null && (
         <FavoritesPicker
           source={favorites}

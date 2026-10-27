@@ -7,7 +7,9 @@ const api = (over: Partial<DesktopApi> = {}): DesktopApi => ({
   openDonate: vi.fn(),
   closeDonate: vi.fn(),
   setDonateBounds: vi.fn(),
+  setDonateMode: vi.fn(),
   onDonateClosed: vi.fn(() => () => {}),
+  onDonateMode: vi.fn(() => () => {}),
   ...over,
 });
 

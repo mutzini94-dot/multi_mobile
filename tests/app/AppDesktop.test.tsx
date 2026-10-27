@@ -12,6 +12,7 @@ const tFav = { tag: 'tagT', name: '투네A', profile: '', channels: [{ platform:
 
 function setup(hash = '') {
   let closedCb: (() => void) | null = null;
+  let modeCb: ((m: 'modal' | 'pip') => void) | null = null;
   const desktop: DesktopApi = {
     status: vi.fn().mockResolvedValue({ ok: true, data: { account: { name: '나' } } }),
     login: vi.fn().mockResolvedValue({ ok: true, data: {} }),
@@ -19,8 +20,13 @@ function setup(hash = '') {
     openDonate: vi.fn(),
     closeDonate: vi.fn(),
     setDonateBounds: vi.fn(),
+    setDonateMode: vi.fn(),
     onDonateClosed: vi.fn((cb) => {
       closedCb = cb;
+      return () => {};
+    }),
+    onDonateMode: vi.fn((cb) => {
+      modeCb = cb;
       return () => {};
     }),
   };
@@ -32,10 +38,16 @@ function setup(hash = '') {
     navigator: {} as Navigator,
   };
   render(<App favorites={localFavorites(kv)} kv={kv} win={win} desktop={desktop} />);
-  return { desktop, win, closeFromApp: () => act(() => closedCb?.()) };
+  return {
+    desktop,
+    win,
+    closeFromApp: () => act(() => closedCb?.()),
+    modeFromApp: (m: 'modal' | 'pip') => act(() => modeCb?.(m)),
+  };
 }
 
 const tiles = () => document.querySelectorAll('.tile');
+const donateDialog = () => screen.queryByRole('dialog', { name: '후원창' });
 
 async function pickToon() {
   fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
@@ -50,42 +62,79 @@ test('설치형: 불러오기 창은 앱의 투네이션 로그인 정보로 즐
   expect(within(tiles()[0] as HTMLElement).getByText('투네A')).toBeInTheDocument();
 });
 
-test('설치형: 후원하기는 팝업 대신 앱의 후원 패널을 열고, 패널 머리에 대상과 닫기를 보여준다', async () => {
+test('설치형: 후원하기는 팝업 대신 앱 가운데 모달 후원창을 연다', async () => {
   const { desktop, win } = setup();
   await pickToon();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
   expect(win.open).not.toHaveBeenCalled();
   expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'tagT', name: '투네A' });
-  const panel = screen.getByRole('complementary', { name: '후원 패널' });
-  expect(within(panel).getByText('투네A에게 후원')).toBeInTheDocument();
+  const dialog = donateDialog()!;
+  expect(within(dialog).getByText('투네A에게 후원')).toBeInTheDocument();
   expect(desktop.setDonateBounds).toHaveBeenCalled();
-  fireEvent.click(within(panel).getByRole('button', { name: '후원 패널 닫기' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: '후원창 닫기' }));
   expect(desktop.closeDonate).toHaveBeenCalled();
-  expect(screen.queryByRole('complementary', { name: '후원 패널' })).toBeNull();
+  expect(donateDialog()).toBeNull();
 });
 
-test('설치형: 앱이 패널을 닫았다고 알리면 패널 자리도 사라진다', async () => {
-  const { closeFromApp } = setup();
+test('설치형: Esc로 모달 후원창을 닫는다', async () => {
+  const { desktop } = setup();
   await pickToon();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
-  expect(screen.getByRole('complementary', { name: '후원 패널' })).toBeInTheDocument();
-  closeFromApp();
-  expect(screen.queryByRole('complementary', { name: '후원 패널' })).toBeNull();
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(desktop.closeDonate).toHaveBeenCalled();
+  expect(donateDialog()).toBeNull();
 });
 
-test('설치형: 패널이 열린 채 다른 방송을 고르면 대상 불일치 경고', async () => {
-  const kvState = encodeShare({
+test('설치형: PIP 모드로 바꾸면 모달이 사라지고 하단에 PIP 상태와 되돌리기·닫기가 보인다', async () => {
+  const { desktop, modeFromApp } = setup();
+  await pickToon();
+  fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
+  fireEvent.click(within(donateDialog()!).getByRole('button', { name: 'PIP 모드' }));
+  expect(desktop.setDonateMode).toHaveBeenCalledWith('pip');
+  modeFromApp('pip');
+  expect(donateDialog()).toBeNull();
+  const bar = screen.getByRole('status', { name: 'PIP 후원창' });
+  expect(bar).toHaveTextContent('PIP 창에서 후원 중: 투네A');
+  fireEvent.click(within(bar).getByRole('button', { name: '모달로 보기' }));
+  expect(desktop.setDonateMode).toHaveBeenLastCalledWith('modal');
+  modeFromApp('modal');
+  expect(donateDialog()).not.toBeNull();
+});
+
+test('설치형: PIP 상태에서 닫기', async () => {
+  const { desktop, modeFromApp } = setup();
+  await pickToon();
+  fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
+  modeFromApp('pip');
+  fireEvent.click(within(screen.getByRole('status', { name: 'PIP 후원창' })).getByRole('button', { name: '후원창 닫기' }));
+  expect(desktop.closeDonate).toHaveBeenCalled();
+  expect(screen.queryByRole('status', { name: 'PIP 후원창' })).toBeNull();
+});
+
+test('설치형: 앱이 후원창을 닫았다고 알리면(PIP 창 ✕ 등) 모달·PIP 표시가 사라진다', async () => {
+  const { closeFromApp, modeFromApp } = setup();
+  await pickToon();
+  fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
+  modeFromApp('pip');
+  closeFromApp();
+  expect(donateDialog()).toBeNull();
+  expect(screen.queryByRole('status', { name: 'PIP 후원창' })).toBeNull();
+});
+
+test('설치형: 후원창이 열린 채 다른 방송을 고르면 대상 불일치 경고', async () => {
+  const hash = encodeShare({
     layout: 'split2',
     slots: [mkCreator(1, { name: 'A' }), mkCreator(2, { name: 'B' })],
     sizes: {},
     selected: null,
     soundOn: true,
   });
-  const { desktop } = setup(kvState);
+  const { desktop, modeFromApp } = setup(hash);
   fireEvent.click(within(tiles()[0] as HTMLElement).getByText('A'));
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
   fireEvent.click(screen.getByRole('button', { name: '확인하고 후원' }));
   expect(desktop.openDonate).toHaveBeenCalledWith({ tag: 'don1', name: 'A' });
+  modeFromApp('pip');
   fireEvent.click(within(tiles()[1] as HTMLElement).getByText('B'));
   expect(screen.getByRole('alert')).toHaveTextContent('후원 창은 A, 선택된 방송은 B입니다');
 });
