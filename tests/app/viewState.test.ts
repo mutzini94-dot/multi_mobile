@@ -94,3 +94,31 @@ test('범위를 벗어난 slot은 무시', () => {
 test('replace는 상태를 통째로 바꾼다', () => {
   expect(viewReducer(initialViewState, { type: 'replace', state: full })).toBe(full);
 });
+
+describe('swap (칸 자리 바꾸기)', () => {
+  const two: ViewState = { layout: 'quad', slots: [mkCreator(1), mkCreator(2), null, null], sizes: {}, selected: 0, soundOn: true };
+
+  test('두 칸의 방송을 맞바꾸고, 선택은 옮겨 간 방송을 따라간다', () => {
+    const s = viewReducer(two, { type: 'swap', from: 0, to: 1 });
+    expect(s.slots).toEqual([mkCreator(2), mkCreator(1), null, null]);
+    expect(s.selected).toBe(1);
+  });
+
+  test('빈 칸으로 옮길 수 있다', () => {
+    const s = viewReducer(two, { type: 'swap', from: 1, to: 3 });
+    expect(s.slots).toEqual([mkCreator(1), null, null, mkCreator(2)]);
+    expect(s.selected).toBe(0);
+  });
+
+  test('선택된 칸 자리로 다른 방송이 오면 선택도 그 자리(원래 방송)를 따라간다', () => {
+    const s = viewReducer(two, { type: 'swap', from: 1, to: 0 });
+    expect(s.selected).toBe(1);
+  });
+
+  test('같은 칸, 숨겨진 칸, 범위 밖은 무시', () => {
+    expect(viewReducer(two, { type: 'swap', from: 1, to: 1 })).toBe(two);
+    const split = applyLayout(two, 'split2');
+    expect(viewReducer(split, { type: 'swap', from: 0, to: 3 })).toBe(split);
+    expect(viewReducer(two, { type: 'swap', from: -1, to: 2 })).toBe(two);
+  });
+});

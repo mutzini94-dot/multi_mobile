@@ -1,3 +1,4 @@
+import type { DragEvent } from 'react';
 import type { Creator } from '../domain/types';
 
 interface Props {
@@ -12,14 +13,30 @@ interface Props {
   locked?: boolean; // 호스트 칸·합방 시청 화면: 불러오기·삭제 불가
   badge?: string; // 예: '호스트'
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
+  // 끌어서 자리 옮기기 (HTML5 drag & drop). 잡는 곳은 상단 바의 ⠿ 버튼
+  dnd?: {
+    canDrag: boolean;
+    canDrop: boolean;
+    over: boolean;
+    onDragStart(e: DragEvent): void;
+    onDragEnd(): void;
+    onDragOver(e: DragEvent): void;
+    onDragLeave(): void;
+    onDrop(e: DragEvent): void;
+  };
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge }: Props) {
+export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge, dnd }: Props) {
   const audible = selected && soundOn;
   return (
-    <div className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}`}>
+    <div
+      className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}`}
+      onDragOver={dnd?.canDrop ? dnd.onDragOver : undefined}
+      onDragLeave={dnd?.canDrop ? dnd.onDragLeave : undefined}
+      onDrop={dnd?.canDrop ? dnd.onDrop : undefined}
+    >
       {creator && <div className="tile__player" ref={playerSlotRef} />}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
       <div className="tile__bar" onClick={creator ? onSelect : undefined}>
@@ -38,6 +55,20 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
         {locked && !creator && <span className="muted">빈 칸</span>}
         {creator && (
           <>
+            {dnd?.canDrag && (
+              <button
+                type="button"
+                className="tile__grip"
+                aria-label="끌어서 자리 옮기기"
+                title="끌어서 다른 칸과 자리 바꾸기"
+                draggable
+                onDragStart={dnd.onDragStart}
+                onDragEnd={dnd.onDragEnd}
+                onClick={(e) => e.stopPropagation()}
+              >
+                ⠿
+              </button>
+            )}
             <span className="tile__name">{creator.name}</span>
             <span className="tile__platform">{PLATFORM_LABEL[creator.platform]}</span>
             {badge && <span className="badge badge--host">{badge}</span>}

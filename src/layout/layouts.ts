@@ -11,6 +11,20 @@ export function visibleCount(state: Pick<ViewState, 'layout'>): number {
   return SLOT_COUNT[state.layout];
 }
 
+/**
+ * 칸마다 플레이어 키: 칸 번호가 아니라 방송(같은 방송이 여럿이면 순번)으로 정한다.
+ * 칸 자리를 바꿔도 키가 그대로라 플레이어(iframe)를 다시 만들지 않는다.
+ */
+export function playerKeys(slots: ViewState['slots']): (string | null)[] {
+  const seen = new Map<string, number>();
+  return slots.map((c) => {
+    if (!c) return null;
+    const n = seen.get(c.key) ?? 0;
+    seen.set(c.key, n + 1);
+    return `${c.key}#${n}`;
+  });
+}
+
 export function visibleSlots(state: ViewState): (ViewState['slots'][number])[] {
   return state.slots.slice(0, visibleCount(state));
 }

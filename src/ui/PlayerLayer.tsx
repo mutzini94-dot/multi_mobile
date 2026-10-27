@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react';
 import type { Creator, ViewState } from '../domain/types';
-import { visibleCount } from '../layout/layouts';
+import { playerKeys, visibleCount } from '../layout/layouts';
 import { StreamPlayer } from '../players/StreamPlayer';
 import type { PlayerHandle } from '../players/types';
 
@@ -15,7 +15,7 @@ interface Props {
   state: ViewState;
   stageRef: RefObject<HTMLElement>;
   slotEls: MutableRefObject<(HTMLElement | null)[]>; // 칸마다 플레이어가 놓일 자리(Tile의 .tile__player)
-  onReady(slot: number, creator: Creator, h: PlayerHandle): void;
+  onReady(playerKey: string, h: PlayerHandle): void; // playerKey: layouts.playerKeys
   dragging?: boolean; // 칸 경계를 드래그하는 동안: iframe이 포인터를 삼키지 않게 한다
   onSelectSlot?(slot: number): void; // 영상(iframe)을 클릭했을 때
   focused?: number | null; // 전체 화면으로 보는 칸
@@ -87,20 +87,24 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
 
   return (
     <div className={`player-layer${dragging ? ' player-layer--dragging' : ''}`}>
-      {state.slots.map((creator, slot) => {
-        if (!creator) return null;
+      {/* 키 순서로 고정해 그린다: 칸 자리를 바꿔도 iframe이 문서 안에서 옮겨지지 않아 다시 로딩되지 않는다 */}
+      {playerKeys(state.slots)
+        .map((key, slot) => ({ key, slot, creator: state.slots[slot] }))
+        .filter((p): p is { key: string; slot: number; creator: Creator } => !!p.key && !!p.creator)
+        .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+        .map(({ key, slot, creator }) => {
         // 레이아웃에서 빠진 칸: 지우지 않고 숨겨 둔다 (다시 칸을 늘리면 다시 불러오지 않고 보인다)
         const offscreen = slot >= visibleCount(state);
         const r = (!offscreen && rects[slot]) || { left: 0, top: 0, width: 0, height: 0 };
         return (
           <div
-            key={`${slot}:${creator.key}`}
+            key={key}
             className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}`}
             data-slot={slot}
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
-            <StreamPlayer creator={creator} onReady={(h) => onReady(slot, creator, h)} />
+            <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} />
             {/* 선택 강조: iframe 위에 겹쳐 그려야 영상에 가려지지 않는다 (클릭은 통과) */}
             {state.selected === slot && <span className="player-layer__highlight" aria-hidden="true" />}
           </div>

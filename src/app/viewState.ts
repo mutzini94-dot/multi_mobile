@@ -14,6 +14,7 @@ export type ViewAction =
   | { type: 'assign'; slot: number; creator: Creator }
   | { type: 'clear'; slot: number }
   | { type: 'select'; slot: number }
+  | { type: 'swap'; from: number; to: number } // 칸 자리 바꾸기 (빈 칸이면 옮기기)
   | { type: 'toggleSound' }
   | { type: 'setSizes'; group: string; sizes: number[] }
   | { type: 'replace'; state: ViewState };
@@ -40,6 +41,14 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
     case 'select':
       if (!inRange(state, action.slot) || !state.slots[action.slot]) return state;
       return { ...state, selected: action.slot, soundOn: true };
+    case 'swap': {
+      if (!inRange(state, action.from) || !inRange(state, action.to) || action.from === action.to) return state;
+      const slots = state.slots.slice();
+      [slots[action.from], slots[action.to]] = [slots[action.to], slots[action.from]];
+      // 선택은 방송을 따라간다
+      const selected = state.selected === action.from ? action.to : state.selected === action.to ? action.from : state.selected;
+      return { ...state, slots, selected };
+    }
     case 'toggleSound':
       return { ...state, soundOn: !state.soundOn };
     case 'setSizes':

@@ -23,7 +23,7 @@ import { FavoritesPicker } from '../ui/FavoritesPicker';
 import { Gnb, type GnbJoint } from '../ui/Gnb';
 import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
-import { visibleCount } from '../layout/layouts';
+import { playerKeys, visibleCount } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
@@ -80,18 +80,18 @@ export function App(props: Props) {
   const popupRef = useRef<Window | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slotEls = useRef<(HTMLElement | null)[]>([]);
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging] = useState(false); // 칸 경계 크기 조절 중
+  // 칸 끌어서 자리 옮기기: 끄는 칸과, 지금 놓으려는 칸
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dropOver, setDropOver] = useState<number | null>(null);
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 합방 링크에는 담지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
   const focusEl = useRef<HTMLDivElement>(null);
 
-  // 플레이어 핸들: 칸 번호 + 크리에이터 키로 구분해, 칸 내용이 바뀌면 이전 핸들을 버린다
+  // 플레이어 핸들: 플레이어 키(방송 기준, layouts.playerKeys)로 보관해 칸 자리를 바꿔도 그대로 쓴다
   const [handles, setHandles] = useState<Record<string, PlayerHandle>>({});
-  const handleKey = (slot: number, c: Creator) => `${slot}:${c.key}`;
-  const handleList = useMemo(
-    () => state.slots.map((c, i) => (c ? handles[handleKey(i, c)] ?? null : null)),
-    [state.slots, handles],
-  );
+  const keys = useMemo(() => playerKeys(state.slots), [state.slots]);
+  const handleList = useMemo(() => keys.map((k) => (k ? handles[k] ?? null : null)), [keys, handles]);
   useAudioFocus(handleList, state.selected, state.soundOn);
 
   const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
@@ -279,13 +279,42 @@ export function App(props: Props) {
                   }}
                   locked={!!viewer || (!!hosting && slot === 0)}
                   badge={hostSlot && creator ? '호스트' : undefined}
+                  dnd={{
+                    // 합방 중에는 1번 호스트 칸은 고정
+                    canDrag: !!creator && !hostSlot,
+                    canDrop: dragFrom !== null && dragFrom !== slot && !hostSlot,
+                    over: dropOver === slot,
+                    onDragStart: (e) => {
+                      e.dataTransfer.setData('text/x-mv-slot', String(slot));
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDragFrom(slot);
+                    },
+                    onDragEnd: () => {
+                      setDragFrom(null);
+                      setDropOver(null);
+                    },
+                    onDragOver: (e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dropOver !== slot) setDropOver(slot);
+                    },
+                    onDragLeave: () => setDropOver((o) => (o === slot ? null : o)),
+                    onDrop: (e) => {
+                      e.preventDefault();
+                      const from = dragFrom ?? Number(e.dataTransfer.getData('text/x-mv-slot'));
+                      if (Number.isInteger(from)) dispatch({ type: 'swap', from, to: slot });
+                      setDragFrom(null);
+                      setDropOver(null);
+                    },
+                  }}
                   onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
                   onRemove={
                     creator
                       ? () => {
                           dispatch({ type: 'clear', slot });
                           // 지운 칸의 플레이어 핸들도 버린다
-                          setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith(`${slot}:`))));
+                          const k = keys[slot];
+                          setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([hk]) => hk !== k)));
                         }
                       : undefined
                   }
@@ -322,8 +351,8 @@ export function App(props: Props) {
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}
             stageRef={stageRef}
             slotEls={slotEls}
-            dragging={dragging}
-            onReady={(slot, creator, h) => setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
+            dragging={dragging || dragFrom !== null}
+            onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
           />
         </div>
       </div>
