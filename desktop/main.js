@@ -327,20 +327,30 @@ function runSmoke(outDir) {
               status: await window.multiviewDesktop.status() }))()`,
         )
         .catch((e) => ({ error: String(e) }));
-      const img = await win.webContents.capturePage();
+      // 캡처 실패(UnknownVizError 등)로 점검 결과까지 잃지 않도록
+      const shot = async (wc, file) => {
+        try {
+          fs.writeFileSync(path.join(outDir, file), (await wc.capturePage()).toPNG());
+        } catch (e) {
+          result[`${file}Error`] = String(e);
+        }
+      };
       fs.mkdirSync(outDir, { recursive: true });
       result.windowFullScreen = win.isFullScreen();
-      fs.writeFileSync(path.join(outDir, 'smoke.png'), img.toPNG());
+      result.windowAlwaysOnTop = win.isAlwaysOnTop();
+      result.theme = await win.webContents.executeJavaScript('document.documentElement.dataset.theme || null').catch(() => null);
+      await shot(win.webContents, 'smoke.png');
       result.donate = donate.state();
       const dv = donate.view();
       if (dv) {
         result.donate.bounds = dv.getBounds();
         result.donate.url = dv.webContents.getURL();
-        fs.writeFileSync(path.join(outDir, 'donate.png'), (await dv.webContents.capturePage()).toPNG());
+        result.donate.inputs = await dv.webContents.executeJavaScript("[...document.querySelectorAll('input[type=text]')].map((i) => i.value)").catch(() => null);
+        await shot(dv.webContents, 'donate.png');
       }
       if (pipWin && !pipWin.isDestroyed()) {
-        result.pip = { bounds: pipWin.getBounds(), alwaysOnTop: pipWin.isAlwaysOnTop() };
-        fs.writeFileSync(path.join(outDir, 'pip.png'), (await pipWin.webContents.capturePage()).toPNG());
+        result.pip = { bounds: pipWin.getBounds(), alwaysOnTop: pipWin.isAlwaysOnTop(), chips: await pipWin.webContents.executeJavaScript("[...document.querySelectorAll('#amounts button')].map((b) => b.textContent)").catch(() => null) };
+        await shot(pipWin.webContents, 'pip.png');
       }
       fs.writeFileSync(path.join(outDir, 'smoke.json'), JSON.stringify(result, null, 2));
       app.quit();

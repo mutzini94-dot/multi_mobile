@@ -1,7 +1,7 @@
 {
   "name": "multiview-desktop",
   "productName": "멀티뷰 후원",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "유튜브·트위치 방송을 여러 개 동시에 보며 투네이션으로 후원하는 설치형 멀티뷰",
   "main": "main.js",
   "author": "Toonation",
