@@ -7,6 +7,8 @@ import type { PlayerHandle } from '../players/types';
 import { useAudioFocus } from '../players/useAudioFocus';
 import { buildShareUrl, decodeShare } from '../share/shareLink';
 import { createBridge, type ToonationBridge } from '../toonation/bridge';
+import { desktopBridge, getDesktopApi, type DesktopApi } from '../desktop/desktopApi';
+import { DonatePanel } from '../ui/DonatePanel';
 import { useToonation } from '../toonation/useToonation';
 import { ToonationSection } from '../ui/ToonationSection';
 import { safeStorage, type KV } from '../storage/safeStorage';
@@ -26,6 +28,7 @@ interface Props {
   kv?: KV;
   win?: AppWindow;
   bridge?: ToonationBridge;
+  desktop?: DesktopApi | null; // 설치형 앱의 window.multiviewDesktop (없으면 웹 방식)
 }
 
 const POPUP_POLL_MS = 1000;
@@ -42,7 +45,11 @@ export function App(props: Props) {
   const win = props.win ?? window;
   const kv = useMemo(() => props.kv ?? safeStorage(readStorage()), [props.kv]);
   const favorites = useMemo(() => props.favorites ?? localFavorites(kv), [props.favorites, kv]);
-  const bridge = useMemo(() => props.bridge ?? createBridge(window), [props.bridge]);
+  const desktop = useMemo(() => (props.desktop !== undefined ? props.desktop : getDesktopApi(window)), [props.desktop]);
+  const bridge = useMemo(
+    () => props.bridge ?? (desktop ? desktopBridge(desktop) : createBridge(window)),
+    [props.bridge, desktop],
+  );
   const toonation = useToonation(bridge);
 
   // 합방 링크로 열렸으면 그 구성으로 시작하고, 원래 구성을 보관한다
@@ -75,12 +82,16 @@ export function App(props: Props) {
 
   const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
 
-  // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다
+  // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
   useEffect(() => {
-    if (!popupCreator) return;
+    if (!desktop) return;
+    return desktop.onDonateClosed(() => setPopupClosed(true));
+  }, [desktop]);
+  useEffect(() => {
+    if (!popupCreator || desktop) return;
     const id = setInterval(() => setPopupClosed(!popupRef.current || popupRef.current.closed), POPUP_POLL_MS);
     return () => clearInterval(id);
-  }, [popupCreator]);
+  }, [popupCreator, desktop]);
 
   // 불러오기 창을 열 때 투네이션 즐겨찾기를 (아직 없으면) 불러온다
   const { refresh: refreshToonation } = toonation;
@@ -94,6 +105,14 @@ export function App(props: Props) {
 
   const openPopup = useCallback(
     (c: Creator) => {
+      if (desktop) {
+        // 설치형: 창 오른쪽 후원 패널 (로그인한 세션으로 열린다)
+        desktop.openDonate({ tag: c.donateId, name: c.name });
+        setPopupCreator(c);
+        setPopupClosed(false);
+        setMessage(null);
+        return;
+      }
       const popup = openDonationPopup(c, win);
       if (!popup) {
         setMessage('팝업이 차단되었습니다. 팝업을 허용해 주세요');
@@ -104,8 +123,9 @@ export function App(props: Props) {
       setPopupClosed(false);
       setMessage(null);
     },
-    [win],
+    [win, desktop],
   );
+  const panelCreator = desktop && popupCreator && !popupClosed ? popupCreator : null;
 
   const onDonate = () => {
     if (!selectedCreator) return;
@@ -134,36 +154,48 @@ export function App(props: Props) {
         sharedMode={!!boot.shared}
         onRestore={() => boot.shared && dispatch({ type: 'replace', state: boot.shared })}
       />
-      <div className="stage" ref={stageRef}>
-        <TileGrid
-          state={state}
-          onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
-          onDragging={setDragging}
-          renderTile={(slot) => {
-            const creator = state.slots[slot] ?? null;
-            return (
-              <Tile
-                creator={creator}
-                selected={state.selected === slot}
-                soundOn={state.soundOn}
-                onSelect={() => dispatch({ type: 'select', slot })}
-                onLoad={() => setPickerSlot(slot)}
-                onToggleSound={() => dispatch({ type: 'toggleSound' })}
-                playerSlotRef={(el) => {
-                  slotEls.current[slot] = el;
-                }}
-                onAddFavorite={() => creator && setConfirmingFavorite(creator)}
-              />
-            );
-          }}
-        />
-        <PlayerLayer
-          state={state}
-          stageRef={stageRef}
-          slotEls={slotEls}
-          dragging={dragging}
-          onReady={(slot, creator, h) => setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
-        />
+      <div className="app__body">
+        <div className="stage" ref={stageRef}>
+          <TileGrid
+            state={state}
+            onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
+            onDragging={setDragging}
+            renderTile={(slot) => {
+              const creator = state.slots[slot] ?? null;
+              return (
+                <Tile
+                  creator={creator}
+                  selected={state.selected === slot}
+                  soundOn={state.soundOn}
+                  onSelect={() => dispatch({ type: 'select', slot })}
+                  onLoad={() => setPickerSlot(slot)}
+                  onToggleSound={() => dispatch({ type: 'toggleSound' })}
+                  playerSlotRef={(el) => {
+                    slotEls.current[slot] = el;
+                  }}
+                  onAddFavorite={() => creator && setConfirmingFavorite(creator)}
+                />
+              );
+            }}
+          />
+          <PlayerLayer
+            state={state}
+            stageRef={stageRef}
+            slotEls={slotEls}
+            dragging={dragging}
+            onReady={(slot, creator, h) => setHandles((prev) => ({ ...prev, [handleKey(slot, creator)]: h }))}
+          />
+        </div>
+        {panelCreator && desktop && (
+          <DonatePanel
+            creator={panelCreator}
+            onBounds={(r) => desktop.setDonateBounds(r)}
+            onClose={() => {
+              desktop.closeDonate();
+              setPopupClosed(true);
+            }}
+          />
+        )}
       </div>
       <DonationBar popupCreator={popupClosed ? null : popupCreator} warning={warning} message={message} />
       {pickerSlot !== null && (

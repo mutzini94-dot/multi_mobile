@@ -108,3 +108,10 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 .player-layer__item { position: absolute; pointer-events: auto; overflow: hidden; }
 .tile__bar { z-index: 2; }
 .player-layer--dragging .player-layer__item { pointer-events: none; }
+
+/* 설치형: 창 오른쪽 후원 패널 (후원 페이지는 앱이 .donate-panel__body 자리에 덮어 그린다) */
+.app__body { flex: 1; min-height: 0; display: flex; gap: 8px; }
+.donate-panel { width: 440px; flex: 0 0 440px; display: flex; flex-direction: column; background: var(--surface); border-radius: 8px; overflow: hidden; }
+.donate-panel__head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.donate-panel__title { font-weight: 700; }
+.donate-panel__body { flex: 1; background: #fff; }

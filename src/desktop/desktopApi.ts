@@ -1,0 +1,38 @@
+import type { BridgeRequest, ToonationBridge, ToonationFavorite, ToonationAccount } from '../toonation/bridge';
+
+/** 설치형 앱 응답: 메인 프로세스는 예외 대신 { ok, data | error }로 돌려준다 (IPC 오류 메시지 접두어를 피하기 위해). */
+export type DesktopResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export interface DonateBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** 설치형 앱(multiview/desktop/preload.js)이 window.multiviewDesktop으로 노출하는 기능 */
+export interface DesktopApi {
+  status(): Promise<DesktopResult<{ account: ToonationAccount | null }>>;
+  login(): Promise<DesktopResult<object>>;
+  favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
+  openDonate(target: { tag: string; name: string }): void;
+  closeDonate(): void;
+  setDonateBounds(rect: DonateBounds): void;
+  onDonateClosed(cb: () => void): () => void;
+}
+
+export function getDesktopApi(win: Window): DesktopApi | null {
+  const api = (win as Window & { multiviewDesktop?: DesktopApi }).multiviewDesktop;
+  return api && typeof api.status === 'function' && typeof api.openDonate === 'function' ? api : null;
+}
+
+/** 설치형 앱의 투네이션 기능을 웹의 ToonationBridge 형태로 감싼다. */
+export function desktopBridge(api: DesktopApi): ToonationBridge {
+  return {
+    async request<T>(type: BridgeRequest): Promise<T> {
+      const res = await (type === 'status' ? api.status() : type === 'login' ? api.login() : api.favorites());
+      if (!res || !res.ok) throw new Error(res && !res.ok ? res.error : 'NO_RESPONSE');
+      return res.data as T;
+    },
+  };
+}
