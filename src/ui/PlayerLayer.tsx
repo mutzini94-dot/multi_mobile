@@ -92,12 +92,14 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         return (
           <div
             key={`${slot}:${creator.key}`}
-            className="player-layer__item"
+            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}`}
             data-slot={slot}
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: focused !== null && focused !== slot ? 'hidden' : undefined }}
           >
             <StreamPlayer creator={creator} onReady={(h) => onReady(slot, creator, h)} />
+            {/* 선택 강조: iframe 위에 겹쳐 그려야 영상에 가려지지 않는다 (클릭은 통과) */}
+            {state.selected === slot && <span className="player-layer__highlight" aria-hidden="true" />}
           </div>
         );
       })}

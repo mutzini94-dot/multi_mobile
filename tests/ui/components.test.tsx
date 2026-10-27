@@ -184,3 +184,16 @@ describe('PlayerLayer', () => {
   });
 });
 
+describe('선택 강조', () => {
+  test('선택된 칸의 플레이어에만 강조 표시가 붙는다 (영상 위에 그려 가려지지 않게)', async () => {
+    const { PlayerLayer } = await import('../../src/ui/PlayerLayer');
+    const state = { ...applyLayout(initialViewState, 'split2'), slots: [mkCreator(1), mkCreator(2)], selected: 1 };
+    const { container, rerender } = render(<PlayerLayer state={state} stageRef={{ current: null }} slotEls={{ current: [] }} onReady={noop} />);
+    const items = () => [...container.querySelectorAll('.player-layer__item')];
+    expect(items().map((el) => el.classList.contains('player-layer__item--selected'))).toEqual([false, true]);
+    expect(items()[1].querySelector('.player-layer__highlight')).not.toBeNull();
+    rerender(<PlayerLayer state={{ ...state, selected: null }} stageRef={{ current: null }} slotEls={{ current: [] }} onReady={noop} />);
+    expect(container.querySelector('.player-layer__item--selected')).toBeNull();
+  });
+});
+
