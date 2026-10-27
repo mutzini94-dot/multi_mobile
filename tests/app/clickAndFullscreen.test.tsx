@@ -125,3 +125,30 @@ describe('칸 전체 화면', () => {
     expect(document.querySelector('.app')).not.toHaveClass('app--focus');
   });
 });
+
+describe('방송 삭제', () => {
+  test('방송이 있는 칸에만 삭제 버튼이 있고, 누르면 칸이 비고 플레이어도 사라진다', () => {
+    setup();
+    expect(within(tiles()[2] as HTMLElement).queryByRole('button', { name: '방송 삭제' })).toBeNull();
+    fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '방송 삭제' }));
+    expect(within(tiles()[1] as HTMLElement).queryByText('B')).toBeNull();
+    expect(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' })).toBeInTheDocument();
+    expect(screen.queryByTitle('player-twitch:chan_2')).toBeNull();
+    expect(iframe('twitch:chan_1')).toBeInTheDocument();
+  });
+
+  test('선택된 칸을 지우면 선택이 풀리고 후원하기가 비활성된다', () => {
+    setup();
+    fireEvent.click(within(tiles()[0] as HTMLElement).getByText('A'));
+    expect(screen.getByRole('button', { name: '후원하기' })).toBeEnabled();
+    fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '방송 삭제' }));
+    expect(screen.getByRole('button', { name: '후원하기' })).toBeDisabled();
+  });
+
+  test('삭제 버튼을 눌러도 칸 선택이 바뀌지 않는다', () => {
+    setup();
+    fireEvent.click(within(tiles()[0] as HTMLElement).getByText('A'));
+    fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '방송 삭제' }));
+    expect(tiles()[0]).toHaveClass('tile--selected');
+  });
+});

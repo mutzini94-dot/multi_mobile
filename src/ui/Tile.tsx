@@ -10,11 +10,12 @@ interface Props {
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onAddFavorite(): void;
   onFullscreen?(): void;
+  onRemove?(): void; // 불러온 방송을 칸에서 지운다
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onAddFavorite, onFullscreen }: Props) {
+export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onAddFavorite, onFullscreen, onRemove }: Props) {
   const audible = selected && soundOn;
   return (
     <div className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}`}>
@@ -75,6 +76,20 @@ export function Tile({ creator, selected, soundOn, onSelect, onLoad, onToggleSou
                 }}
               >
                 ⛶
+              </button>
+            )}
+            {onRemove && (
+              <button
+                type="button"
+                className="sound sound--remove"
+                aria-label="방송 삭제"
+                title="방송 삭제"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+              >
+                ✕
               </button>
             )}
           </>

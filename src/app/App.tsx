@@ -206,6 +206,15 @@ export function App(props: Props) {
                   }}
                   onAddFavorite={() => creator && setConfirmingFavorite(creator)}
                   onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
+                  onRemove={
+                    creator
+                      ? () => {
+                          dispatch({ type: 'clear', slot });
+                          // 지운 칸의 플레이어 핸들도 버린다
+                          setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith(`${slot}:`))));
+                        }
+                      : undefined
+                  }
                 />
               );
             }}
