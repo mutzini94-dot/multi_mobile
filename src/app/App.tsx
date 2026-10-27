@@ -25,6 +25,8 @@ import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
 import { playerKeys, visibleCount } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
+import { loadLastView, saveLastView } from './lastView';
+import { applyLayout } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { useTileDrag } from './useTileDrag';
@@ -83,7 +85,19 @@ export function App(props: Props) {
     return { joint, error: joint ? null : '합방 URL이 올바르지 않습니다' };
   });
   const viewer = boot.joint;
-  const [state, dispatch] = useReducer(viewReducer, boot.joint?.state ?? initialViewState);
+  // 시작 화면: 합방 URL > 마지막 화면 복원(설정) > 기본 레이아웃(설정)
+  const [state, dispatch] = useReducer(
+    viewReducer,
+    null,
+    () =>
+      boot.joint?.state ??
+      (settings.restoreLastView ? loadLastView(kv) : null) ??
+      applyLayout(initialViewState, settings.defaultLayout),
+  );
+  // 화면이 바뀔 때마다 저장 (합방 시청 화면은 남의 구성이라 저장하지 않는다)
+  useEffect(() => {
+    if (!viewer) saveLastView(kv, state);
+  }, [kv, state, viewer]);
   const [message, setMessage] = useState<string | null>(boot.error);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<Creator | null>(null);
@@ -128,6 +142,8 @@ export function App(props: Props) {
   useAudioFocus(handleList, state.selected, state.soundOn);
 
   const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
+  const stateRef = useRef(state);
+  stateRef.current = state;
   // 후원 대상: 합방 시청 화면에서는 어느 칸을 골랐든 호스트, 그 밖에는 선택한 방송
   const donateTarget = viewer ? viewer.host : selectedCreator;
 
@@ -190,6 +206,27 @@ export function App(props: Props) {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
 
+  // 단축키: 1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원하기 (입력 중이거나 창이 열려 있으면 무시)
+  const keyActions = useRef({ onDonate: () => {}, fullscreen: (_slot: number) => {} });
+  useEffect(() => {
+    if (!settings.shortcuts) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      const k = e.key.toLowerCase();
+      if (/^[1-4]$/.test(k)) dispatch({ type: 'select', slot: Number(k) - 1 });
+      else if (k === 'm') dispatch({ type: 'toggleSound' });
+      else if (k === 'd') keyActions.current.onDonate();
+      else if (k === 'f' && stateRef.current.selected !== null) keyActions.current.fullscreen(stateRef.current.selected);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [settings.shortcuts]);
+
   const warning = donationWarning(popupCreator, popupClosed, donateTarget);
 
   const openPopup = useCallback(
@@ -231,6 +268,8 @@ export function App(props: Props) {
     if (needsConfirm(donateTarget, kv)) setConfirming(donateTarget);
     else openPopup(donateTarget);
   };
+
+  keyActions.current = { onDonate, fullscreen: enterFullscreen };
 
   // ---------- 합동 방송 (호스트) ----------
   const beginHosting = (host: Creator) => {
@@ -384,7 +423,8 @@ export function App(props: Props) {
             focusEl={focusEl}
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}
             // 합방 중 호스트 칸(1번)은 눌러도 선택만
-            onGrab={(slot, e) => tileDrag.start(slot, e, { canDrag: !((!!viewer || !!hosting) && slot === 0) })}
+            // 영상 클릭 설정이 '플레이어'면 영상 위 잡는 층을 깔지 않는다 (클릭이 플레이어로 간다)
+            onGrab={settings.videoClick === 'select' ? (slot, e) => tileDrag.start(slot, e, { canDrag: !((!!viewer || !!hosting) && slot === 0) }) : undefined}
             stageRef={stageRef}
             slotEls={slotEls}
             dragging={dragging || tileDrag.drag !== null}

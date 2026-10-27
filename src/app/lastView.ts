@@ -1,0 +1,39 @@
+import { makeCreator, type CreatorInput } from '../domain/creatorInput';
+import type { Creator, LayoutKind, ViewState } from '../domain/types';
+import { MAX_SLOTS, SLOT_COUNT } from '../layout/layouts';
+import type { KV } from '../storage/safeStorage';
+
+/** 마지막 화면(레이아웃·칸·칸 크기): 다음 실행에서 복원 (설정: 시작할 때 마지막 화면 복원) */
+export const LAST_VIEW_KEY = 'mv.lastView.v1';
+
+type SavedSlot = (CreatorInput & { source: Creator['source'] }) | null;
+
+export function saveLastView(kv: KV, state: ViewState): void {
+  const slots: SavedSlot[] = state.slots.map((c) => (c ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel, source: c.source } : null));
+  kv.set(LAST_VIEW_KEY, JSON.stringify({ v: 1, layout: state.layout, sizes: state.sizes, slots }));
+}
+
+export function loadLastView(kv: KV): ViewState | null {
+  try {
+    const raw = JSON.parse(kv.get(LAST_VIEW_KEY) ?? 'null');
+    if (!raw || raw.v !== 1 || !Object.prototype.hasOwnProperty.call(SLOT_COUNT, raw.layout) || !Array.isArray(raw.slots)) return null;
+    const slots: (Creator | null)[] = [];
+    for (let i = 0; i < MAX_SLOTS; i++) {
+      const s = raw.slots[i];
+      if (!s || typeof s !== 'object') {
+        slots.push(null);
+        continue;
+      }
+      const source: Creator['source'] = s.source === 'toonation' || s.source === 'link' ? s.source : 'manual';
+      const r = makeCreator(s, source);
+      slots.push(r.ok ? r.value : null);
+    }
+    const sizes =
+      raw.sizes && typeof raw.sizes === 'object' && !Array.isArray(raw.sizes)
+        ? Object.fromEntries(Object.entries(raw.sizes as Record<string, unknown>).filter(([k, v]) => k !== '__proto__' && Array.isArray(v) && v.every((n) => typeof n === 'number' && Number.isFinite(n)))) as Record<string, number[]>
+        : {};
+    return { layout: raw.layout as LayoutKind, slots, sizes, selected: null, soundOn: true };
+  } catch {
+    return null;
+  }
+}
