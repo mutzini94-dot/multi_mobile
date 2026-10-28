@@ -85,6 +85,7 @@ export function SettingsDialog(p: Props) {
   const s = p.settings;
   const [list, setList] = useState(() => p.favorites.list());
   const [amountText, setAmountText] = useState(formatAmounts(s.quickAmounts));
+  const [limitText, setLimitText] = useState(s.monthlyLimit ? s.monthlyLimit.toLocaleString('ko-KR') : '0');
   const [base, setBase] = useState(p.publicBase);
   const [baseError, setBaseError] = useState<string | null>(null);
   const [favMessage, setFavMessage] = useState<string | null>(null);
@@ -212,6 +213,25 @@ export function SettingsDialog(p: Props) {
             onChange={(v) => p.onChange({ liveRefreshMinutes: v })}
           />
           <Toggle label="즐겨찾기 방송 시작 알림" checked={s.liveNotify} onChange={(v) => p.onChange({ liveNotify: v })} hint="라이브 자동 갱신이 켜져 있어야 합니다" />
+          <label className="settings__row">
+            <span>
+              월 후원 한도
+              <small className="muted">이번 달 후원 합계가 한도에 이르면 후원 전에 한 번 더 확인합니다 (0이면 끔)</small>
+            </span>
+            <input
+              aria-label="월 후원 한도"
+              inputMode="numeric"
+              value={limitText}
+              placeholder="예: 50,000"
+              onChange={(e) => setLimitText(e.target.value)}
+              onBlur={() => {
+                const n = Number(limitText.replace(/[,\s원]/g, ''));
+                const v = Number.isInteger(n) && n >= 0 && n <= 100_000_000 ? n : 0;
+                p.onChange({ monthlyLimit: v });
+                setLimitText(v ? v.toLocaleString('ko-KR') : '0');
+              }}
+            />
+          </label>
           <div className="settings__row">
             <span>{p.toonationAccount ? `${p.toonationAccount} 님으로 로그인됨` : '로그인하지 않음'}</span>
             {p.toonationAccount && (

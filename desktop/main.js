@@ -358,7 +358,7 @@ function wireIpc() {
     },
   });
   const fromWin = (e) => win && e.sender === win.webContents;
-  for (const name of ['status', 'login', 'logout', 'favorites']) {
+  for (const name of ['status', 'login', 'logout', 'favorites', 'history']) {
     ipcMain.handle(`mv:${name}`, (e) => (fromWin(e) ? handlers[name]() : { ok: false, error: 'FORBIDDEN' }));
   }
   const fromPip = (e) => pipWin && !pipWin.isDestroyed() && e.sender === pipWin.webContents;

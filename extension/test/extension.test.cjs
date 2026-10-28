@@ -51,7 +51,12 @@ function loadBackground(world) {
   const html = (s) => ({ ok: true, status: 200, url: '', text: async () => s, clone() { return this; } });
   const fetch = async (url) => {
     world.fetched.push(String(url));
-    if (url.includes('/dapi/donator/common')) return json({ Account: world.loggedIn ? { DisplayName: '나', TitleHash: 'h' } : null });
+    if (url.includes('/dapi/donator/common')) return json({ Account: world.loggedIn ? { DisplayName: '나', TitleHash: 'h', Cash: 1200 } : null });
+    if (url.includes('/dapi/donator/mypage/donation_history')) {
+      if (!world.loggedIn) return html('<html>login</html>');
+      const page = Number(new URL(url).searchParams.get('page'));
+      return json({ Data: world.history[page - 1] || [], PageInfo: { PageCount: world.history.length } });
+    }
     if (url.includes('/dapi/donator/favorites/')) {
       if (!world.loggedIn) return html('<html>login</html>');
       return json({ list: world.favorites, PageInfo: { PageCount: 1 } });
@@ -76,7 +81,7 @@ function loadBackground(world) {
   return { send, rules, tabsCreated, removed };
 }
 
-const world = (o = {}) => ({ loggedIn: false, favorites: [], fetched: [], twitchLive: false, ...o });
+const world = (o = {}) => ({ loggedIn: false, favorites: [], fetched: [], twitchLive: false, history: [], ...o });
 
 test('status: 로그아웃 상태', async () => {
   const { send } = loadBackground(world());
@@ -118,6 +123,21 @@ test('favorites: 라이브 중인 채널에 제목·시청자 수를 붙인다',
 test('favorites: 로그아웃이면 NOT_LOGGED_IN', async () => {
   const { send } = loadBackground(world());
   assert.deepStrictEqual(await send({ type: 'favorites' }), { ok: false, error: 'NOT_LOGGED_IN' });
+});
+
+test('history: 후원 내역을 모아 필요한 필드만 (Time은 KST 문자열)', async () => {
+  const recent = new Date(Date.now() - 86400000).toISOString().slice(0, 19).replace('T', ' ');
+  const w = world({ loggedIn: true, history: [[{ Time: recent, LinkTag: 'tg', StreamerName: '스트리머', Cash: '3000', Message: '비밀', Name: '나' }], [{ Time: '2020-01-01 00:00:00', LinkTag: 'old', StreamerName: '옛날', Cash: 1 }]] });
+  const { send } = loadBackground(w);
+  const r = await send({ type: 'history' });
+  assert.strictEqual(r.ok, true);
+  assert.deepStrictEqual(r.data.map(({ tag, creator, cash }) => ({ tag, creator, cash })), [{ tag: 'tg', creator: '스트리머', cash: 3000 }]);
+  assert.ok(r.data[0].at > 0);
+});
+
+test('status: 캐시 잔액을 함께', async () => {
+  const { send } = loadBackground(world({ loggedIn: true }));
+  assert.deepStrictEqual((await send({ type: 'status' })).data.account.cash, 1200);
 });
 
 test('login: 공식 로그인 창을 연다', async () => {

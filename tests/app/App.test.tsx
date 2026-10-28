@@ -120,9 +120,11 @@ describe('투네이션 즐겨찾기 연동', () => {
     render(<App favorites={localFavorites(kv)} kv={kv} bridge={b} win={{ open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator }} />);
     fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
     await screen.findByRole('button', { name: /^투네A · Twitch/ });
+    const favCalls = () => vi.mocked(b.request).mock.calls.filter(([t]) => t === 'favorites').length;
+    const before = favCalls(); // 시작할 때 로그인 확인으로 이미 한 번 가져왔을 수 있다
     fireEvent.click(screen.getByRole('button', { name: '닫기' }));
     fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' }));
     await screen.findByRole('button', { name: /^투네A · Twitch/ });
-    expect(vi.mocked(b.request).mock.calls.filter(([t]) => t === 'favorites')).toHaveLength(2);
+    await vi.waitFor(() => expect(favCalls()).toBe(before + 1));
   });
 });

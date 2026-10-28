@@ -12,9 +12,10 @@ export interface ToonationFavorite {
 export interface ToonationAccount {
   name: string;
   profile?: string;
+  cash?: number | null; // 캐시 잔액
 }
 
-export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites';
+export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites' | 'history';
 
 export interface ToonationBridge {
   request<T = unknown>(type: BridgeRequest): Promise<T>;

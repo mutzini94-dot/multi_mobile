@@ -38,6 +38,8 @@ import { applyLayout } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { PresetsDialog } from '../ui/PresetsDialog';
+import { HistoryDialog } from '../ui/HistoryDialog';
+import { monthTotal, type DonationRecord } from '../toonation/history';
 import { useTileDrag } from './useTileDrag';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
@@ -89,6 +91,8 @@ export function App(props: Props) {
   const [settings, updateSettings] = useSettings(kv);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [limitAsk, setLimitAsk] = useState<{ creator: Creator; total: number } | null>(null);
 
   // 테마: 시스템을 따르거나 라이트·다크로 고정
   useEffect(() => {
@@ -279,6 +283,23 @@ export function App(props: Props) {
     if (patch.liveNotify && N?.permission === 'default') Promise.resolve(N.requestPermission()).catch(() => {});
     updateSettings(patch);
   };
+  // 시작할 때 로그인 상태(캐시 잔액)를 확인한다
+  useEffect(() => {
+    if (toonStatus === 'idle' && !viewer) refreshToonation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // 내 후원 내역 (월 후원 한도 확인에도 쓴다). 로그인되면 미리 불러 두고, 후원창을 닫으면 다시 불러온다
+  const [history, setHistory] = useState<DonationRecord[] | null>(null);
+  const loggedIn = !!toonation.state.account;
+  const loadHistory = useCallback(async () => {
+    const list = await bridge.request<DonationRecord[]>('history');
+    const clean = Array.isArray(list) ? list.filter((i) => i && Number.isFinite(i.at) && Number.isFinite(i.cash)) : [];
+    setHistory(clean);
+    return clean;
+  }, [bridge]);
+  useEffect(() => {
+    if (loggedIn && settings.monthlyLimit > 0) loadHistory().catch(() => {});
+  }, [loggedIn, settings.monthlyLimit, popupClosed, loadHistory]);
   // 설정 창을 열 때도 로그인 상태를 확인한다 (로그아웃 버튼)
   useEffect(() => {
     if (settingsOpen && toonStatus !== 'waiting-login') refreshToonation();
@@ -423,7 +444,13 @@ export function App(props: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [desktopDonate, donateMode, closeDesktopDonate]);
 
-  const donateTo = (c: Creator) => {
+  const donateTo = (c: Creator, checkLimit = true) => {
+    // 월 후원 한도: 미리 불러 둔 이번 달 합계로 바로 판단한다 (웹 팝업은 클릭 순간에 열어야 막히지 않는다)
+    const total = history ? monthTotal(history, Date.now()) : 0;
+    if (checkLimit && settings.monthlyLimit > 0 && total >= settings.monthlyLimit) {
+      setLimitAsk({ creator: c, total });
+      return;
+    }
     if (needsConfirm(c, kv)) setConfirming(c);
     else openPopup(c);
   };
@@ -582,6 +609,7 @@ export function App(props: Props) {
         joint={gnbJoint}
         onSettings={() => setSettingsOpen(true)}
         onPresets={viewer || hosting ? undefined : () => setPresetsOpen(true)}
+        account={toonation.state.account && !viewer ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
       <div className="app__body">
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
@@ -783,6 +811,42 @@ export function App(props: Props) {
             }}
           />
         </FavoritesPicker>
+      )}
+      {historyOpen && (
+        <HistoryDialog
+          load={loadHistory}
+          cash={typeof toonation.state.account?.cash === 'number' ? toonation.state.account.cash : null}
+          monthlyLimit={settings.monthlyLimit}
+          onCharge={() => win.open('https://toon.at/donator/account/charge', '_blank', 'noopener')}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+      {limitAsk && (
+        <div className="modal-backdrop" onClick={() => setLimitAsk(null)}>
+          <div className="modal" role="dialog" aria-label="후원 한도 확인" onClick={(e) => e.stopPropagation()}>
+            <h2>월 후원 한도</h2>
+            <p>
+              이번 달 후원 {limitAsk.total.toLocaleString('ko-KR')}원으로 한도 {settings.monthlyLimit.toLocaleString('ko-KR')}원에 이르렀습니다. 그래도 {limitAsk.creator.name}에게 후원할까요?
+            </p>
+            <p className="muted">한도는 설정에서 바꿀 수 있습니다.</p>
+            <div className="modal__actions">
+              <button type="button" className="btn btn--ghost" onClick={() => setLimitAsk(null)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="btn btn--donate"
+                onClick={() => {
+                  const c = limitAsk.creator;
+                  setLimitAsk(null);
+                  donateTo(c, false);
+                }}
+              >
+                그래도 후원하기
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {presetsOpen && (
         <PresetsDialog

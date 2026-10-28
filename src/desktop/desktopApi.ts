@@ -16,6 +16,7 @@ export interface DesktopApi {
   login(): Promise<DesktopResult<object>>;
   logout(): Promise<DesktopResult<object>>;
   favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
+  history?(): Promise<DesktopResult<unknown[]>>; // 내 후원 내역 (src/toonation/history.ts DonationRecord)
   /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */
   openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[] }): void;
   closeDonate(): void;
@@ -49,7 +50,9 @@ export function getDesktopApi(win: Window): DesktopApi | null {
 export function desktopBridge(api: DesktopApi): ToonationBridge {
   return {
     async request<T>(type: BridgeRequest): Promise<T> {
-      const res = await (type === 'status' ? api.status() : type === 'login' ? api.login() : type === 'logout' ? api.logout() : api.favorites());
+      const call = { status: api.status, login: api.login, logout: api.logout, favorites: api.favorites, history: api.history }[type];
+      if (!call) throw new Error('NOT_SUPPORTED');
+      const res = await call.call(api);
       if (!res || !res.ok) throw new Error(res && !res.ok ? res.error : 'NO_RESPONSE');
       return res.data as T;
     },

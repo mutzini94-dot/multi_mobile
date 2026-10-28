@@ -2,7 +2,30 @@
 // 웹(window.multiviewDesktop)의 요청 처리. 예외 대신 { ok, data | error }로 돌려준다.
 const { NotLoggedInError } = require('./toonation');
 
-function createHandlers({ client, openLogin, resolveYouTube, checkLive = async () => new Map(), logout = async () => {} }) {
+// 내 후원 내역: 이만큼 지난 내역까지만 모은다 (월별·크리에이터별 합계, 이번 달 한도에 충분)
+const HISTORY_SPAN_MS = 400 * 24 * 60 * 60 * 1000;
+const HISTORY_MAX_PAGES = 20;
+
+/** 여러 쪽에 걸친 후원 내역을 최근 13개월치까지 모은다 (필요한 필드만) */
+async function collectHistory(client, now) {
+  const out = [];
+  for (let page = 1; page <= HISTORY_MAX_PAGES; page++) {
+    const r = await client.getDonationHistory(page);
+    let old = false;
+    for (const i of r.items || []) {
+      if (!(i.at > 0)) continue;
+      if (now - i.at > HISTORY_SPAN_MS) {
+        old = true;
+        continue;
+      }
+      out.push({ at: i.at, tag: String(i.tag || ''), creator: String(i.creator || ''), cash: Number(i.cash) || 0 });
+    }
+    if (old || page >= (r.pageCount || 1) || !(r.items || []).length) break;
+  }
+  return out;
+}
+
+function createHandlers({ client, openLogin, resolveYouTube, checkLive = async () => new Map(), logout = async () => {}, now = () => Date.now() }) {
   const wrap = (fn) => async () => {
     try {
       return { ok: true, data: await fn() };
@@ -13,12 +36,13 @@ function createHandlers({ client, openLogin, resolveYouTube, checkLive = async (
   return {
     status: wrap(async () => {
       const a = await client.getAccount();
-      return { account: a ? { name: a.name, profile: a.profile } : null };
+      return { account: a ? { name: a.name, profile: a.profile, cash: Number.isFinite(Number(a.cash)) && a.cash !== null ? Number(a.cash) : null } : null };
     }),
     login: wrap(async () => {
       openLogin();
       return {};
     }),
+    history: wrap(() => collectHistory(client, now())),
     logout: wrap(async () => {
       await logout();
       return {};
@@ -52,4 +76,4 @@ function createHandlers({ client, openLogin, resolveYouTube, checkLive = async (
   };
 }
 
-module.exports = { createHandlers };
+module.exports = { createHandlers, collectHistory };

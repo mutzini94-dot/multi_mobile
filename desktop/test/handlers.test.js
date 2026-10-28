@@ -16,9 +16,37 @@ function fakeClient({ account = null, favorites = [], fail } = {}) {
   };
 }
 
-test('status: 계정 이름·프로필만', async () => {
-  const h = createHandlers({ client: fakeClient({ account: { name: '나', profile: 'https://p', cash: 1000 } }), openLogin: () => {}, resolveYouTube: async () => '' });
-  assert.deepStrictEqual(await h.status(), { ok: true, data: { account: { name: '나', profile: 'https://p' } } });
+test('status: 계정 이름·프로필·캐시 잔액만', async () => {
+  const h = createHandlers({ client: fakeClient({ account: { name: '나', profile: 'https://p', cash: 1000, raw: { secret: 1 } } }), openLogin: () => {}, resolveYouTube: async () => '' });
+  assert.deepStrictEqual(await h.status(), { ok: true, data: { account: { name: '나', profile: 'https://p', cash: 1000 } } });
+});
+
+test('history: 최근 13개월 후원 내역을 여러 쪽에 걸쳐 모은다 (필요한 필드만)', async () => {
+  const now = Date.UTC(2026, 9, 28);
+  const day = 86400000;
+  const pages = {
+    1: { pageCount: 5, items: [{ at: now - day, tag: 'a', creator: 'A', cash: 1000, type: 1, message: '비밀' }] },
+    2: { pageCount: 5, items: [{ at: now - 30 * day, tag: 'b', creator: 'B', cash: 5000 }] },
+    3: { pageCount: 5, items: [{ at: now - 420 * day, tag: 'c', creator: 'C', cash: 9 }] }, // 13개월보다 오래됨 → 여기서 멈춤
+    4: { pageCount: 5, items: [{ at: now - 500 * day, tag: 'd', creator: 'D', cash: 9 }] },
+  };
+  const asked = [];
+  const client = { ...fakeClient(), getDonationHistory: async (p) => (asked.push(p), { page: p, ...pages[p] }) };
+  const h = createHandlers({ client, openLogin: () => {}, resolveYouTube: async () => '', now: () => now });
+  assert.deepStrictEqual(await h.history(), {
+    ok: true,
+    data: [
+      { at: now - day, tag: 'a', creator: 'A', cash: 1000 },
+      { at: now - 30 * day, tag: 'b', creator: 'B', cash: 5000 },
+    ],
+  });
+  assert.deepStrictEqual(asked, [1, 2, 3]);
+});
+
+test('history: 로그아웃이면 NOT_LOGGED_IN', async () => {
+  const client = { ...fakeClient(), getDonationHistory: async () => { throw new NotLoggedInError(); } };
+  const h = createHandlers({ client, openLogin: () => {}, resolveYouTube: async () => '' });
+  assert.deepStrictEqual(await h.history(), { ok: false, error: 'NOT_LOGGED_IN' });
 });
 
 test('status: 로그아웃이면 account null', async () => {

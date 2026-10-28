@@ -11,6 +11,8 @@ test('기본값', () => {
     hiddenSlotPlayback: 'keep',
     lowQualityOthers: false,
     autoReplaceEnded: false,
+    quickMessages: [],
+    monthlyLimit: 0,
     videoClick: 'select',
     soundMode: 'single',
     masterVolume: 100,

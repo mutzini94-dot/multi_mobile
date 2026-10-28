@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   login: () => ipcRenderer.invoke('mv:login'),
   logout: () => ipcRenderer.invoke('mv:logout'),
   favorites: () => ipcRenderer.invoke('mv:favorites'),
+  history: () => ipcRenderer.invoke('mv:history'),
   openDonate: (t) =>
     ipcRenderer.send('mv:donate:open', {
       tag: String(t && t.tag),

@@ -28,9 +28,10 @@ interface Props {
   joint: GnbJoint;
   onSettings?(): void;
   onPresets?(): void; // 화면 구성 저장·불러오기 (합방 중·시청 화면에서는 없음)
+  account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings, onPresets }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings, onPresets, account }: Props) {
   return (
     <header className="gnb">
       {joint.kind === 'viewer' ? (
@@ -103,6 +104,17 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings, 
       {onSettings && (
         <button type="button" className="btn btn--icon gnb__settings" aria-label="설정" title="설정" onClick={onSettings}>
           ⚙
+        </button>
+      )}
+      {account && (
+        <button
+          type="button"
+          className="btn btn--ghost gnb__cash"
+          aria-label={account.cash === null ? '내 후원 내역' : `내 후원 내역 · 캐시 ${account.cash.toLocaleString('ko-KR')}`}
+          title="내 후원 내역"
+          onClick={account.onHistory}
+        >
+          {account.cash === null ? '후원 내역' : `캐시 ${account.cash.toLocaleString('ko-KR')}`}
         </button>
       )}
       <button type="button" className="btn btn--donate" disabled={!canDonate} onClick={onDonate}>

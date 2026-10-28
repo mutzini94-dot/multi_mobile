@@ -378,3 +378,19 @@ button:disabled { cursor: not-allowed; }
 .ended-notice strong { font-size: 15px; }
 .ended-notice .muted { color: rgba(255, 255, 255, 0.75); font-size: 12px; }
 .ended-notice .btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 내 후원 내역 ---------- */
+.gnb__cash { font-variant-numeric: tabular-nums; }
+.history { width: min(680px, calc(100vw - 32px)); }
+.history__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.history__card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); }
+.history__card strong { font-size: 20px; letter-spacing: -0.4px; }
+.history__card .btn { align-self: flex-start; }
+.history__bar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.history__bar i { display: block; height: 100%; background: var(--primary); }
+.history__bar--over i { background: var(--live); }
+.history__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.history__cols h3 { margin: 0 0 6px; font-size: 14px; }
+.history__list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto; }
+.history__list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 2px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+.modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }

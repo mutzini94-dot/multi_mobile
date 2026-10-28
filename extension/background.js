@@ -57,7 +57,7 @@ const handlers = {
   async status() {
     await ensureHeaderRules();
     const a = await client.getAccount();
-    return { account: a ? { name: a.name, profile: a.profile } : null };
+    return { account: a ? { name: a.name, profile: a.profile, cash: a.cash !== null && Number.isFinite(Number(a.cash)) ? Number(a.cash) : null } : null };
   },
   async login() {
     await chrome.tabs.create({ url: `${ORIGIN}/donator/login?callback=/donator` });
@@ -79,6 +79,26 @@ const handlers = {
     );
     await Promise.all(jobs);
     return {};
+  },
+  /** 내 후원 내역: 최근 13개월치까지 여러 쪽에 걸쳐 모은다 (desktop/lib/handlers.js collectHistory와 같은 규칙) */
+  async history() {
+    await ensureHeaderRules();
+    const now = Date.now();
+    const out = [];
+    for (let page = 1; page <= 20; page++) {
+      const r = await client.getDonationHistory(page);
+      let old = false;
+      for (const i of r.items || []) {
+        if (!(i.at > 0)) continue;
+        if (now - i.at > 400 * 86400000) {
+          old = true;
+          continue;
+        }
+        out.push({ at: i.at, tag: String(i.tag || ''), creator: String(i.creator || ''), cash: Number(i.cash) || 0 });
+      }
+      if (old || page >= (r.pageCount || 1) || !(r.items || []).length) break;
+    }
+    return out;
   },
   async favorites() {
     await ensureHeaderRules();
