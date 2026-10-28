@@ -21,7 +21,7 @@ function whenYouTubeApiReady(): Promise<void> {
   return apiReady;
 }
 
-export function YouTubePlayer({ channel, onReady }: { channel: string; onReady: (h: PlayerHandle) => void }) {
+export function YouTubePlayer({ channel, videoId, onReady }: { channel: string; videoId?: string; onReady: (h: PlayerHandle) => void }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -54,7 +54,12 @@ export function YouTubePlayer({ channel, onReady }: { channel: string; onReady: 
     <iframe
       ref={ref}
       title={`YouTube ${channel}`}
-      src={`https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}&enablejsapi=1&autoplay=1&mute=1`}
+      // 라이브 영상 ID를 알면 그 영상으로 (채널 라이브 임베드가 '볼 수 없음'이 되는 채널이 있다)
+      src={
+        videoId
+          ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?enablejsapi=1&autoplay=1&mute=1`
+          : `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}&enablejsapi=1&autoplay=1&mute=1`
+      }
       allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
       allowFullScreen
       style={{ width: '100%', height: '100%', border: 0 }}

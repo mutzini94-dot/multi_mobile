@@ -1,4 +1,5 @@
-import type { Creator, LayoutKind, ViewState } from '../domain/types';
+import type { Creator, LayoutKind, PageSlot, ViewState } from '../domain/types';
+import { isStream } from '../domain/pages';
 import { applyLayout, visibleCount } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
@@ -12,6 +13,7 @@ export const initialViewState: ViewState = {
 export type ViewAction =
   | { type: 'setLayout'; layout: LayoutKind }
   | { type: 'assign'; slot: number; creator: Creator }
+  | { type: 'assignPage'; slot: number; page: PageSlot } // 후원 페이지·웹페이지 칸 (선택은 그대로)
   | { type: 'clear'; slot: number }
   | { type: 'select'; slot: number }
   | { type: 'swap'; from: number; to: number } // 칸 자리 바꾸기 (빈 칸이면 옮기기)
@@ -32,6 +34,12 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       slots[action.slot] = action.creator;
       return { ...state, slots, selected: action.slot, soundOn: true };
     }
+    case 'assignPage': {
+      if (!inRange(state, action.slot)) return state;
+      const slots = state.slots.slice();
+      slots[action.slot] = action.page;
+      return { ...state, slots, selected: state.selected === action.slot ? null : state.selected };
+    }
     case 'clear': {
       if (!inRange(state, action.slot)) return state;
       const slots = state.slots.slice();
@@ -39,7 +47,8 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       return { ...state, slots, selected: state.selected === action.slot ? null : state.selected };
     }
     case 'select':
-      if (!inRange(state, action.slot) || !state.slots[action.slot]) return state;
+      // 페이지 칸은 선택하지 않는다: 선택은 소리·후원 대상이라 페이지를 누를 때 방송 소리가 꺼지면 안 된다
+      if (!inRange(state, action.slot) || !isStream(state.slots[action.slot])) return state;
       return { ...state, selected: action.slot, soundOn: true };
     case 'swap': {
       if (!inRange(state, action.from) || !inRange(state, action.to) || action.from === action.to) return state;

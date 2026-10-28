@@ -1,6 +1,7 @@
 import { buildJointUrl, decodeJoint, encodeJoint, publicBase } from '../../src/share/jointLink';
 import { mkCreator } from '../helpers/fixtures';
 import type { ViewState } from '../../src/domain/types';
+import { makeDonatePage } from '../../src/domain/pages';
 
 const host = mkCreator(9, { name: '호스트님', donateId: 'hostTag' });
 const state: ViewState = {
@@ -71,4 +72,10 @@ describe('publicBase (시청 페이지 주소)', () => {
   test('저장한 주소가 http(s)가 아니면 무시', () => {
     expect(publicBase('http://localhost:5230/', 'javascript:alert(1)')).toBeNull();
   });
+});
+
+test('후원 페이지·웹페이지 칸은 합방 링크에 담지 않는다 (빈 칸)', () => {
+  const host = mkCreator(1);
+  const state: ViewState = { layout: 'split2', slots: [host, makeDonatePage(), null, null], sizes: {}, selected: null, soundOn: true };
+  expect(decodeJoint(encodeJoint(host, state))!.state.slots.map((s) => s && s.name)).toEqual([host.name, null, null, null]);
 });

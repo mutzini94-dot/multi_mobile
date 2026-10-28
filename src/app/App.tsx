@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { Creator } from '../domain/types';
+import type { Creator, PageSlot } from '../domain/types';
+import { donatePageUrl, followDonateCreator, isStream } from '../domain/pages';
+import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveList';
+import { PageView, type PageHandle } from '../ui/PageView';
+import { DonatePageTab, WebPageTab } from '../ui/PageTabs';
+import { LiveTab } from '../ui/LiveTab';
 import { markConfirmed, needsConfirm } from '../donate/confirmations';
 import { donationWarning, openDonationPopup } from '../donate/donation';
 import { localFavorites, type FavoritesSource } from '../favorites/favorites';
@@ -41,6 +46,7 @@ interface Props {
   win?: AppWindow;
   bridge?: ToonationBridge;
   desktop?: DesktopApi | null; // 설치형 앱의 window.multiviewDesktop (없으면 웹 방식)
+  lives?: (q: LiveQuery) => Promise<LivePage>; // 투네이션 라이브 목록 (테스트에서 바꿔 끼움)
 }
 
 const POPUP_POLL_MS = 1000;
@@ -155,11 +161,22 @@ export function App(props: Props) {
     keys.map((_, i) => settings.lowQualityOthers && i !== state.selected),
   );
 
-  const selectedCreator = state.selected !== null ? state.slots[state.selected] ?? null : null;
+  const selectedItem = state.selected !== null ? state.slots[state.selected] ?? null : null;
+  const selectedCreator = isStream(selectedItem) ? selectedItem : null;
   const stateRef = useRef(state);
   stateRef.current = state;
   // 후원 대상: 합방 시청 화면에서는 어느 칸을 골랐든 호스트, 그 밖에는 선택한 방송
   const donateTarget = viewer ? viewer.host : selectedCreator;
+  // 후원 페이지 칸이 따라가는 크리에이터: 선택한 방송 (선택이 풀리면 마지막으로 따라간 방송)
+  const [lastFollowed, setLastFollowed] = useState<Creator | null>(null);
+  const donateFor = viewer ? viewer.host : followDonateCreator(state, lastFollowed);
+  useEffect(() => {
+    if (donateFor !== lastFollowed) setLastFollowed(donateFor);
+  }, [donateFor, lastFollowed]);
+  // 페이지 칸의 뒤로·새로고침 (플레이어 키로 보관)
+  const pageHandles = useRef<Record<string, PageHandle>>({});
+  const embed = desktop ? 'webview' : 'iframe';
+  const pageUrl = (page: PageSlot) => (page.kind === 'web' ? page.url : donateFor ? donatePageUrl(donateFor) : null);
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
   // 설치형 후원창 자리 (모달/PIP). 앱이 바꾸면(PIP 창의 '모달로' 등) 알려준다
@@ -235,7 +252,8 @@ export function App(props: Props) {
       document.removeEventListener('fullscreenchange', onChange);
     };
   }, [focused, exitFullscreen]);
-  const focusedCreator = focused !== null && focused < visibleCount(state) ? state.slots[focused] ?? null : null;
+  const focusedCreator = focused !== null && focused < visibleCount(state) ? state.slots[focused] ?? null : null; // 방송 또는 페이지
+  const focusedStream = isStream(focusedCreator) ? focusedCreator : null;
   useEffect(() => {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
@@ -300,13 +318,22 @@ export function App(props: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [desktopDonate, donateMode, closeDesktopDonate]);
 
+  const donateTo = (c: Creator) => {
+    if (needsConfirm(c, kv)) setConfirming(c);
+    else openPopup(c);
+  };
   const onDonate = () => {
-    if (!donateTarget) return;
-    if (needsConfirm(donateTarget, kv)) setConfirming(donateTarget);
-    else openPopup(donateTarget);
+    if (donateTarget) donateTo(donateTarget);
   };
 
   keyActions.current = { onDonate, fullscreen: enterFullscreen };
+
+  const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
+  const pickPage = (page: PageSlot) => {
+    if (pickerSlot === null) return;
+    dispatch({ type: 'assignPage', slot: pickerSlot, page });
+    setPickerSlot(null);
+  };
 
   // ---------- 합동 방송 (호스트) ----------
   const beginHosting = (host: Creator) => {
@@ -392,7 +419,10 @@ export function App(props: Props) {
             onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
             onDragging={setDragging}
             renderTile={(slot) => {
-              const creator = state.slots[slot] ?? null;
+              const item = state.slots[slot] ?? null;
+              const creator = isStream(item) ? item : null;
+              const page = item && !isStream(item) ? item : null;
+              const pageKey = keys[slot];
               // 호스트 칸(1번)은 합방 중 고정, 합방 시청 화면은 모든 칸 고정
               const hostSlot = (!!viewer || !!hosting) && slot === 0;
               return (
@@ -423,18 +453,29 @@ export function App(props: Props) {
                       : undefined
                   }
                   badge={hostSlot && creator ? '호스트' : undefined}
+                  page={
+                    page
+                      ? {
+                          label: page.kind === 'web' ? page.name : donateFor ? `${donateFor.name} 후원 페이지` : '후원 페이지',
+                          onBack: () => pageKey && pageHandles.current[pageKey]?.back(),
+                          onReload: () => pageKey && pageHandles.current[pageKey]?.reload(),
+                          onOpenWindow:
+                            page.kind === 'web' ? () => win.open(page.url, '_blank', 'noopener') : !desktop && donateFor ? () => donateTo(donateFor) : undefined,
+                        }
+                      : undefined
+                  }
                   dnd={{
                     slot,
                     // 합방 중에는 1번 호스트 칸은 고정
-                    canDrag: !!creator && !hostSlot,
+                    canDrag: !!item && !hostSlot,
                     canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot && !hostSlot,
                     over: tileDrag.drag?.over === slot,
                     source: tileDrag.drag?.from === slot,
-                    onPress: (e) => tileDrag.start(slot, e, { canDrag: !!creator && !hostSlot }),
+                    onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item && !hostSlot }),
                   }}
-                  onFullscreen={creator ? () => enterFullscreen(slot) : undefined}
+                  onFullscreen={item ? () => enterFullscreen(slot) : undefined}
                   onRemove={
-                    creator
+                    item
                       ? () => {
                           dispatch({ type: 'clear', slot });
                           // 지운 칸의 플레이어 핸들도 버린다
@@ -452,17 +493,21 @@ export function App(props: Props) {
               <div className="focus-view__player" ref={focusEl} />
               <div className="tile__bar focus-view__bar">
                 <span className="tile__name">{focusedCreator.name}</span>
-                <button
-                  type="button"
-                  className={`sound${state.soundOn ? ' sound--on' : ''}`}
-                  aria-label={state.soundOn ? '소리 끄기' : '소리 켜기'}
-                  onClick={() => dispatch({ type: 'toggleSound' })}
-                >
-                  {state.soundOn ? '🔊' : '🔇'}
-                </button>
-                <button type="button" className="btn btn--donate" onClick={onDonate}>
-                  후원하기
-                </button>
+                {focusedStream && (
+                  <>
+                    <button
+                      type="button"
+                      className={`sound${state.soundOn ? ' sound--on' : ''}`}
+                      aria-label={state.soundOn ? '소리 끄기' : '소리 켜기'}
+                      onClick={() => dispatch({ type: 'toggleSound' })}
+                    >
+                      {state.soundOn ? '🔊' : '🔇'}
+                    </button>
+                    <button type="button" className="btn btn--donate" onClick={onDonate}>
+                      후원하기
+                    </button>
+                  </>
+                )}
                 <button type="button" className="btn btn--ghost" aria-label="전체 화면 종료" onClick={exitFullscreen}>
                   전체 화면 종료 (Esc)
                 </button>
@@ -487,6 +532,18 @@ export function App(props: Props) {
             }
             settling={settling}
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
+            renderPage={(page, key) => (
+              <PageView
+                page={page}
+                url={pageUrl(page)}
+                embed={embed}
+                onHandle={(h) => {
+                  if (h) pageHandles.current[key] = h;
+                  else delete pageHandles.current[key];
+                }}
+                onOpenWindow={donateFor ? () => donateTo(donateFor) : undefined}
+              />
+            )}
           />
         </div>
       </div>
@@ -517,6 +574,22 @@ export function App(props: Props) {
         <FavoritesPicker
           source={favorites}
           onClose={() => setPickerSlot(null)}
+          tabs={[
+            {
+              label: '투네이션 라이브',
+              content: (
+                <LiveTab
+                  load={liveSource}
+                  onPick={(creator) => {
+                    dispatch({ type: 'assign', slot: pickerSlot, creator });
+                    setPickerSlot(null);
+                  }}
+                />
+              ),
+            },
+            { label: '후원 페이지', content: <DonatePageTab desktop={!!desktop} onPick={pickPage} /> },
+            { label: '웹페이지', content: <WebPageTab desktop={!!desktop} onPick={pickPage} /> },
+          ]}
           onPick={(creator) => {
             dispatch({ type: 'assign', slot: pickerSlot, creator });
             setPickerSlot(null);

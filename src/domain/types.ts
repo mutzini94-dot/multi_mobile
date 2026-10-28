@@ -9,13 +9,33 @@ export interface Creator {
   source: 'manual' | 'link' | 'toonation'; // toonation: 투네이션 계정 즐겨찾기(검증됨)
   profile?: string; // 프로필 이미지 URL (투네이션 즐겨찾기만)
   live?: { title: string; viewers: number }; // 라이브 중일 때만 (투네이션 즐겨찾기를 불러온 시점 기준)
+  videoId?: string; // 유튜브 라이브 영상 ID (투네이션 라이브 목록): 채널 임베드가 안 되는 채널도 재생. 저장하지 않는다
 }
+
+/** 웹페이지 칸: 주소를 직접 넣어 연 사이트 (key는 칸마다 고유) */
+export interface WebPage {
+  kind: 'web';
+  key: string;
+  name: string; // 사이트 주소 (www 제외)
+  url: string;
+}
+
+/** 후원 페이지 칸: 선택한 방송 크리에이터의 투네이션 후원 페이지 */
+export interface DonatePage {
+  kind: 'donate';
+  key: string;
+  name: string;
+}
+
+export type PageSlot = WebPage | DonatePage;
+/** 칸 하나의 내용: 방송 또는 페이지 */
+export type SlotItem = Creator | PageSlot;
 
 export type LayoutKind = 'single' | 'split2' | 'oneTwo' | 'quad';
 
 export interface ViewState {
   layout: LayoutKind;
-  slots: (Creator | null)[];
+  slots: (SlotItem | null)[];
   sizes: Record<string, number[]>; // 패널 그룹 id → 퍼센트 배열
   selected: number | null;
   soundOn: boolean;

@@ -8,11 +8,13 @@ interface Props {
   onPick(c: Creator): void;
   onClose(): void;
   children?: ReactNode; // 맨 위에 넣을 내용 (투네이션 즐겨찾기)
+  tabs?: { label: string; content: ReactNode }[]; // '방송' 탭 뒤의 탭들 (투네이션 라이브·후원 페이지·웹페이지)
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function FavoritesPicker({ source, onPick, onClose, children }: Props) {
+export function FavoritesPicker({ source, onPick, onClose, children, tabs = [] }: Props) {
+  const [tab, setTab] = useState(0); // 0: 방송
   const [list, setList] = useState(() => source.list());
   const [name, setName] = useState('');
   const [platform, setPlatform] = useState<Platform>('twitch');
@@ -36,13 +38,28 @@ export function FavoritesPicker({ source, onPick, onClose, children }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-label="즐겨찾기에서 불러오기" onClick={(e) => e.stopPropagation()}>
+      <div className="modal picker" role="dialog" aria-label="불러오기" onClick={(e) => e.stopPropagation()}>
         <div className="modal__head">
-          <h2>즐겨찾기에서 불러오기</h2>
+          <h2>불러오기</h2>
           <button type="button" className="btn btn--ghost" onClick={onClose}>
             닫기
           </button>
         </div>
+        {tabs.length > 0 && (
+          <div className="picker__tabs" role="tablist">
+            {['방송', ...tabs.map((t) => t.label)].map((label, i) => (
+              <button key={label} type="button" role="tab" aria-selected={tab === i} className={`picker__tab${tab === i ? ' picker__tab--on' : ''}`} onClick={() => setTab(i)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab > 0 ? (
+          <div role="tabpanel" aria-label={tabs[tab - 1].label}>
+            {tabs[tab - 1].content}
+          </div>
+        ) : (
+          <div role={tabs.length ? 'tabpanel' : undefined} aria-label={tabs.length ? '방송' : undefined}>
         {children}
         <h3>직접 추가한 크리에이터</h3>
         {list.length === 0 ? (
@@ -92,6 +109,8 @@ export function FavoritesPicker({ source, onPick, onClose, children }: Props) {
             추가
           </button>
         </form>
+          </div>
+        )}
       </div>
     </div>
   );

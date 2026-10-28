@@ -99,3 +99,11 @@ test('트위치: 볼륨(0~1)·정지·낮은 화질(가장 낮은 화질 ↔ 자
   h.setLowQuality(false);
   expect(tw.setQuality).toHaveBeenLastCalledWith('auto');
 });
+
+test('유튜브: 라이브 영상 ID를 알면(투네이션 라이브 목록) 그 영상으로 임베드', () => {
+  (window as any).YT = { Player: vi.fn(() => ({})) };
+  const { container } = render(
+    <StreamPlayer creator={mkCreator(1, { platform: 'youtube', channel: UC, key: `youtube:${UC}`, videoId: 'm8HaYP0qcRM' })} onReady={vi.fn()} />,
+  );
+  expect(container.querySelector('iframe')!.getAttribute('src')).toBe('https://www.youtube.com/embed/m8HaYP0qcRM?enablejsapi=1&autoplay=1&mute=1');
+});

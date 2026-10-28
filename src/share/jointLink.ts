@@ -1,4 +1,5 @@
 import { makeCreator, type CreatorInput } from '../domain/creatorInput';
+import { isStream } from '../domain/pages';
 import type { Creator, LayoutKind, ViewState } from '../domain/types';
 import { MAX_SLOTS, SLOT_COUNT, visibleSlots } from '../layout/layouts';
 
@@ -45,7 +46,7 @@ export function encodeJoint(host: Creator, state: ViewState): string {
     // 1번 칸은 호스트, 나머지는 지금 보이는 게스트 칸만
     guests: visibleSlots(state)
       .slice(1)
-      .map((c) => (c ? toInput(c) : null)),
+      .map((c) => (isStream(c) ? toInput(c) : null)), // 후원 페이지·웹페이지 칸은 빈 칸으로
   };
   return PREFIX + toBase64Url(JSON.stringify(payload));
 }

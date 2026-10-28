@@ -16,6 +16,8 @@ interface Props {
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
   onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
   volume?: { value: number; onChange(v: number): void }; // 여러 칸 동시 듣기: 칸별 볼륨
+  // 페이지 칸(후원 페이지·웹페이지): 위쪽 바가 영상 위에 겹치지 않고 페이지 위에 따로 놓인다. 소리 버튼 없음
+  page?: { label: string; onBack?(): void; onReload?(): void; onOpenWindow?(): void };
   // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 상단 바 어디든(버튼 제외)·⠿를 눌러 끈다
   dnd?: {
     slot: number;
@@ -32,19 +34,36 @@ const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 export function Tile(props: Props) {
   const { creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge, dnd } = props;
   const audible = props.audible ?? (selected && soundOn);
+  const page = props.page;
+  const filled = !!creator || !!page;
+  const barButton = (label: string, text: string, fn?: () => void) =>
+    fn && (
+      <button
+        type="button"
+        className="sound"
+        aria-label={label}
+        title={label}
+        onClick={(e) => {
+          e.stopPropagation();
+          fn();
+        }}
+      >
+        {text}
+      </button>
+    );
   return (
     <div
-      className={`tile${selected ? ' tile--selected' : ''}${creator ? '' : ' tile--empty'}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
+      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${page ? ' tile--page' : ''}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
       data-slot={dnd?.slot}
       data-drop={dnd?.canDrop ? '1' : undefined}
     >
-      {creator && <div className="tile__player" ref={playerSlotRef} />}
+      {filled && <div className="tile__player" ref={playerSlotRef} />}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
       <div
-        className={`tile__bar${creator && dnd?.canDrag ? ' tile__bar--grab' : ''}`}
+        className={`tile__bar${filled && dnd?.canDrag ? ' tile__bar--grab' : ''}`}
         onClick={creator ? onSelect : undefined}
         onPointerDown={
-          creator && dnd
+          filled && dnd
             ? (e) => {
                 if ((e.target as HTMLElement).closest('button')) return; // 버튼은 버튼으로
                 dnd.onPress(e);
@@ -64,7 +83,23 @@ export function Tile(props: Props) {
             불러오기
           </button>
         )}
-        {locked && !creator && <span className="muted">빈 칸</span>}
+        {locked && !filled && <span className="muted">빈 칸</span>}
+        {page && (
+          <>
+            {dnd?.canDrag && (
+              <button type="button" className="tile__grip" aria-label="끌어서 자리 옮기기" title="끌어서 다른 칸과 자리 바꾸기" onPointerDown={dnd.onPress} onClick={(e) => e.stopPropagation()}>
+                ⠿
+              </button>
+            )}
+            <span className="tile__name">{page.label}</span>
+            <span className="tile__bar-gap" />
+            {barButton('뒤로', '←', page.onBack)}
+            {barButton('새로고침', '⟳', page.onReload)}
+            {barButton('새 창으로 열기', '↗', page.onOpenWindow)}
+            {barButton('전체 화면', '⛶', onFullscreen)}
+            {!locked && barButton('칸 비우기', '✕', onRemove)}
+          </>
+        )}
         {creator && (
           <>
             {dnd?.canDrag && (

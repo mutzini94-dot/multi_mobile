@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
-import type { Creator, ViewState } from '../domain/types';
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
+import type { PageSlot, SlotItem, ViewState } from '../domain/types';
+import { isStream } from '../domain/pages';
 import { playerKeys, visibleCount } from '../layout/layouts';
 import { StreamPlayer } from '../players/StreamPlayer';
 import type { PlayerHandle } from '../players/types';
@@ -26,6 +27,7 @@ interface Props {
   // 끄는 중인 방송: 작은 창으로 줄어 커서(x, y: 화면 좌표)를 따라간다 — 위치·크기만 바꿔 iframe은 그대로
   floating?: { slot: number; x: number; y: number; name: string } | null;
   settling?: number[]; // 놓은 직후 제자리로 부드럽게 들어가는 칸들
+  renderPage?(page: PageSlot, playerKey: string): ReactNode; // 후원 페이지·웹페이지 칸 (App의 PageView)
 }
 
 /** 끄는 동안 작은 창의 폭 (높이는 원래 칸 비율, 모르면 16:9) */
@@ -44,7 +46,7 @@ const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
  * 플레이어를 칸 번호 key로 한 번만 마운트하고, 레이아웃이 정한 칸 자리에 절대 위치로 덮는다.
  * 레이아웃을 바꿔도 iframe이 DOM에서 옮겨지지 않으므로 방송이 다시 로딩되지 않는다.
  */
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [] }: Props) {
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
   const onSelectRef = useRef(onSelectSlot);
   onSelectRef.current = onSelectSlot;
@@ -58,7 +60,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         const el = document.activeElement;
         if (!el || el.tagName !== 'IFRAME') return;
         const item = el.closest<HTMLElement>('.player-layer__item[data-slot]');
-        if (!item) return;
+        if (!item || item.dataset.kind === 'page') return; // 웹페이지는 입력 중일 수 있어 포커스를 빼앗지 않는다
         onSelectRef.current?.(Number(item.dataset.slot));
         (el as HTMLElement).blur();
       }, 0);
@@ -99,7 +101,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
       {/* 키 순서로 고정해 그린다: 칸 자리를 바꿔도 iframe이 문서 안에서 옮겨지지 않아 다시 로딩되지 않는다 */}
       {playerKeys(state.slots)
         .map((key, slot) => ({ key, slot, creator: state.slots[slot] }))
-        .filter((p): p is { key: string; slot: number; creator: Creator } => !!p.key && !!p.creator)
+        .filter((p): p is { key: string; slot: number; creator: SlotItem } => !!p.key && !!p.creator)
         .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
         .map(({ key, slot, creator }) => {
         // 레이아웃에서 빠진 칸: 지우지 않고 숨겨 둔다 (다시 칸을 늘리면 다시 불러오지 않고 보인다)
@@ -117,11 +119,13 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
             key={key}
             className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}`}
             data-slot={slot}
+            data-kind={isStream(creator) ? 'stream' : 'page'}
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
-            <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} />
-            {onGrab && focused === null && !offscreen && <div className="player-layer__grab" onPointerDown={(e) => onGrab(slot, e)} />}
+            {isStream(creator) ? <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} /> : renderPage?.(creator, key)}
+            {/* 페이지 칸은 클릭·입력을 페이지가 받아야 하므로 잡는 층이 없다 (위쪽 바로 끈다) */}
+            {onGrab && isStream(creator) && focused === null && !offscreen && <div className="player-layer__grab" onPointerDown={(e) => onGrab(slot, e)} />}
             {isFloating && floating && <span className="player-layer__drag-label">{floating.name}</span>}
             {/* 선택 강조: iframe 위에 겹쳐 그려야 영상에 가려지지 않는다 (클릭은 통과) */}
             {state.selected === slot && <span className="player-layer__highlight" aria-hidden="true" />}

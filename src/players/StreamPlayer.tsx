@@ -5,7 +5,7 @@ import type { PlayerHandle } from './types';
 
 export function StreamPlayer({ creator, onReady }: { creator: Creator; onReady: (h: PlayerHandle) => void }) {
   return creator.platform === 'youtube' ? (
-    <YouTubePlayer key={creator.key} channel={creator.channel} onReady={onReady} />
+    <YouTubePlayer key={creator.key} channel={creator.channel} videoId={creator.videoId} onReady={onReady} />
   ) : (
     <TwitchPlayer key={creator.key} channel={creator.channel} onReady={onReady} />
   );

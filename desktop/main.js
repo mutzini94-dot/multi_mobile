@@ -14,6 +14,7 @@ const { startStaticServer } = require('./lib/staticServer');
 const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
 const { restoreBounds } = require('./lib/windowBounds');
+const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION } = require('./lib/webviewPolicy');
 const { fillAmountScript } = require('./lib/donateFill');
 const { createHandlers } = require('./lib/handlers');
 
@@ -63,6 +64,28 @@ function useGoogleUa(wc) {
   wc.on('will-navigate', onNav);
   wc.on('will-redirect', onNav);
   wc.on('did-create-window', (child) => useGoogleUa(child.webContents));
+}
+
+// 칸 안의 webview: 후원 페이지 칸은 투네이션 창과 같이(결제·로그인 팝업 허용, 후원 부분만 보이게),
+// 웹페이지 칸은 새 창 요청을 그 칸에서 연다.
+function setupTileWebview(wc) {
+  const donateTile = wc.session === ses;
+  if (donateTile) {
+    allowPopups(wc);
+    useGoogleUa(wc);
+    wc.on('dom-ready', () => {
+      if (isDonateUrl(wc.getURL())) wc.insertCSS(DONATE_ONLY_CSS).catch(() => {});
+    });
+  } else {
+    wc.setWindowOpenHandler(({ url }) => {
+      if (isWebUrl(url)) wc.loadURL(url);
+      return { action: 'deny' };
+    });
+  }
+  // http(s) 밖(파일·앱 실행 링크 등)으로는 이동하지 않는다
+  wc.on('will-navigate', (e, url) => {
+    if (!isWebUrl(url)) e.preventDefault();
+  });
 }
 
 // 결제·소셜 로그인 팝업은 같은 로그인 세션에서 연다.
@@ -208,8 +231,14 @@ function createWindow(url) {
     icon: ICON,
     backgroundColor: '#121318',
     autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
+    // webviewTag: 후원 페이지·웹페이지 칸 (붙기 전에 lib/webviewPolicy.js로 검사)
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, webviewTag: true },
   });
+  win.webContents.on('will-attach-webview', (e, webPreferences, params) => {
+    hardenWebPreferences(webPreferences);
+    if (!allowWebview(params)) e.preventDefault();
+  });
+  win.webContents.on('did-attach-webview', (_e, wc) => setupTileWebview(wc));
   // 멀티뷰 화면 밖으로 나가는 링크·새 창은 기본 브라우저로
   const appOrigin = new URL(url).origin;
   win.webContents.setWindowOpenHandler(({ url: u }) => {
@@ -372,6 +401,10 @@ app.whenReady().then(async () => {
   app.userAgentFallback = ua;
   ses.setUserAgent(ua);
   client = new ToonationClient(ses);
+  // 웹페이지 칸 세션: 카메라·마이크·위치·알림 등 권한은 주지 않는다 (전체 화면·클립보드 쓰기만)
+  const webSes = session.fromPartition(WEB_PARTITION);
+  webSes.setUserAgent(ua);
+  webSes.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'fullscreen' || permission === 'clipboard-sanitized-write'));
   wireIpc();
 
   let url = DEV_URL;
