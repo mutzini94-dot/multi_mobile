@@ -24,6 +24,8 @@
       button:hover { background: #f4f7fa; }
       #amounts { display: flex; gap: 4px; flex: none; }
       #amounts button { padding: 0 8px; color: var(--primary); }
+      #messages { -webkit-app-region: no-drag; flex: none; max-width: 92px; height: 26px; border: 0; border-radius: 999px; padding: 0 6px; font: inherit; font-size: 12px; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+      #messages[hidden] { display: none; }
       #close { width: 26px; padding: 0; box-shadow: none; color: var(--ink-sub); font-size: 14px; }
       #close:hover { background: var(--live); color: #fff; }
     </style>
@@ -34,6 +36,7 @@
       <span id="title"></span>
       <span class="tag">PIP</span>
       <span id="amounts"></span>
+      <select id="messages" aria-label="자주 쓰는 메시지" title="자주 쓰는 메시지 채우기" hidden></select>
       <button id="modal" title="앱 화면 가운데 모달로 보기">모달로</button>
       <button id="close" title="후원창 닫기" aria-label="후원창 닫기">✕</button>
     </header>
@@ -60,6 +63,33 @@
       };
       setAmounts((new URLSearchParams(location.search).get('amounts') || '').split(',').filter(Boolean).map(Number));
       window.mvPip.onAmounts(setAmounts);
+      // 자주 쓰는 후원 메시지: 고르면 후원 페이지의 메시지 칸만 채운다
+      const messagesEl = document.getElementById('messages');
+      const setMessages = (list) => {
+        const head = document.createElement('option');
+        head.value = '';
+        head.textContent = '메시지';
+        messagesEl.replaceChildren(
+          head,
+          ...list.filter((m) => typeof m === 'string' && m.trim()).map((m) => {
+            const o = document.createElement('option');
+            o.value = m;
+            o.textContent = m.length > 20 ? `${m.slice(0, 20)}…` : m;
+            return o;
+          }),
+        );
+        messagesEl.hidden = messagesEl.options.length <= 1;
+      };
+      messagesEl.addEventListener('change', () => {
+        if (messagesEl.value) window.mvPip.fillMessage(messagesEl.value);
+        messagesEl.value = '';
+      });
+      try {
+        setMessages(JSON.parse(new URLSearchParams(location.search).get('messages') || '[]'));
+      } catch {
+        setMessages([]);
+      }
+      window.mvPip.onMessages(setMessages);
       document.getElementById('modal').addEventListener('click', () => window.mvPip.toModal());
       document.getElementById('close').addEventListener('click', () => window.mvPip.close());
     </script>

@@ -21,4 +21,22 @@ function fillAmountScript(amount) {
   })()`;
 }
 
-module.exports = { fillAmountScript };
+// 자주 쓰는 후원 메시지: 후원 페이지의 메시지 칸(보이는 textarea)만 채운다 (toon-widget fillDonate의 message와 같은 방식)
+function fillMessageScript(message) {
+  if (typeof message !== 'string' || !message.trim() || message.length > 300) throw new Error('잘못된 메시지');
+  const text = JSON.stringify(message.trim());
+  return `(() => {
+    const visible = (el) => el && el.getBoundingClientRect().height > 0;
+    const ta = [...document.querySelectorAll('#baselayout textarea')].find(visible);
+    if (!ta) return false;
+    const v = ${text}.slice(0, ta.maxLength > 0 ? ta.maxLength : 1000);
+    ta.focus();
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(ta, v);
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.dispatchEvent(new Event('change', { bubbles: true }));
+    ta.blur();
+    return true;
+  })()`;
+}
+
+module.exports = { fillAmountScript, fillMessageScript };

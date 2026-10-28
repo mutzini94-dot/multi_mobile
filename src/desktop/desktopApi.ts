@@ -18,11 +18,12 @@ export interface DesktopApi {
   favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
   history?(): Promise<DesktopResult<unknown[]>>; // 내 후원 내역 (src/toonation/history.ts DonationRecord)
   /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */
-  openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[] }): void;
+  openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[]; messages?: string[] }): void;
   closeDonate(): void;
   setDonateBounds(rect: DonateBounds): void;
   setDonateMode(mode: DonateMode): void;
   fillDonate(amount: number): void; // 빠른 후원: 후원창의 금액만 채운다
+  fillDonateMessage?(message: string): void; // 자주 쓰는 메시지: 후원창의 메시지만 채운다
   setAlwaysOnTop(on: boolean): void;
   onDonateClosed(cb: () => void): () => void;
   onDonateMode(cb: (mode: DonateMode) => void): () => void;

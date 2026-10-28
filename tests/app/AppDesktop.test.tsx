@@ -152,3 +152,14 @@ test('설치형: 모달 후원창의 빠른 후원 금액을 누르면 금액만
   fireEvent.click(within(donateDialog()!).getByRole('button', { name: '5,000원 채우기' }));
   expect(desktop.fillDonate).toHaveBeenCalledWith(5000);
 });
+
+test('설치형: 자주 쓰는 메시지를 고르면 메시지만 채우고, 후원창에 캐시 잔액', async () => {
+  const { desktop } = setup('', { quickMessages: ['잘 보고 있어요!', '파이팅'] });
+  (desktop as { fillDonateMessage?: unknown }).fillDonateMessage = vi.fn();
+  await pickToon();
+  fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
+  expect(desktop.openDonate).toHaveBeenCalledWith(expect.objectContaining({ messages: ['잘 보고 있어요!', '파이팅'] }));
+  const dialog = donateDialog()!;
+  fireEvent.change(within(dialog).getByLabelText('자주 쓰는 메시지'), { target: { value: '파이팅' } });
+  expect((desktop as { fillDonateMessage?: unknown }).fillDonateMessage).toHaveBeenCalledWith('파이팅');
+});

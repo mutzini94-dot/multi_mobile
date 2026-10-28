@@ -394,3 +394,9 @@ button:disabled { cursor: not-allowed; }
 .history__list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto; }
 .history__list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 2px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
 .modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* ---------- 자주 쓰는 메시지 · 캐시 (후원창 머리줄) ---------- */
+.donate-modal__messages { flex: none; max-width: 140px; height: 30px; border-radius: var(--r-pill); padding: 0 8px; }
+.donate-modal__cash { flex: none; font-size: 12px; font-weight: 600; color: var(--ink-sub); font-variant-numeric: tabular-nums; }
+.settings__row--top { align-items: flex-start; }
+.settings__row textarea { width: 240px; resize: vertical; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: var(--r-sm, 6px); border: 1px solid var(--line); background: var(--canvas); color: var(--ink); }

@@ -15,7 +15,7 @@ const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
 const { restoreBounds } = require('./lib/windowBounds');
 const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION } = require('./lib/webviewPolicy');
-const { fillAmountScript } = require('./lib/donateFill');
+const { fillAmountScript, fillMessageScript } = require('./lib/donateFill');
 const { createHandlers } = require('./lib/handlers');
 
 const APP_NAME = '멀티뷰 후원';
@@ -170,6 +170,7 @@ function createDonateView() {
 // PIP: 테두리 없는 작은 창, 항상 위. 얇은 머리줄(pip.html: 끌어서 옮기기 · 모달로 · 닫기) 아래에 후원 페이지를 붙인다.
 let pipWin = null;
 let quickAmounts = []; // 빠른 후원 금액 (웹의 설정 → PIP 머리줄)
+let quickMessages = []; // 자주 쓰는 후원 메시지 (웹의 설정 → PIP 머리줄)
 function createPipWindow({ title, onClosed, onResize }) {
   const area = screen.getDisplayMatching(win.getBounds()).workArea;
   const width = 420;
@@ -196,7 +197,7 @@ function createPipWindow({ title, onClosed, onResize }) {
     webPreferences: { preload: path.join(__dirname, 'pip-preload.js'), contextIsolation: true, sandbox: true },
   });
   w.setAlwaysOnTop(true, 'floating');
-  w.loadFile(path.join(__dirname, 'pip.html'), { query: { title, amounts: quickAmounts.join(',') } });
+  w.loadFile(path.join(__dirname, 'pip.html'), { query: { title, amounts: quickAmounts.join(','), messages: JSON.stringify(quickMessages) } });
   w.on('resize', onResize);
   const remember = () => !w.isDestroyed() && prefs.set('pipBounds', w.getBounds());
   w.on('moved', remember);
@@ -368,10 +369,27 @@ function wireIpc() {
       quickAmounts = t.amounts.filter((n) => Number.isInteger(n) && n >= 1 && n <= 10_000_000).slice(0, 6);
       if (pipWin && !pipWin.isDestroyed()) pipWin.webContents.send('mv:pip:amounts', quickAmounts);
     }
+    if (Array.isArray(t.messages)) {
+      quickMessages = t.messages.filter((m) => typeof m === 'string' && m.trim() && m.length <= 300).slice(0, 5);
+      if (pipWin && !pipWin.isDestroyed()) pipWin.webContents.send('mv:pip:messages', quickMessages);
+    }
     // 설정의 후원창 기본 모드 ('modal' | 'pip'), 없으면 마지막 모드
     donate.open(String(t.tag), String(t.name || '').slice(0, 30), t.mode === 'modal' || t.mode === 'pip' ? t.mode : undefined);
   });
   // 빠른 후원: 후원 페이지의 금액 칸만 채운다 (메인 창의 모달 머리줄 또는 PIP 머리줄에서)
+  // 자주 쓰는 후원 메시지: 후원 페이지의 메시지 칸만 채운다
+  ipcMain.on('mv:donate:fillMessage', (e, message) => {
+    if (!(fromWin(e) || fromPip(e))) return;
+    const v = donate.view();
+    if (!v) return;
+    let code;
+    try {
+      code = fillMessageScript(String(message));
+    } catch {
+      return;
+    }
+    v.webContents.executeJavaScript(code).catch(() => {});
+  });
   ipcMain.on('mv:donate:fill', (e, amount) => {
     if (!(fromWin(e) || fromPip(e))) return;
     const v = donate.view();

@@ -413,7 +413,7 @@ export function App(props: Props) {
         // 설치형: 창 오른쪽 후원 패널 (로그인한 세션으로 열린다)
         // 설정: 후원창 기본 모드('last'면 앱이 마지막 모드로) · 빠른 후원 금액
         const mode = settings.donateMode === 'last' ? undefined : settings.donateMode;
-        desktop.openDonate({ tag: c.donateId, name: c.name, ...(mode && { mode }), amounts: settings.quickAmounts });
+        desktop.openDonate({ tag: c.donateId, name: c.name, ...(mode && { mode }), amounts: settings.quickAmounts, ...(settings.quickMessages.length ? { messages: settings.quickMessages } : {}) });
         if (mode) setDonateMode(mode); // 앱의 모드 알림을 기다리지 않고 맞는 틀을 그린다
         setPopupCreator(c);
         setPopupClosed(false);
@@ -430,7 +430,7 @@ export function App(props: Props) {
       setPopupClosed(false);
       setMessage(null);
     },
-    [win, desktop, settings.donateMode, settings.quickAmounts],
+    [win, desktop, settings.donateMode, settings.quickAmounts, settings.quickMessages],
   );
   const desktopDonate = desktop && popupCreator && !popupClosed ? popupCreator : null;
   const closeDesktopDonate = useCallback(() => {
@@ -772,6 +772,9 @@ export function App(props: Props) {
           onPip={() => desktop?.setDonateMode('pip')}
           amounts={settings.quickAmounts}
           onFill={(n) => desktop?.fillDonate(n)}
+          messages={settings.quickMessages}
+          onFillMessage={desktop?.fillDonateMessage ? (m) => desktop.fillDonateMessage?.(m) : undefined}
+          cash={typeof toonation.state.account?.cash === 'number' ? toonation.state.account.cash : null}
           onClose={closeDesktopDonate}
         />
       )}

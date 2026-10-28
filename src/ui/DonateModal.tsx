@@ -9,10 +9,13 @@ interface Props {
   onBounds(rect: DonateBounds): void; // 설치형 앱이 후원 페이지(WebContentsView)를 본문 자리에 놓는다
   amounts?: number[]; // 빠른 후원 금액: 누르면 후원 페이지의 금액 칸만 채운다
   onFill?(amount: number): void;
+  messages?: string[]; // 자주 쓰는 후원 메시지: 고르면 메시지 칸만 채운다
+  onFillMessage?(message: string): void;
+  cash?: number | null; // 캐시 잔액
 }
 
 /** 설치형 전용: 앱 가운데 모달 후원창의 틀. 후원 페이지 자체는 앱이 본문 자리에 덮어 그린다. */
-export function DonateModal({ creator, onClose, onPip, onBounds, amounts = [], onFill }: Props) {
+export function DonateModal({ creator, onClose, onPip, onBounds, amounts = [], onFill, messages = [], onFillMessage, cash = null }: Props) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const onBoundsRef = useRef(onBounds);
   onBoundsRef.current = onBounds;
@@ -49,6 +52,24 @@ export function DonateModal({ creator, onClose, onPip, onBounds, amounts = [], o
                 </button>
               );
             })}
+          {onFillMessage && messages.length > 0 && (
+            <select
+              className="donate-modal__messages"
+              aria-label="자주 쓰는 메시지"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) onFillMessage(e.target.value);
+              }}
+            >
+              <option value="">메시지</option>
+              {messages.map((m) => (
+                <option key={m} value={m}>
+                  {m.length > 24 ? `${m.slice(0, 24)}…` : m}
+                </option>
+              ))}
+            </select>
+          )}
+          {cash !== null && <span className="donate-modal__cash">캐시 {cash.toLocaleString('ko-KR')}</span>}
           <button type="button" className="btn btn--ghost btn--sm" onClick={onPip} title="항상 위에 떠 있는 작은 창으로 보기">
             PIP 모드
           </button>

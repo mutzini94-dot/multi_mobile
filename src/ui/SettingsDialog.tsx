@@ -2,7 +2,7 @@ import { useState, type ChangeEvent, type ReactNode } from 'react';
 import type { Creator } from '../domain/types';
 import type { FavoritesSource } from '../favorites/favorites';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
-import { cleanAmounts, LIVE_REFRESH_OPTIONS, type Settings } from '../settings/settings';
+import { cleanAmounts, cleanMessages, LIVE_REFRESH_OPTIONS, type Settings } from '../settings/settings';
 
 interface Props {
   settings: Settings;
@@ -85,6 +85,7 @@ export function SettingsDialog(p: Props) {
   const s = p.settings;
   const [list, setList] = useState(() => p.favorites.list());
   const [amountText, setAmountText] = useState(formatAmounts(s.quickAmounts));
+  const [messageText, setMessageText] = useState(s.quickMessages.join('\n'));
   const [limitText, setLimitText] = useState(s.monthlyLimit ? s.monthlyLimit.toLocaleString('ko-KR') : '0');
   const [base, setBase] = useState(p.publicBase);
   const [baseError, setBaseError] = useState<string | null>(null);
@@ -185,6 +186,24 @@ export function SettingsDialog(p: Props) {
               ]}
               onChange={(v) => p.onChange({ donateMode: v })}
             />
+            <label className="settings__row settings__row--top">
+              <span>
+                자주 쓰는 후원 메시지
+                <small className="muted">한 줄에 하나, 5개까지. 후원창에서 고르면 메시지 칸만 채웁니다</small>
+              </span>
+              <textarea
+                aria-label="자주 쓰는 후원 메시지"
+                rows={3}
+                value={messageText}
+                placeholder={'예: 오늘도 방송 잘 보고 있어요!'}
+                onChange={(e) => setMessageText(e.target.value)}
+                onBlur={() => {
+                  const list = cleanMessages(messageText.split('\n'));
+                  p.onChange({ quickMessages: list });
+                  setMessageText(list.join('\n'));
+                }}
+              />
+            </label>
             <label className="settings__row">
               <span>
                 빠른 후원 금액
