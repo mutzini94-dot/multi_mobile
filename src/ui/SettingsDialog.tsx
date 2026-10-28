@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type ReactNode } from 'react';
 import type { Creator } from '../domain/types';
 import type { FavoritesSource } from '../favorites/favorites';
-import { LAYOUT_LABEL } from '../layout/layouts';
+import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import { cleanAmounts, LIVE_REFRESH_OPTIONS, type Settings } from '../settings/settings';
 
 interface Props {
@@ -113,7 +113,7 @@ export function SettingsDialog(p: Props) {
           <Select
             label="기본 레이아웃"
             value={s.defaultLayout}
-            options={(['single', 'split2', 'oneTwo', 'quad'] as const).map((l) => [l, LAYOUT_LABEL[l]])}
+            options={LAYOUTS.map((l) => [l, LAYOUT_LABEL[l]])}
             onChange={(v) => p.onChange({ defaultLayout: v })}
             hint="마지막 화면을 복원하지 않을 때"
           />
@@ -136,7 +136,7 @@ export function SettingsDialog(p: Props) {
             ]}
             onChange={(v) => p.onChange({ theme: v })}
           />
-          <Toggle label="단축키" checked={s.shortcuts} onChange={(v) => p.onChange({ shortcuts: v })} hint="1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원하기" />
+          <Toggle label="단축키" checked={s.shortcuts} onChange={(v) => p.onChange({ shortcuts: v })} hint="1~9 칸 선택 · M 소리 · F 전체 화면 · D 후원하기" />
           {p.desktop && <Toggle label="항상 위에 표시" checked={s.alwaysOnTop} onChange={(v) => p.onChange({ alwaysOnTop: v })} />}
         </Section>
 

@@ -92,7 +92,7 @@ describe('호스트: 합방 방송 개설', () => {
     expect(url.startsWith('https://mv.example.com/#j=')).toBe(true);
     const joint = decodeJoint(new URL(url).hash)!;
     expect(joint.host).toMatchObject({ name: '나', donateId: 'myTag' });
-    expect(joint.state.slots.map((c) => c?.name ?? null)).toEqual(['나', '게스트B', null, null]);
+    expect(joint.state.slots.map((c) => c?.name ?? null)).toEqual(['나', '게스트B', null, null, null, null, null, null, null]);
     await act(async () => {
       fireEvent.click(within(shareDialog()).getByRole('button', { name: 'URL 복사' }));
     });
@@ -112,7 +112,7 @@ describe('호스트: 합방 방송 개설', () => {
     expect(shareUrl()).toBe(first);
     fireEvent.click(within(shareDialog()).getByRole('button', { name: '새 URL 만들기' }));
     expect(shareUrl()).not.toBe(first);
-    expect(decodeJoint(new URL(shareUrl()).hash)!.state.slots.map((c) => c?.name ?? null)).toEqual(['나', '게스트B', '게스트C', null]);
+    expect(decodeJoint(new URL(shareUrl()).hash)!.state.slots.map((c) => c?.name ?? null)).toEqual(['나', '게스트B', '게스트C', null, null, null, null, null, null]);
   });
 
   test('설치형·로컬(localhost)에서는 시청 페이지 주소를 입력받아 저장한다', () => {

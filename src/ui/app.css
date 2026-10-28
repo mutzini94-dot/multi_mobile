@@ -93,6 +93,12 @@ button:disabled { cursor: not-allowed; }
 .layout-icon--oneTwo { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; grid-auto-flow: column; }
 .layout-icon--oneTwo i:nth-child(3) { grid-row: span 2; }
 .layout-icon--quad { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.layout-icon--oneThree { grid-template-columns: 2fr 1fr; grid-template-rows: repeat(3, 1fr); gap: 1.5px; }
+.layout-icon--oneThree i:nth-child(1) { grid-row: span 3; }
+.layout-icon--oneFive { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1.5px; }
+.layout-icon--oneFive i:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+.layout-icon--six { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; grid-auto-flow: column; }
+.layout-icon--nine { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1.5px; }
 
 /* ---------- 버튼: Button/Solid · Button/Outlined · Button/Text ---------- */
 .btn { height: 36px; padding: 0 16px; border-radius: var(--r-pill); border: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; transition: background 0.12s, box-shadow 0.12s; }

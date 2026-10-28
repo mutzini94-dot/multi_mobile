@@ -12,12 +12,13 @@ interface Props {
 export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
   // 칸 크기 비율은 레이아웃별로 기억한다 (예: 'quad:root')
   const sizeKey = (id: string) => `${state.layout}:${id}`;
-  const size = (group: string, i: number, count: number) => state.sizes[sizeKey(group)]?.[i] ?? 100 / count;
+  const size = (group: string, i: number, count: number, defaults?: number[]) => state.sizes[sizeKey(group)]?.[i] ?? defaults?.[i] ?? 100 / count;
 
-  const group = (id: string, direction: 'horizontal' | 'vertical', children: { node: ReactNode; col?: string }[]) => (
+  // defaults: 처음 비율 (큰 화면 레이아웃은 큰 칸을 넓게)
+  const group = (id: string, direction: 'horizontal' | 'vertical', children: { node: ReactNode; col?: string }[], defaults?: number[]) => (
     <PanelGroup id={id} direction={direction} onLayout={(s) => onSizes(sizeKey(id), s)}>
       {children.map((c, i) => (
-        <PanelChild key={i} index={i} id={id} defaultSize={size(id, i, children.length)} col={c.col} onDragging={onDragging}>
+        <PanelChild key={i} index={i} id={id} defaultSize={size(id, i, children.length, defaults)} col={c.col} onDragging={onDragging}>
           {c.node}
         </PanelChild>
       ))}
@@ -28,6 +29,7 @@ export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
     slots.length === 1
       ? { node: renderTile(slots[0]), col }
       : { node: group(id, 'vertical', slots.map((s) => ({ node: renderTile(s) }))), col };
+  const row = (id: string, slots: number[]) => ({ node: group(id, 'horizontal', slots.map((s) => ({ node: renderTile(s) }))) });
 
   // 레이아웃별 구성: oneTwo = [왼쪽 위아래 2칸 | 오른쪽 1칸], quad = [2칸 | 2칸]
   const key = state.layout;
@@ -44,6 +46,23 @@ export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
       break;
     case 'quad':
       content = group('root', 'horizontal', [column('col-left', 'left', [0, 1]), column('col-right', 'right', [2, 3])]);
+      break;
+    case 'oneThree': // [큰 칸 | 오른쪽 위아래 3칸]
+      content = group('root', 'horizontal', [column('col-left', 'left', [0]), column('col-right', 'right', [1, 2, 3])], [72, 28]);
+      break;
+    case 'oneFive': // 위: [큰 칸 | 오른쪽 2칸], 아래: 3칸
+      content = group(
+        'root',
+        'vertical',
+        [{ node: group('top', 'horizontal', [column('col-left', 'left', [0]), column('col-right', 'right', [1, 2])], [67, 33]) }, row('bottom', [3, 4, 5])],
+        [67, 33],
+      );
+      break;
+    case 'six': // 3열 × 2칸 (4분할과 같이 열 순서로 번호)
+      content = group('root', 'horizontal', [column('col-1', 'left', [0, 1]), column('col-2', 'mid', [2, 3]), column('col-3', 'right', [4, 5])]);
+      break;
+    case 'nine':
+      content = group('root', 'horizontal', [column('col-1', 'left', [0, 1, 2]), column('col-2', 'mid', [3, 4, 5]), column('col-3', 'right', [6, 7, 8])]);
       break;
   }
   return (

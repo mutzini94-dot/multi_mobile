@@ -1,7 +1,6 @@
 import type { Creator, LayoutKind } from '../domain/types';
-import { LAYOUT_LABEL } from '../layout/layouts';
+import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 
-const LAYOUTS: LayoutKind[] = ['single', 'split2', 'oneTwo', 'quad'];
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
 const ICON_CELLS: Record<LayoutKind, string[]> = {
@@ -9,6 +8,10 @@ const ICON_CELLS: Record<LayoutKind, string[]> = {
   split2: ['a', 'b'],
   oneTwo: ['a', 'b', 'c'],
   quad: ['a', 'b', 'c', 'd'],
+  oneThree: ['a', 'b', 'c', 'd'],
+  oneFive: ['a', 'b', 'c', 'd', 'e', 'f'],
+  six: ['a', 'b', 'c', 'd', 'e', 'f'],
+  nine: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'],
 };
 
 /** 합동 방송 상태에 따라 바뀌는 상단 영역 */

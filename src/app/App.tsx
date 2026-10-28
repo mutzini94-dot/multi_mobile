@@ -283,7 +283,7 @@ export function App(props: Props) {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
 
-  // 단축키: 1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원하기 (입력 중이거나 창이 열려 있으면 무시)
+  // 단축키: 1~9 칸 선택 · M 소리 · F 전체 화면 · D 후원하기 (입력 중이거나 창이 열려 있으면 무시)
   const keyActions = useRef({ onDonate: () => {}, fullscreen: (_slot: number) => {} });
   useEffect(() => {
     if (!settings.shortcuts) return;
@@ -293,7 +293,7 @@ export function App(props: Props) {
       if (t?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
       if (document.querySelector('[role="dialog"]')) return;
       const k = e.key.toLowerCase();
-      if (/^[1-4]$/.test(k)) dispatch({ type: 'select', slot: Number(k) - 1 });
+      if (/^[1-9]$/.test(k)) dispatch({ type: 'select', slot: Number(k) - 1 });
       else if (k === 'm') dispatch({ type: 'toggleSound' });
       else if (k === 'd') keyActions.current.onDonate();
       else if (k === 'f' && stateRef.current.selected !== null) keyActions.current.fullscreen(stateRef.current.selected);

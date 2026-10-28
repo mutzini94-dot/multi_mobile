@@ -33,7 +33,7 @@ test('왕복: 호스트는 1번 칸, 보이는 게스트 칸만 담기고 4칸�
   const out = decodeJoint(hash)!;
   expect(out.host).toEqual({ ...host, source: 'link' });
   expect(out.state.layout).toBe('oneTwo');
-  expect(out.state.slots.map((c) => c?.name ?? null)).toEqual(['호스트님', '게스트B', null, null]);
+  expect(out.state.slots.map((c) => c?.name ?? null)).toEqual(['호스트님', '게스트B', null, null, null, null, null, null, null]);
   expect(out.state.slots[0]).toEqual(out.host);
   expect(out.state.sizes).toEqual({ 'oneTwo:root': [60, 40] });
   expect(out.state.selected).toBeNull();
@@ -77,5 +77,5 @@ describe('publicBase (시청 페이지 주소)', () => {
 test('후원 페이지·웹페이지 칸은 합방 링크에 담지 않는다 (빈 칸)', () => {
   const host = mkCreator(1);
   const state: ViewState = { layout: 'split2', slots: [host, makeDonatePage(), null, null], sizes: {}, selected: null, soundOn: true };
-  expect(decodeJoint(encodeJoint(host, state))!.state.slots.map((s) => s && s.name)).toEqual([host.name, null, null, null]);
+  expect(decodeJoint(encodeJoint(host, state))!.state.slots.map((s) => s && s.name)).toEqual([host.name, null, null, null, null, null, null, null, null]);
 });

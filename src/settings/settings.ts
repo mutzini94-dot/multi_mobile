@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { LayoutKind } from '../domain/types';
+import { LAYOUTS } from '../layout/layouts';
 import type { KV } from '../storage/safeStorage';
 
 /** 설정 (설정 창). 설치형 창 관련(항상 위)은 앱에도 전달된다. */
@@ -60,7 +61,7 @@ export function normalizeSettings(raw: unknown): Settings {
   const vol = r.masterVolume;
   return {
     restoreLastView: bool(r.restoreLastView, d.restoreLastView),
-    defaultLayout: oneOf(r.defaultLayout, ['single', 'split2', 'oneTwo', 'quad'] as const, d.defaultLayout),
+    defaultLayout: oneOf(r.defaultLayout, LAYOUTS, d.defaultLayout),
     hiddenSlotPlayback: oneOf(r.hiddenSlotPlayback, ['keep', 'pause'] as const, d.hiddenSlotPlayback),
     lowQualityOthers: bool(r.lowQualityOthers, d.lowQualityOthers),
     videoClick: oneOf(r.videoClick, ['select', 'player'] as const, d.videoClick),

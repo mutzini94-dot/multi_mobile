@@ -40,7 +40,7 @@ export interface DetachedMark {
 /** 칸 하나의 내용: 방송 · 페이지 · 분리 표시 */
 export type SlotItem = Creator | PageSlot | DetachedMark;
 
-export type LayoutKind = 'single' | 'split2' | 'oneTwo' | 'quad';
+export type LayoutKind = 'single' | 'split2' | 'oneTwo' | 'quad' | 'oneThree' | 'oneFive' | 'six' | 'nine';
 
 export interface ViewState {
   layout: LayoutKind;

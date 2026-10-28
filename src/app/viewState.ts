@@ -4,7 +4,7 @@ import { applyLayout, visibleCount } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
   layout: 'quad',
-  slots: [null, null, null, null],
+  slots: Array(9).fill(null), // layouts.MAX_SLOTS
   sizes: {},
   selected: null,
   soundOn: true,
