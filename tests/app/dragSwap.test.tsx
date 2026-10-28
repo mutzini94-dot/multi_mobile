@@ -2,7 +2,6 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { useEffect } from 'react';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
-import { HOST_KEY } from '../../src/host/hostProfile';
 import { safeStorage } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
@@ -19,10 +18,9 @@ vi.mock('../../src/players/StreamPlayer', () => ({
 
 const noBridge: ToonationBridge = { request: () => Promise.reject(new Error('NO_EXTENSION')) };
 
-function setup({ savedHost = false } = {}) {
+function setup() {
   mounts.length = 0;
   const kv = safeStorage(undefined);
-  if (savedHost) kv.set(HOST_KEY, JSON.stringify({ name: '나', donateId: 'myTag', platform: 'twitch', channel: 'my_ch' }));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));
@@ -118,19 +116,6 @@ test('Esc로 끌기를 취소한다', () => {
   expect(document.querySelector('.player-layer__item--floating')).toBeNull();
 });
 
-test('합방 중에는 1번 호스트 칸은 끌 수도, 그 자리에 놓을 수도 없다', () => {
-  setup({ savedHost: true });
-  fireEvent.click(screen.getByRole('button', { name: '합방 방송 개설' }));
-  pick(1, 'A');
-  pick(2, 'B');
-  expect(within(tile(0)).queryByRole('button', { name: '끌어서 자리 옮기기' })).toBeNull();
-  drag(1, 0);
-  expect(within(tile(0)).getByText('나')).toBeInTheDocument();
-  drag(1, 2);
-  expect(within(tile(1)).getByText('B')).toBeInTheDocument();
-  expect(within(tile(2)).getByText('A')).toBeInTheDocument();
-});
-
 describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
   const bar = (i: number) => tile(i).querySelector('.tile__bar') as HTMLElement;
   const grab = (slot: number) => document.querySelector(`.player-layer__item[data-slot="${slot}"] .player-layer__grab`) as HTMLElement;
@@ -182,16 +167,6 @@ describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
     drop();
   });
 
-  test('합방 중 호스트 칸은 영상을 눌러도 끌리지 않고 선택만 된다', () => {
-    setup({ savedHost: true });
-    fireEvent.click(screen.getByRole('button', { name: '합방 방송 개설' }));
-    pick(1, 'A');
-    pressAt(grab(0));
-    moveOver(1);
-    drop();
-    expect(within(tile(0)).getByText('나')).toBeInTheDocument();
-    expect(within(tile(1)).getByText('A')).toBeInTheDocument();
-  });
 });
 
 describe('끄는 동안 작은 창 효과', () => {

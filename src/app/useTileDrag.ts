@@ -11,7 +11,7 @@ interface Press extends TileDragState {
   x0: number;
   y0: number;
   started: boolean; // 기준 거리 이상 움직여 끌기가 시작됨
-  canDrag: boolean; // false면 눌러도 선택만 (합방 호스트 칸 등)
+  canDrag: boolean; // false면 눌러도 선택만
 }
 
 /** 이만큼 움직여야 끌기로 본다 (그보다 작으면 짧게 누른 것 = 칸 선택) */

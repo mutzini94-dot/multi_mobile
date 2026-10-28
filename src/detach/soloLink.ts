@@ -1,7 +1,7 @@
 import { makeCreator } from '../domain/creatorInput';
 import { makeChatPage, makeDonatePage, makeWebPage, isStream } from '../domain/pages';
 import type { Creator, SlotItem } from '../domain/types';
-import { fromBase64Url, toBase64Url } from '../share/jointLink';
+import { fromBase64Url, toBase64Url } from './base64url';
 
 /**
  * 분리 창 주소: 같은 앱을 `#solo=<base64url(JSON)>`로 열면 칸 하나만 보여 주는 분리 창이 된다.
@@ -24,7 +24,7 @@ const saveCreator = (c: Creator): SavedCreator => ({ name: c.name, donateId: c.d
 export function loadCreator(raw: unknown): Creator | null {
   if (!raw || typeof raw !== 'object') return null;
   const s = raw as Partial<SavedCreator>;
-  const source: Creator['source'] = s.source === 'toonation' || s.source === 'link' ? s.source : 'manual';
+  const source: Creator['source'] = s.source === 'toonation' ? 'toonation' : 'manual';
   const r = makeCreator({ name: String(s.name ?? ''), donateId: String(s.donateId ?? ''), platform: s.platform as Creator['platform'], channel: String(s.channel ?? '') }, source);
   if (!r.ok) return null;
   const videoId = typeof s.videoId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(s.videoId) ? s.videoId : undefined;

@@ -6,17 +6,11 @@ import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveL
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
 import { LiveTab } from '../ui/LiveTab';
-import { markConfirmed, needsConfirm } from '../donate/confirmations';
 import { donationWarning, openDonationPopup } from '../donate/donation';
 import { localFavorites, type FavoritesSource } from '../favorites/favorites';
 import type { PlayerHandle, StreamStatus } from '../players/types';
 import { useAudioMix } from '../players/useAudioFocus';
 import { usePlaybackPolicy } from '../players/usePlaybackPolicy';
-import { buildJointUrl, decodeJoint, publicBase } from '../share/jointLink';
-import { loadHost, saveHost } from '../host/hostProfile';
-import type { CreatorInput } from '../domain/creatorInput';
-import { HostProfileDialog } from '../ui/HostProfileDialog';
-import { JointShareDialog } from '../ui/JointShareDialog';
 import { createBridge, type ToonationBridge } from '../toonation/bridge';
 import { desktopBridge, getDesktopApi, type AppInfo, type DesktopApi, type DonateMode } from '../desktop/desktopApi';
 import { DonateModal } from '../ui/DonateModal';
@@ -24,11 +18,10 @@ import { useToonation } from '../toonation/useToonation';
 import { showLiveNotification, useLiveWatch } from '../toonation/liveWatch';
 import { ToonationSection } from '../ui/ToonationSection';
 import { safeStorage, type KV } from '../storage/safeStorage';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DonationBar } from '../ui/DonationBar';
 import { PlayerLayer } from '../ui/PlayerLayer';
 import { FavoritesPicker } from '../ui/FavoritesPicker';
-import { Gnb, type GnbJoint } from '../ui/Gnb';
+import { Gnb } from '../ui/Gnb';
 import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
 import { playerKeys, visibleCount, visibleSlots } from '../layout/layouts';
@@ -68,7 +61,6 @@ function withDetachedItems(state: ViewState, detached: Detached[]): ViewState {
 }
 
 const POPUP_POLL_MS = 1000;
-const PUBLIC_BASE_KEY = 'mv.publicBase.v1'; // 설치형·로컬에서 합방 URL에 쓸 시청 페이지(배포한 웹) 주소
 
 function readStorage(): Storage | undefined {
   try {
@@ -105,37 +97,20 @@ export function App(props: Props) {
     desktop?.setAlwaysOnTop?.(settings.alwaysOnTop);
   }, [desktop, settings.alwaysOnTop]);
 
-  // 합방 URL(#j=)로 열렸으면 시청자 화면: 그 구성으로 시작하고, 후원은 항상 호스트에게
-  const [boot] = useState(() => {
-    const hash = win.location.hash;
-    if (hash.startsWith('#s=')) return { joint: null, error: '예전 형식의 합방 링크입니다. 호스트에게 새 URL을 받아 주세요' };
-    if (!hash.startsWith('#j=')) return { joint: null, error: null };
-    const joint = decodeJoint(hash);
-    return { joint, error: joint ? null : '합방 URL이 올바르지 않습니다' };
-  });
-  const viewer = boot.joint;
-  // 시작 화면: 합방 URL > 마지막 화면 복원(설정) > 기본 레이아웃(설정)
+  // 시작 화면: 마지막 화면 복원(설정) > 기본 레이아웃(설정)
   const [state, dispatch] = useReducer(
     viewReducer,
     null,
-    () =>
-      boot.joint?.state ??
-      (settings.restoreLastView ? loadLastView(kv) : null) ??
-      applyLayout(initialViewState, settings.defaultLayout),
+    () => (settings.restoreLastView ? loadLastView(kv) : null) ?? applyLayout(initialViewState, settings.defaultLayout),
   );
   // 새 창으로 분리한 칸들 (칸에는 분리 표시만 남는다)
   const [detached, setDetached] = useState<Detached[]>([]);
-  // 화면이 바뀔 때마다 저장 (합방 시청 화면은 남의 구성이라 저장하지 않는다)
+  // 화면이 바뀔 때마다 저장
   useEffect(() => {
-    if (!viewer) saveLastView(kv, withDetachedItems(state, detached));
-  }, [kv, state, viewer, detached]);
-  const [message, setMessage] = useState<string | null>(boot.error);
+    saveLastView(kv, withDetachedItems(state, detached));
+  }, [kv, state, detached]);
+  const [message, setMessage] = useState<string | null>(null);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
-  const [confirming, setConfirming] = useState<Creator | null>(null);
-  // 합동 방송 호스트: 호스트 방송은 1번 칸 고정. url은 '방송 시작하기' 순간의 구성으로 고정된 URL
-  const [hosting, setHosting] = useState<{ host: Creator; started: boolean; url: string | null } | null>(null);
-  const [hostDialog, setHostDialog] = useState<'open' | 'edit' | null>(null);
-  const [shareOpen, setShareOpen] = useState(false);
   const [popupCreator, setPopupCreator] = useState<Creator | null>(null);
   const [popupClosed, setPopupClosed] = useState(true);
   const popupRef = useRef<Window | null>(null);
@@ -158,11 +133,10 @@ export function App(props: Props) {
       settle([from, to]);
     },
     (slot) => dispatch({ type: 'select', slot }), // 짧게 누름 = 그 칸 선택 (그 칸만 소리)
-    // 합방 중 1번 호스트 칸 자리에는 놓을 수 없다
-    (_from, to) => !((!!viewer || !!hosting) && to === 0),
+    () => true,
     (from) => settle([from]), // 취소: 제자리로
   );
-  // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 합방 링크에는 담지 않는다)
+  // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
   const focusEl = useRef<HTMLDivElement>(null);
 
@@ -188,15 +162,15 @@ export function App(props: Props) {
   const selectedCreator = isStream(selectedItem) ? selectedItem : null;
   const stateRef = useRef(state);
   stateRef.current = state;
-  // 후원 대상: 합방 시청 화면에서는 어느 칸을 골랐든 호스트, 그 밖에는 선택한 방송
-  const donateTarget = viewer ? viewer.host : selectedCreator;
+  // 후원 대상: 선택한 방송
+  const donateTarget = selectedCreator;
   // 후원 페이지 칸이 따라가는 크리에이터: 선택한 방송 (선택이 풀리면 마지막으로 따라간 방송)
   const [lastFollowed, setLastFollowed] = useState<Creator | null>(null);
   const detachHost = useMemo(
     () => props.detachHost ?? (desktop ? desktopDetachHost(desktop, () => window.location.href) : webDetachHost(window)),
     [props.detachHost, desktop],
   );
-  const donateFor = viewer ? viewer.host : followDonateCreator(state, lastFollowed);
+  const donateFor = followDonateCreator(state, lastFollowed);
   useEffect(() => {
     if (donateFor !== lastFollowed) setLastFollowed(donateFor);
   }, [donateFor, lastFollowed]);
@@ -285,7 +259,7 @@ export function App(props: Props) {
   };
   // 시작할 때 로그인 상태(캐시 잔액)를 확인한다
   useEffect(() => {
-    if (toonStatus === 'idle' && !viewer) refreshToonation();
+    if (toonStatus === 'idle') refreshToonation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // 내 후원 내역 (월 후원 한도 확인에도 쓴다). 로그인되면 미리 불러 두고, 후원창을 닫으면 다시 불러온다
@@ -365,7 +339,7 @@ export function App(props: Props) {
   const endedSlots = keys.map((k, i) => (k && isStream(state.slots[i]) && streamStatus[k] && streamStatus[k] !== 'live' ? streamStatus[k] : null));
   // 설정: 방송이 끝나면 라이브 중인 즐겨찾기로 자동으로 바꾸기
   useEffect(() => {
-    if (!settings.autoReplaceEnded || viewer) return;
+    if (!settings.autoReplaceEnded) return;
     const slot = endedSlots.findIndex((s, i) => s && i < visibleCount(state));
     const c = slot >= 0 ? liveReplacement() : null;
     if (c) replaceSlot(slot, c);
@@ -375,7 +349,7 @@ export function App(props: Props) {
     const s = endedSlots[slot];
     const item = state.slots[slot];
     if (!s || !isStream(item)) return null;
-    const c = viewer ? null : liveReplacement();
+    const c = liveReplacement();
     return (
       <div className="ended-notice" role="status" aria-label={`${item.name} 방송 상태`}>
         <strong>{s === 'ended' ? '방송 종료' : '재생할 수 없는 방송'}</strong>
@@ -384,7 +358,7 @@ export function App(props: Props) {
             라이브로 바꾸기 · {c.name}
           </button>
         ) : (
-          !viewer && <span className="muted">라이브 중인 투네이션 즐겨찾기가 없습니다</span>
+          <span className="muted">라이브 중인 투네이션 즐겨찾기가 없습니다</span>
         )}
       </div>
     );
@@ -457,8 +431,7 @@ export function App(props: Props) {
       setLimitAsk({ creator: c, total });
       return;
     }
-    if (needsConfirm(c, kv)) setConfirming(c);
-    else openPopup(c);
+    openPopup(c);
   };
   const onDonate = () => {
     if (donateTarget) donateTo(donateTarget);
@@ -538,42 +511,6 @@ export function App(props: Props) {
     setPickerSlot(null);
   };
 
-  // ---------- 합동 방송 (호스트) ----------
-  const beginHosting = (host: Creator) => {
-    dispatch({ type: 'assign', slot: 0, creator: host });
-    setHosting({ host, started: false, url: null });
-  };
-  const onOpenJoint = () => {
-    const host = loadHost(kv);
-    if (host) beginHosting(host);
-    else setHostDialog('open');
-  };
-  const onSaveHost = (input: CreatorInput) => {
-    const r = saveHost(kv, input);
-    if (!r.ok) return r;
-    if (hostDialog === 'open') beginHosting(r.value);
-    else if (hosting) {
-      // 합방 중이면 1번 칸 호스트도 바꾼다 (설정 창에서 수정한 경우는 저장만)
-      dispatch({ type: 'assign', slot: 0, creator: r.value });
-      setHosting((h) => h && { ...h, host: r.value });
-    }
-    setHostDialog(null);
-    return r;
-  };
-  const jointUrl = (host: Creator, base: string | null) => (base ? buildJointUrl(host, state, base) : null);
-  const currentBase = () => publicBase(win.location.href, kv.get(PUBLIC_BASE_KEY));
-  const onStartJoint = () => {
-    if (!hosting) return;
-    setHosting({ ...hosting, started: true, url: jointUrl(hosting.host, currentBase()) });
-    setShareOpen(true);
-  };
-  const onRegenerateUrl = () => hosting && setHosting({ ...hosting, url: jointUrl(hosting.host, currentBase()) });
-  const onApplyBase = (base: string) => {
-    if (!/^https?:\/\/[^\s]+$/i.test(base)) return 'http:// 또는 https:// 로 시작하는 주소를 입력해 주세요';
-    kv.set(PUBLIC_BASE_KEY, base);
-    if (hosting) setHosting({ ...hosting, url: jointUrl(hosting.host, base) });
-    return null;
-  };
   const exportFavorites = (json: string) => {
     try {
       const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -586,24 +523,6 @@ export function App(props: Props) {
       setMessage('내보내기에 실패했습니다');
     }
   };
-  const onCopyUrl = async (url: string) => {
-    try {
-      await win.navigator.clipboard.writeText(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  const onEndJoint = () => {
-    setHosting(null);
-    setShareOpen(false);
-  };
-  const gnbJoint: GnbJoint = viewer
-    ? { kind: 'viewer', host: viewer.host, onRestore: () => dispatch({ type: 'replace', state: viewer.state }) }
-    : hosting
-      ? { kind: 'hosting', started: hosting.started, onEditHost: () => setHostDialog('edit'), onStart: onStartJoint, onShowUrl: () => setShareOpen(true), onEnd: onEndJoint }
-      : { kind: 'normal', onOpen: onOpenJoint };
-
   return (
     <div className={`app${focusedCreator ? ' app--focus' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
 
@@ -612,10 +531,9 @@ export function App(props: Props) {
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
         canDonate={!!donateTarget}
         onDonate={onDonate}
-        joint={gnbJoint}
         onSettings={() => setSettingsOpen(true)}
-        onPresets={viewer || hosting ? undefined : () => setPresetsOpen(true)}
-        account={toonation.state.account && !viewer ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
+        onPresets={() => setPresetsOpen(true)}
+        account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
       <div className="app__body">
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
@@ -629,8 +547,6 @@ export function App(props: Props) {
               const page = isPage(item) ? item : null;
               const markId = detachedId(item);
               const pageKey = keys[slot];
-              // 호스트 칸(1번)은 합방 중 고정, 합방 시청 화면은 모든 칸 고정
-              const hostSlot = (!!viewer || !!hosting) && slot === 0;
               return (
                 <Tile
                   creator={creator}
@@ -642,7 +558,6 @@ export function App(props: Props) {
                   playerSlotRef={(el) => {
                     slotEls.current[slot] = el;
                   }}
-                  locked={!!viewer || (!!hosting && slot === 0)}
                   audible={audible[slot]}
                   onSoundClick={
                     mix && keys[slot]
@@ -658,7 +573,6 @@ export function App(props: Props) {
                       ? { value: tileVolumes[keys[slot]!] ?? settings.masterVolume, onChange: (v) => setTileVolumes((t) => ({ ...t, [keys[slot]!]: v })) }
                       : undefined
                   }
-                  badge={hostSlot && creator ? '호스트' : undefined}
                   page={
                     page
                       ? {
@@ -672,15 +586,14 @@ export function App(props: Props) {
                   }
                   dnd={{
                     slot,
-                    // 합방 중에는 1번 호스트 칸은 고정
-                    canDrag: !!item && !hostSlot,
-                    canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot && !hostSlot,
+                    canDrag: !!item,
+                    canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot,
                     over: tileDrag.drag?.over === slot,
                     source: tileDrag.drag?.from === slot,
-                    onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item && !hostSlot }),
+                    onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item }),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
-                  onDetach={(creator || page) && !hostSlot && !viewer ? () => detachSlot(slot) : undefined}
+                  onDetach={creator || page ? () => detachSlot(slot) : undefined}
                   detached={markId && item ? { name: item.name, onReturn: () => restoreDetached(markId, 'button') } : undefined}
                   onRemove={
                     creator || page
@@ -727,9 +640,8 @@ export function App(props: Props) {
             focused={focusedCreator ? focused : null}
             focusEl={focusEl}
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}
-            // 합방 중 호스트 칸(1번)은 눌러도 선택만
             // 영상 클릭 설정이 '플레이어'면 영상 위 잡는 층을 깔지 않는다 (클릭이 플레이어로 간다)
-            onGrab={settings.videoClick === 'select' ? (slot, e) => tileDrag.start(slot, e, { canDrag: !((!!viewer || !!hosting) && slot === 0) }) : undefined}
+            onGrab={settings.videoClick === 'select' ? (slot, e) => tileDrag.start(slot, e, { canDrag: true }) : undefined}
             stageRef={stageRef}
             slotEls={slotEls}
             dragging={dragging || tileDrag.drag !== null}
@@ -875,10 +787,6 @@ export function App(props: Props) {
           settings={settings}
           onChange={changeSettings}
           desktop={!!desktop}
-          host={hosting?.host ?? loadHost(kv)}
-          onEditHost={() => setHostDialog('edit')}
-          publicBase={kv.get(PUBLIC_BASE_KEY) ?? ''}
-          onSavePublicBase={onApplyBase}
           toonationAccount={toonation.state.account?.name ?? null}
           onLogout={toonation.logout}
           favorites={favorites}
@@ -897,34 +805,6 @@ export function App(props: Props) {
                 }
               : undefined
           }
-        />
-      )}
-      {hostDialog && (
-        <HostProfileDialog
-          initial={hosting?.host ?? loadHost(kv)}
-          submitLabel={hostDialog === 'open' ? '저장하고 개설' : '저장'}
-          onSave={onSaveHost}
-          onCancel={() => setHostDialog(null)}
-        />
-      )}
-      {shareOpen && hosting && (
-        <JointShareDialog
-          url={hosting.url}
-          onApplyBase={onApplyBase}
-          onCopy={onCopyUrl}
-          onRegenerate={onRegenerateUrl}
-          onClose={() => setShareOpen(false)}
-        />
-      )}
-      {confirming && (
-        <ConfirmDialog
-          creator={confirming}
-          onCancel={() => setConfirming(null)}
-          onConfirm={() => {
-            markConfirmed(confirming, kv);
-            setConfirming(null);
-            openPopup(confirming);
-          }}
         />
       )}
     </div>

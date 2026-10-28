@@ -10,7 +10,7 @@ const memKV = () => safeStorage(undefined);
 
 test("add 후 list에 나오고, 저장된 항목은 source가 'manual'이다", () => {
   const fav = localFavorites(memKV());
-  fav.add(creator({ source: 'link' }));
+  fav.add(creator({ source: 'toonation' }));
   expect(fav.list()).toEqual([creator()]);
 });
 

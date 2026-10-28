@@ -49,7 +49,7 @@ export function parseView(raw: unknown): ViewState | null {
       slots.push(w.ok ? w.value : null);
       continue;
     }
-    const source: Creator['source'] = s.source === 'toonation' || s.source === 'link' ? s.source : 'manual';
+    const source: Creator['source'] = s.source === 'toonation' ? 'toonation' : 'manual';
     const c = makeCreator(s as unknown as CreatorInput, source);
     slots.push(c.ok ? c.value : null);
   }

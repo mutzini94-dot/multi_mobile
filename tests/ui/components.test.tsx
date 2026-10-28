@@ -4,7 +4,6 @@ import { Gnb } from '../../src/ui/Gnb';
 import { Tile } from '../../src/ui/Tile';
 import { TileGrid } from '../../src/ui/TileGrid';
 import { FavoritesPicker } from '../../src/ui/FavoritesPicker';
-import { ConfirmDialog } from '../../src/ui/ConfirmDialog';
 import { DonationBar } from '../../src/ui/DonationBar';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
@@ -15,7 +14,7 @@ import { mkCreator } from '../helpers/fixtures';
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
 const noop = () => {};
-const gnbProps = { layout: 'quad' as const, onLayout: noop, canDonate: true, onDonate: noop, joint: { kind: 'normal' as const, onOpen: noop } };
+const gnbProps = { layout: 'quad' as const, onLayout: noop, canDonate: true, onDonate: noop };
 const tileProps = { creator: null, selected: false, soundOn: true, onSelect: noop, onLoad: noop, onToggleSound: noop };
 
 describe('Gnb', () => {
@@ -34,28 +33,6 @@ describe('Gnb', () => {
     render(<Gnb {...gnbProps} canDonate={false} />);
     expect(screen.getByRole('button', { name: '후원하기' })).toBeDisabled();
   });
-  test('일반: 합방 방송 개설', async () => {
-    const onOpen = vi.fn();
-    render(<Gnb {...gnbProps} joint={{ kind: 'normal', onOpen }} />);
-    await userEvent.click(screen.getByRole('button', { name: '합방 방송 개설' }));
-    expect(onOpen).toHaveBeenCalled();
-  });
-  test('호스트: 시작 전에는 방송 시작하기, 시작 후에는 방송 URL', () => {
-    const h = { kind: 'hosting' as const, started: false, onEditHost: noop, onStart: noop, onShowUrl: noop, onEnd: noop };
-    const { rerender } = render(<Gnb {...gnbProps} joint={h} />);
-    expect(screen.getByText('합방 준비 중')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '방송 시작하기' })).toBeInTheDocument();
-    rerender(<Gnb {...gnbProps} joint={{ ...h, started: true }} />);
-    expect(screen.getByText('합방 방송 중')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '방송 URL' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '합방 방송 개설' })).toBeNull();
-  });
-  test('시청자: 합방 제목과 후원 대상, 원래 구성으로', () => {
-    render(<Gnb {...gnbProps} joint={{ kind: 'viewer', host: mkCreator(9, { name: '호스트님', donateId: 'hostTag' }), onRestore: noop }} />);
-    expect(screen.getByText('호스트님의 합방')).toBeInTheDocument();
-    expect(screen.getByLabelText('후원 대상')).toHaveTextContent('toon.at/donate/hostTag');
-    expect(screen.getByRole('button', { name: '원래 구성으로' })).toBeInTheDocument();
-  });
 });
 
 describe('Tile', () => {
@@ -68,12 +45,6 @@ describe('Tile', () => {
   test('선택되면 tile--selected', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} selected />);
     expect(container.firstChild).toHaveClass('tile--selected');
-  });
-  test('잠긴 칸(호스트·시청 화면)은 불러오기·삭제가 없고 배지를 단다', () => {
-    render(<Tile {...tileProps} creator={mkCreator(1)} locked badge="호스트" onRemove={noop} />);
-    expect(screen.queryByRole('button', { name: '불러오기' })).toBeNull();
-    expect(screen.queryByRole('button', { name: '방송 삭제' })).toBeNull();
-    expect(screen.getByText('호스트')).toBeInTheDocument();
   });
   test('사운드 버튼 라벨', () => {
     const { rerender } = render(<Tile {...tileProps} creator={mkCreator(1)} selected soundOn />);
@@ -147,20 +118,6 @@ describe('FavoritesPicker', () => {
     render(<FavoritesPicker source={s} onPick={noop} onClose={noop} />);
     await userEvent.click(screen.getByRole('button', { name: '크리에이터1 삭제' }));
     expect(s.list()).toEqual([]);
-  });
-});
-
-describe('ConfirmDialog', () => {
-  test('본문과 버튼', async () => {
-    const onConfirm = vi.fn();
-    const onCancel = vi.fn();
-    render(<ConfirmDialog creator={mkCreator(1, { source: 'link', donateId: 'abc' })} onConfirm={onConfirm} onCancel={onCancel} />);
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/후원 아이디가 abc가 맞는지/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '확인하고 후원' }));
-    expect(onConfirm).toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: '취소' }));
-    expect(onCancel).toHaveBeenCalled();
   });
 });
 

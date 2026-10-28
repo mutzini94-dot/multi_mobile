@@ -44,7 +44,7 @@ export function PresetsDialog({ kv, current, onLoad, onClose }: Props) {
           </button>
         </div>
         <form className="page-tab__form" onSubmit={submit}>
-          <input aria-label="구성 이름" value={name} placeholder="예: 저녁 합방 세트" maxLength={30} onChange={(e) => setName(e.target.value)} />
+          <input aria-label="구성 이름" value={name} placeholder="예: 저녁 방송 세트" maxLength={30} onChange={(e) => setName(e.target.value)} />
           <button type="submit" className="btn btn--donate">
             지금 구성 저장
           </button>

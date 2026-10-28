@@ -51,5 +51,5 @@ test('makeCreator는 key를 채우고 이름 공백을 거부', () => {
 });
 
 test('makeCreator는 알 수 없는 플랫폼을 거부', () => {
-  expect(makeCreator({ name: 'a', donateId: 'abc', platform: 'kick' as never, channel: 'foo_bar' }, 'link').ok).toBe(false);
+  expect(makeCreator({ name: 'a', donateId: 'abc', platform: 'kick' as never, channel: 'foo_bar' }, 'manual').ok).toBe(false);
 });

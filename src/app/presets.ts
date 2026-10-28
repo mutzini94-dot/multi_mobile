@@ -3,7 +3,7 @@ import type { ViewState } from '../domain/types';
 import type { KV } from '../storage/safeStorage';
 import { parseView, serializeView } from './lastView';
 
-/** 화면 구성 저장: "저녁 합방 세트"처럼 레이아웃·칸·칸 크기를 이름 붙여 저장해 두고 한 번에 불러온다 */
+/** 화면 구성 저장: "저녁 방송 세트"처럼 레이아웃·칸·칸 크기를 이름 붙여 저장해 두고 한 번에 불러온다 */
 export const PRESETS_KEY = 'mv.presets.v1';
 export const MAX_PRESETS = 20;
 

@@ -10,8 +10,6 @@ interface Props {
   onToggleSound(): void;
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onFullscreen?(): void;
-  locked?: boolean; // 호스트 칸·합방 시청 화면: 불러오기·삭제 불가
-  badge?: string; // 예: '호스트'
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
   onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
@@ -35,7 +33,7 @@ interface Props {
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
 export function Tile(props: Props) {
-  const { creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, locked = false, badge, dnd } = props;
+  const { creator, selected, soundOn, onSelect, onLoad, onToggleSound, playerSlotRef, onFullscreen, onRemove, dnd } = props;
   const audible = props.audible ?? (selected && soundOn);
   const page = props.page;
   const filled = !!creator || !!page;
@@ -56,7 +54,7 @@ export function Tile(props: Props) {
     );
   return (
     <div
-      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
+      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
       data-slot={dnd?.slot}
       data-drop={dnd?.canDrop ? '1' : undefined}
     >
@@ -87,7 +85,7 @@ export function Tile(props: Props) {
             되돌리기
           </button>
         )}
-        {!locked && (
+        {(
           <button
             type="button"
             className="chip"
@@ -99,7 +97,6 @@ export function Tile(props: Props) {
             불러오기
           </button>
         )}
-        {locked && !filled && <span className="muted">빈 칸</span>}
         {page && (
           <>
             {dnd?.canDrag && (
@@ -114,7 +111,7 @@ export function Tile(props: Props) {
             {barButton('새 창으로 열기', '↗', page.onOpenWindow)}
             {barButton('새 창으로 분리', '⧉', props.onDetach)}
             {barButton('전체 화면', '⛶', onFullscreen)}
-            {!locked && barButton('칸 비우기', '✕', onRemove)}
+            {barButton('칸 비우기', '✕', onRemove)}
           </>
         )}
         {creator && (
@@ -133,7 +130,6 @@ export function Tile(props: Props) {
             )}
             <span className="tile__name">{creator.name}</span>
             <span className="tile__platform">{PLATFORM_LABEL[creator.platform]}</span>
-            {badge && <span className="badge badge--host">{badge}</span>}
             <button
               type="button"
               className={`sound${audible ? ' sound--on' : ''}`}
@@ -175,7 +171,7 @@ export function Tile(props: Props) {
                 ⛶
               </button>
             )}
-            {onRemove && !locked && (
+            {onRemove && (
               <button
                 type="button"
                 className="sound sound--remove"

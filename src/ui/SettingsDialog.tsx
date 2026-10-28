@@ -9,10 +9,6 @@ interface Props {
   settings: Settings;
   onChange(patch: Partial<Settings>): void;
   desktop: boolean; // 설치형 전용 항목(항상 위·후원창 모드·빠른 후원)
-  host: Creator | null;
-  onEditHost(): void;
-  publicBase: string;
-  onSavePublicBase(base: string): string | null; // 오류 메시지 또는 null
   toonationAccount: string | null; // 로그인한 투네이션 계정 이름
   onLogout(): void;
   favorites: FavoritesSource;
@@ -108,8 +104,6 @@ export function SettingsDialog(p: Props) {
   const [amountText, setAmountText] = useState(formatAmounts(s.quickAmounts));
   const [messageText, setMessageText] = useState(s.quickMessages.join('\n'));
   const [limitText, setLimitText] = useState(s.monthlyLimit ? s.monthlyLimit.toLocaleString('ko-KR') : '0');
-  const [base, setBase] = useState(p.publicBase);
-  const [baseError, setBaseError] = useState<string | null>(null);
   const [favMessage, setFavMessage] = useState<string | null>(null);
 
   const onImport = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -342,28 +336,6 @@ export function SettingsDialog(p: Props) {
           {favMessage && <p className="muted">{favMessage}</p>}
         </Section>
 
-        <Section title="합동 방송">
-          <div className="settings__row">
-            <span>{p.host ? `${p.host.name} · ${PLATFORM_LABEL[p.host.platform]} · ${p.host.channel}` : '내 방송 정보가 없습니다'}</span>
-            <button type="button" className="btn btn--ghost btn--sm" aria-label="내 방송 정보 수정" onClick={p.onEditHost}>
-              {p.host ? '수정' : '입력'}
-            </button>
-          </div>
-          <label className="settings__row">
-            <span>
-              시청 페이지 주소
-              <small className="muted">합방 URL에 쓰는 배포한 멀티뷰 웹 주소</small>
-            </span>
-            <input
-              aria-label="시청 페이지 주소"
-              value={base}
-              placeholder="https://…"
-              onChange={(e) => setBase(e.target.value)}
-              onBlur={() => setBaseError(base.trim() ? p.onSavePublicBase(base.trim()) : null)}
-            />
-          </label>
-          {baseError && <p className="form-error">{baseError}</p>}
-        </Section>
       </div>
     </div>
   );

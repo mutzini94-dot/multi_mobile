@@ -4,7 +4,6 @@ import { LAST_VIEW_KEY } from '../../src/app/lastView';
 import { localFavorites } from '../../src/favorites/favorites';
 import { DEFAULT_SETTINGS, SETTINGS_KEY, type Settings } from '../../src/settings/settings';
 import { safeStorage, type KV } from '../../src/storage/safeStorage';
-import { encodeJoint } from '../../src/share/jointLink';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
 
@@ -57,16 +56,6 @@ describe('마지막 화면 복원 · 기본 레이아웃', () => {
     expect(tiles()).toHaveLength(1);
   });
 
-  test('합방 URL로 열면 복원하지 않고 그 구성을 쓴다', () => {
-    const kv = safeStorage(undefined);
-    const first = setup({ kv });
-    pick(0, 'A');
-    first.unmount();
-    const host = mkCreator(9, { name: 'H', donateId: 'hTag' });
-    setup({ kv, hash: encodeJoint(host, { layout: 'single', slots: [host, null, null, null], sizes: {}, selected: null, soundOn: true }) });
-    expect(tiles()).toHaveLength(1);
-    expect(within(tile(0)).getByText('H')).toBeInTheDocument();
-  });
 });
 
 test('영상 클릭을 "플레이어"로 바꾸면 영상 위 잡는 층이 없어진다 (위쪽 바로는 계속 끌 수 있음)', () => {

@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
-import { HOST_KEY } from '../../src/host/hostProfile';
 import { SETTINGS_KEY } from '../../src/settings/settings';
 import { safeStorage } from '../../src/storage/safeStorage';
 import type { DesktopApi } from '../../src/desktop/desktopApi';
@@ -30,7 +29,6 @@ function desktopApi(over: Partial<DesktopApi> = {}): DesktopApi {
 
 function setup({ desktop = null as DesktopApi | null, bridge }: { desktop?: DesktopApi | null; bridge?: ToonationBridge } = {}) {
   const kv = safeStorage(undefined);
-  kv.set(HOST_KEY, JSON.stringify({ name: '나', donateId: 'myTag', platform: 'twitch', channel: 'my_ch' }));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));
@@ -83,21 +81,6 @@ test('설정 창: 빠른 후원 금액은 쉼표로 입력하고 잘못된 값�
   fireEvent.change(input, { target: { value: '1,000, 3000, abc, -5, 20000' } });
   fireEvent.blur(input);
   expect(JSON.parse(kv.get(SETTINGS_KEY)!).quickAmounts).toEqual([1000, 3000, 20000]);
-});
-
-test('설정 창: 내 방송 정보와 시청 페이지 주소를 바꿀 수 있다', () => {
-  const { kv } = setup();
-  const dlg = openSettings();
-  expect(within(dlg).getByText(/나 · Twitch · my_ch/)).toBeInTheDocument();
-  fireEvent.click(within(dlg).getByRole('button', { name: '내 방송 정보 수정' }));
-  const host = screen.getByRole('dialog', { name: '내 방송 정보' });
-  fireEvent.change(within(host).getByLabelText('이름'), { target: { value: '새이름' } });
-  fireEvent.click(within(host).getByRole('button', { name: '저장' }));
-  expect(JSON.parse(kv.get(HOST_KEY)!).name).toBe('새이름');
-  const base = within(screen.getByRole('dialog', { name: '설정' })).getByLabelText('시청 페이지 주소');
-  fireEvent.change(base, { target: { value: 'https://mv.example.com/' } });
-  fireEvent.blur(base);
-  expect(kv.get('mv.publicBase.v1')).toBe('https://mv.example.com/');
 });
 
 test('설정 창: 즐겨찾기 순서 바꾸기', () => {
