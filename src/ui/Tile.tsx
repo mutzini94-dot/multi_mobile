@@ -18,6 +18,9 @@ interface Props {
   volume?: { value: number; onChange(v: number): void }; // 여러 칸 동시 듣기: 칸별 볼륨
   // 페이지 칸(후원 페이지·웹페이지): 위쪽 바가 영상 위에 겹치지 않고 페이지 위에 따로 놓인다. 소리 버튼 없음
   page?: { label: string; onBack?(): void; onReload?(): void; onOpenWindow?(): void };
+  onDetach?(): void; // 이 칸을 새 창으로 분리
+  // 새 창으로 분리한 칸: "{이름} · 새 창으로 분리됨"과 되돌리기 · 불러오기(다른 방송 넣기)
+  detached?: { name: string; onReturn(): void };
   // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 상단 바 어디든(버튼 제외)·⠿를 눌러 끈다
   dnd?: {
     slot: number;
@@ -53,7 +56,7 @@ export function Tile(props: Props) {
     );
   return (
     <div
-      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${page ? ' tile--page' : ''}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
+      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${locked ? ' tile--locked' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
       data-slot={dnd?.slot}
       data-drop={dnd?.canDrop ? '1' : undefined}
     >
@@ -71,6 +74,19 @@ export function Tile(props: Props) {
             : undefined
         }
       >
+        {props.detached && <span className="tile__detached-text">{props.detached.name} · 새 창으로 분리됨</span>}
+        {props.detached && (
+          <button
+            type="button"
+            className="chip chip--primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.detached!.onReturn();
+            }}
+          >
+            되돌리기
+          </button>
+        )}
         {!locked && (
           <button
             type="button"
@@ -96,6 +112,7 @@ export function Tile(props: Props) {
             {barButton('뒤로', '←', page.onBack)}
             {barButton('새로고침', '⟳', page.onReload)}
             {barButton('새 창으로 열기', '↗', page.onOpenWindow)}
+            {barButton('새 창으로 분리', '⧉', props.onDetach)}
             {barButton('전체 화면', '⛶', onFullscreen)}
             {!locked && barButton('칸 비우기', '✕', onRemove)}
           </>
@@ -143,6 +160,7 @@ export function Tile(props: Props) {
                 onChange={(e) => props.volume!.onChange(Number(e.target.value))}
               />
             )}
+            {barButton('새 창으로 분리', '⧉', props.onDetach)}
             {onFullscreen && (
               <button
                 type="button"

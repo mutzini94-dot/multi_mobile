@@ -345,3 +345,18 @@ button:disabled { cursor: not-allowed; }
 .live-item__name { font-weight: 700; font-size: 14px; }
 .live-item__title, .live-item__meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-tab__more { margin-top: 8px; width: 100%; }
+
+/* ---------- 새 창으로 분리한 칸 ---------- */
+.tile--detached::before { content: '⧉'; font-size: 18px; }
+.tile--detached .tile__bar { flex-wrap: wrap; margin-top: 24px; max-width: 90%; }
+.tile__detached-text { flex: 1 1 100% !important; text-align: center; font-size: 14px; font-weight: 600; color: var(--ink-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile--empty .chip--primary { background: var(--primary); color: #fff; box-shadow: none; }
+.tile--empty .chip--primary:hover { background: var(--primary-press); }
+
+/* ---------- 분리 창 ---------- */
+.solo { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--video); }
+.solo__bar { position: static; flex: none; height: 44px; padding: 0 8px 0 12px; background: var(--video); cursor: default; }
+.solo__bar .tile__bar-gap + .sound { margin-left: 0; }
+.solo__return { background: rgba(255, 255, 255, 0.18); color: #fff; box-shadow: none; }
+.solo__body { position: relative; flex: 1; min-height: 0; }
+.solo__body > * { position: absolute; inset: 0; }

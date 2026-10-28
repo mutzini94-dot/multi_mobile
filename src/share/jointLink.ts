@@ -23,13 +23,13 @@ export interface JointBroadcast {
   state: ViewState;
 }
 
-function toBase64Url(text: string): string {
+export function toBase64Url(text: string): string {
   let bin = '';
   new TextEncoder().encode(text).forEach((b) => (bin += String.fromCharCode(b)));
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function fromBase64Url(data: string): string {
+export function fromBase64Url(data: string): string {
   const bin = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
   const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
   return new TextDecoder('utf-8', { fatal: true }).decode(bytes);

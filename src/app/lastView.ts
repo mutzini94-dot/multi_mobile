@@ -11,7 +11,13 @@ type SavedSlot = (CreatorInput & { source: Creator['source'] }) | { kind: 'web';
 
 export function saveLastView(kv: KV, state: ViewState): void {
   const slots: SavedSlot[] = state.slots.map((c) =>
-    !c ? null : isStream(c) ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel, source: c.source } : c.kind === 'web' ? { kind: 'web', url: c.url } : { kind: 'donate' },
+    !c || (!isStream(c) && c.kind === 'detached')
+      ? null // 분리 표시 (App이 원래 내용으로 바꿔 저장한다)
+      : isStream(c)
+        ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel, source: c.source }
+        : c.kind === 'web'
+          ? { kind: 'web', url: c.url }
+          : { kind: 'donate' },
   );
   kv.set(LAST_VIEW_KEY, JSON.stringify({ v: 1, layout: state.layout, sizes: state.sizes, slots }));
 }

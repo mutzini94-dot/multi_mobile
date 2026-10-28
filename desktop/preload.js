@@ -24,6 +24,28 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
     ipcRenderer.on('mv:donate:closed', fn);
     return () => ipcRenderer.removeListener('mv:donate:closed', fn);
   },
+  // 칸 분리 창 (메인 화면 쪽)
+  detachOpen: (p) => ipcRenderer.send('mv:detach:open', { id: String(p && p.id), url: String(p && p.url), title: String((p && p.title) || '') }),
+  detachClose: (id) => ipcRenderer.send('mv:detach:close', String(id)),
+  detachPost: (id, msg) => ipcRenderer.send('mv:detach:post', String(id), msg),
+  onDetachMessage: (cb) => {
+    const fn = (_e, d) => d && cb(String(d.id), d.msg);
+    ipcRenderer.on('mv:detach:message', fn);
+    return () => ipcRenderer.removeListener('mv:detach:message', fn);
+  },
+  onDetachClosed: (cb) => {
+    const fn = (_e, id) => cb(String(id));
+    ipcRenderer.on('mv:detach:closed', fn);
+    return () => ipcRenderer.removeListener('mv:detach:closed', fn);
+  },
+  // 분리 창 쪽
+  soloPost: (msg) => ipcRenderer.send('mv:solo:post', msg),
+  onSoloMessage: (cb) => {
+    const fn = (_e, msg) => cb(msg);
+    ipcRenderer.on('mv:solo:message', fn);
+    return () => ipcRenderer.removeListener('mv:solo:message', fn);
+  },
+  soloSetAlwaysOnTop: (on) => ipcRenderer.send('mv:solo:alwaysOnTop', !!on),
   onDonateMode: (cb) => {
     const fn = (_e, mode) => cb(mode === 'pip' ? 'pip' : 'modal');
     ipcRenderer.on('mv:donate:mode', fn);

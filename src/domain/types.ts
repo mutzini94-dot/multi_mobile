@@ -28,8 +28,17 @@ export interface DonatePage {
 }
 
 export type PageSlot = WebPage | DonatePage;
-/** 칸 하나의 내용: 방송 또는 페이지 */
-export type SlotItem = Creator | PageSlot;
+
+/** 새 창으로 분리한 칸의 자리 표시: 내용은 분리 창에 있고 칸에는 되돌리기·불러오기만 */
+export interface DetachedMark {
+  kind: 'detached';
+  key: string;
+  name: string; // 분리한 내용의 이름
+  id: string; // 분리 창 id
+}
+
+/** 칸 하나의 내용: 방송 · 페이지 · 분리 표시 */
+export type SlotItem = Creator | PageSlot | DetachedMark;
 
 export type LayoutKind = 'single' | 'split2' | 'oneTwo' | 'quad';
 

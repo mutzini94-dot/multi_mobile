@@ -1,10 +1,15 @@
 import type { Result } from './creatorInput';
-import type { Creator, DonatePage, SlotItem, ViewState, WebPage } from './types';
+import type { Creator, DonatePage, PageSlot, SlotItem, ViewState, WebPage } from './types';
 import { visibleSlots } from '../layout/layouts';
 
 /** 칸 내용이 방송인지 (후원 페이지·웹페이지 칸이 아닌지) */
 export function isStream(item: SlotItem | null | undefined): item is Creator {
   return !!item && !('kind' in item);
+}
+
+/** 후원 페이지·웹페이지 칸 (분리 표시는 아님) */
+export function isPage(item: SlotItem | null | undefined): item is PageSlot {
+  return !!item && 'kind' in item && (item.kind === 'web' || item.kind === 'donate');
 }
 
 /** 웹페이지 칸 주소: 주소만 넣으면 https://, http·https만 허용 */

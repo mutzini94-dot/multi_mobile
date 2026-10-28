@@ -25,6 +25,16 @@ export interface DesktopApi {
   setAlwaysOnTop(on: boolean): void;
   onDonateClosed(cb: () => void): () => void;
   onDonateMode(cb: (mode: DonateMode) => void): () => void;
+  // 칸 분리 창 (src/detach/channel.ts). 메인 화면 쪽
+  detachOpen?(p: { id: string; url: string; title: string }): void;
+  detachClose?(id: string): void;
+  detachPost?(id: string, msg: unknown): void;
+  onDetachMessage?(cb: (id: string, msg: unknown) => void): () => void;
+  onDetachClosed?(cb: (id: string) => void): () => void;
+  // 분리 창 쪽
+  soloPost?(msg: unknown): void;
+  onSoloMessage?(cb: (msg: unknown) => void): () => void;
+  soloSetAlwaysOnTop?(on: boolean): void;
 }
 
 /** 후원창 자리: 앱 가운데 모달 또는 항상 위 PIP 창 */

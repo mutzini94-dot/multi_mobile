@@ -44,6 +44,8 @@ let loginWin = null;
 let server = null;
 let prefs = null; // 설치형 전용 설정 (lib/prefs.js)
 let donate = null; // 후원창 컨트롤러 (lib/donateController.js)
+let appOrigin = null; // 멀티뷰 화면 주소의 origin (분리 창은 이 주소만 연다)
+const soloWins = new Map(); // 분리 창 id → BrowserWindow
 
 const send = (channel, payload) => win && !win.isDestroyed() && win.webContents.send(channel, payload);
 
@@ -214,6 +216,81 @@ function createPipWindow({ title, onClosed, onResize }) {
 
 // ---------------------------------------------------------------- 메인 창
 
+// 멀티뷰 화면(메인 창·분리 창) 공통: 칸 webview 검사, 화면 밖 링크·새 창은 기본 브라우저로, 다른 주소로 이동 금지
+function guardAppContents(wc) {
+  wc.on('will-attach-webview', (e, webPreferences, params) => {
+    hardenWebPreferences(webPreferences);
+    if (!allowWebview(params)) e.preventDefault();
+  });
+  wc.on('did-attach-webview', (_e, child) => setupTileWebview(child));
+  wc.setWindowOpenHandler(({ url: u }) => {
+    if (/^https?:/.test(u)) shell.openExternal(u);
+    return { action: 'deny' };
+  });
+  wc.on('will-navigate', (e, u) => {
+    if (new URL(u).origin !== appOrigin) {
+      e.preventDefault();
+      if (/^https?:/.test(u)) shell.openExternal(u);
+    }
+  });
+}
+
+// ---------------------------------------------------------------- 칸 분리 창
+
+const SOLO_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+
+/** 칸 하나를 새 창으로 (웹의 #solo= 화면). 지난번 분리 창 크기·위치를 쓰고, 여러 개면 조금씩 비켜 놓는다 */
+function createSoloWindow({ id, url, title }) {
+  if (!SOLO_ID_RE.test(id) || soloWins.has(id)) return;
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return;
+  }
+  if (u.origin !== appOrigin || !u.hash.startsWith('#solo=')) return;
+  const area = screen.getDisplayMatching(win.getBounds()).workArea;
+  const fallback = { width: 720, height: 444, x: area.x + area.width - 720 - 40, y: area.y + 60 };
+  const b = restoreBounds(prefs.get('soloBounds'), screen.getAllDisplays().map((d) => d.workArea), fallback, { width: 360, height: 240 });
+  const shift = 28 * soloWins.size;
+  const w = new BrowserWindow({
+    ...b,
+    x: b.x + shift,
+    y: b.y + shift,
+    minWidth: 360,
+    minHeight: 240,
+    title: `${String(title || '').slice(0, 40)} · ${APP_NAME}`,
+    icon: ICON,
+    backgroundColor: '#121318',
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, webviewTag: true },
+  });
+  guardAppContents(w.webContents);
+  const remember = () => !w.isDestroyed() && !w.isMaximized() && !w.isFullScreen() && prefs.set('soloBounds', w.getBounds());
+  w.on('moved', remember);
+  w.on('resized', remember);
+  w.on('closed', () => {
+    soloWins.delete(id);
+    send('mv:detach:closed', id); // 메인 화면이 칸으로 되돌린다 (이미 되돌렸으면 무시)
+  });
+  soloWins.set(id, w);
+  w.loadURL(u.href);
+}
+
+function closeAllSolos() {
+  for (const w of [...soloWins.values()]) if (!w.isDestroyed()) w.close();
+}
+
+// 분리 창 ↔ 메인 화면 메시지: 직렬화할 수 있는 작은 값만 넘긴다
+function plainMessage(msg) {
+  try {
+    const text = JSON.stringify(msg);
+    return text && text.length < 4000 ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
 function createWindow(url) {
   const primary = screen.getPrimaryDisplay().workArea;
   const fallback = {
@@ -234,25 +311,13 @@ function createWindow(url) {
     // webviewTag: 후원 페이지·웹페이지 칸 (붙기 전에 lib/webviewPolicy.js로 검사)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, webviewTag: true },
   });
-  win.webContents.on('will-attach-webview', (e, webPreferences, params) => {
-    hardenWebPreferences(webPreferences);
-    if (!allowWebview(params)) e.preventDefault();
-  });
-  win.webContents.on('did-attach-webview', (_e, wc) => setupTileWebview(wc));
-  // 멀티뷰 화면 밖으로 나가는 링크·새 창은 기본 브라우저로
-  const appOrigin = new URL(url).origin;
-  win.webContents.setWindowOpenHandler(({ url: u }) => {
-    if (/^https?:/.test(u)) shell.openExternal(u);
-    return { action: 'deny' };
-  });
-  win.webContents.on('will-navigate', (e, u) => {
-    if (new URL(u).origin !== appOrigin) {
-      e.preventDefault();
-      if (/^https?:/.test(u)) shell.openExternal(u);
-    }
-  });
+  appOrigin = new URL(url).origin;
+  guardAppContents(win.webContents);
   win.webContents.on('did-start-navigation', (_e, _u, inPage, isMain) => {
-    if (isMain && !inPage) donate && donate.close({ notify: false }); // 화면을 새로 읽으면 후원창도 처음부터
+    if (!isMain || inPage) return;
+    // 화면을 새로 읽으면 후원창·분리 창도 처음부터 (메인 화면이 분리 상태를 잊는다)
+    if (donate) donate.close({ notify: false });
+    closeAllSolos();
   });
   if (prefs.get('windowMaximized')) win.maximize();
   if (prefs.get('alwaysOnTop')) win.setAlwaysOnTop(true); // 웹의 설정이 읽히기 전에도 지난 상태로
@@ -265,6 +330,7 @@ function createWindow(url) {
   for (const ev of ['moved', 'resized', 'maximize', 'unmaximize']) win.on(ev, remember);
   win.on('closed', () => {
     if (donate) donate.dispose(); // PIP 창도 함께 닫는다
+    closeAllSolos();
     win = null;
   });
   donate = createDonateController({
@@ -318,6 +384,27 @@ function wireIpc() {
     }
     v.webContents.executeJavaScript(code).catch(() => {});
   });
+  // 칸 분리 창: 여닫기·메시지는 메인 창에서, 분리 창의 메시지·항상 위는 그 분리 창에서 온 것만
+  const soloIdOf = (e) => [...soloWins].find(([, w]) => !w.isDestroyed() && w.webContents === e.sender)?.[0];
+  ipcMain.on('mv:detach:open', (e, p) => fromWin(e) && p && createSoloWindow({ id: String(p.id), url: String(p.url), title: String(p.title || '') }));
+  ipcMain.on('mv:detach:close', (e, id) => {
+    const w = fromWin(e) && soloWins.get(String(id));
+    if (w && !w.isDestroyed()) w.close();
+  });
+  ipcMain.on('mv:detach:post', (e, id, msg) => {
+    const w = fromWin(e) && soloWins.get(String(id));
+    const m = plainMessage(msg);
+    if (w && !w.isDestroyed() && m) w.webContents.send('mv:solo:message', m);
+  });
+  ipcMain.on('mv:solo:post', (e, msg) => {
+    const id = soloIdOf(e);
+    const m = plainMessage(msg);
+    if (id && m) send('mv:detach:message', { id, msg: m });
+  });
+  ipcMain.on('mv:solo:alwaysOnTop', (e, on) => {
+    const id = soloIdOf(e);
+    if (id) soloWins.get(id).setAlwaysOnTop(!!on, 'floating');
+  });
   ipcMain.on('mv:window:alwaysOnTop', (e, on) => {
     if (!fromWin(e)) return;
     win.setAlwaysOnTop(!!on);
@@ -344,6 +431,16 @@ function runSmoke(outDir) {
           await new Promise((r) => setTimeout(r, 40));
         }
         if (input.length) await new Promise((r) => setTimeout(r, 1000));
+        // MV_SMOKE_SOLO_CLICK=<버튼 이름>: 첫 분리 창에서 그 버튼을 누른다 (분리 창 → 메인 화면 메시지 확인)
+        const soloClick = process.env.MV_SMOKE_SOLO_CLICK;
+        const firstSolo = [...soloWins.values()][0];
+        if (soloClick && firstSolo) {
+          const sel = JSON.stringify(`[aria-label="${soloClick}"], button`);
+          await firstSolo.webContents
+            .executeJavaScript(`[...document.querySelectorAll(${sel})].find((b) => b.getAttribute('aria-label') === ${JSON.stringify(soloClick)} || b.textContent.trim() === ${JSON.stringify(soloClick)})?.click()`)
+            .catch((e) => console.error('[smoke]', e));
+          await new Promise((r) => setTimeout(r, 1500));
+        }
       }
       const result = await win.webContents
         .executeJavaScript(
@@ -367,6 +464,8 @@ function runSmoke(outDir) {
       fs.mkdirSync(outDir, { recursive: true });
       result.windowFullScreen = win.isFullScreen();
       result.windowAlwaysOnTop = win.isAlwaysOnTop();
+      result.solos = [...soloWins].map(([id, w]) => ({ id, title: w.getTitle(), url: w.webContents.getURL().slice(0, 60), bounds: w.getBounds(), alwaysOnTop: w.isAlwaysOnTop() }));
+      for (const [id, w] of soloWins) await shot(w.webContents, `solo-${id}.png`);
       result.theme = await win.webContents.executeJavaScript('document.documentElement.dataset.theme || null').catch(() => null);
       await shot(win.webContents, 'smoke.png');
       result.donate = donate.state();
@@ -394,6 +493,7 @@ app.whenReady().then(async () => {
     windowBounds: null,
     pipBounds: null,
     windowMaximized: false,
+    soloBounds: null,
   });
   ses = session.fromPartition(PARTITION);
   // toon-widget과 같은 정직한 Electron UA (Cloudflare Turnstile이 UA와 client hints를 비교한다).

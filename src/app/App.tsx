@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { Creator, PageSlot } from '../domain/types';
-import { donatePageUrl, followDonateCreator, isStream } from '../domain/pages';
+import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
+import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
+import { donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
 import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { DonatePageTab, WebPageTab } from '../ui/PageTabs';
@@ -30,7 +31,7 @@ import { FavoritesPicker } from '../ui/FavoritesPicker';
 import { Gnb, type GnbJoint } from '../ui/Gnb';
 import { Tile } from '../ui/Tile';
 import { TileGrid } from '../ui/TileGrid';
-import { playerKeys, visibleCount } from '../layout/layouts';
+import { playerKeys, visibleCount, visibleSlots } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
 import { loadLastView, saveLastView } from './lastView';
 import { applyLayout } from '../layout/layouts';
@@ -47,6 +48,20 @@ interface Props {
   bridge?: ToonationBridge;
   desktop?: DesktopApi | null; // 설치형 앱의 window.multiviewDesktop (없으면 웹 방식)
   lives?: (q: LiveQuery) => Promise<LivePage>; // 투네이션 라이브 목록 (테스트에서 바꿔 끼움)
+  detachHost?: DetachHost; // 칸 분리 창 통로 (테스트에서 바꿔 끼움)
+}
+
+/** 분리 창에 가 있는 칸 내용 */
+interface Detached {
+  id: string;
+  item: SlotItem;
+}
+
+const detachedId = (item: SlotItem | null | undefined) => (item && !isStream(item) && item.kind === 'detached' ? item.id : null);
+
+/** 저장용: 분리 표시 칸은 분리 창에 가 있는 원래 내용으로 (다음 실행에서는 칸 안에서 연다) */
+function withDetachedItems(state: ViewState, detached: Detached[]): ViewState {
+  return { ...state, slots: state.slots.map((s) => (detachedId(s) ? detached.find((d) => d.id === detachedId(s))?.item ?? null : s)) };
 }
 
 const POPUP_POLL_MS = 1000;
@@ -102,10 +117,12 @@ export function App(props: Props) {
       (settings.restoreLastView ? loadLastView(kv) : null) ??
       applyLayout(initialViewState, settings.defaultLayout),
   );
+  // 새 창으로 분리한 칸들 (칸에는 분리 표시만 남는다)
+  const [detached, setDetached] = useState<Detached[]>([]);
   // 화면이 바뀔 때마다 저장 (합방 시청 화면은 남의 구성이라 저장하지 않는다)
   useEffect(() => {
-    if (!viewer) saveLastView(kv, state);
-  }, [kv, state, viewer]);
+    if (!viewer) saveLastView(kv, withDetachedItems(state, detached));
+  }, [kv, state, viewer, detached]);
   const [message, setMessage] = useState<string | null>(boot.error);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<Creator | null>(null);
@@ -169,6 +186,10 @@ export function App(props: Props) {
   const donateTarget = viewer ? viewer.host : selectedCreator;
   // 후원 페이지 칸이 따라가는 크리에이터: 선택한 방송 (선택이 풀리면 마지막으로 따라간 방송)
   const [lastFollowed, setLastFollowed] = useState<Creator | null>(null);
+  const detachHost = useMemo(
+    () => props.detachHost ?? (desktop ? desktopDetachHost(desktop, () => window.location.href) : webDetachHost(window)),
+    [props.detachHost, desktop],
+  );
   const donateFor = viewer ? viewer.host : followDonateCreator(state, lastFollowed);
   useEffect(() => {
     if (donateFor !== lastFollowed) setLastFollowed(donateFor);
@@ -176,6 +197,10 @@ export function App(props: Props) {
   // 페이지 칸의 뒤로·새로고침 (플레이어 키로 보관)
   const pageHandles = useRef<Record<string, PageHandle>>({});
   const embed = desktop ? 'webview' : 'iframe';
+  // 분리 창에 가 있는 후원 페이지도 따라갈 크리에이터를 알려 준다
+  useEffect(() => {
+    for (const d of detached) if (isPage(d.item) && d.item.kind === 'donate') detachHost.post(d.id, { type: 'donateFor', creator: donateFor });
+  }, [donateFor, detached, detachHost]);
   const pageUrl = (page: PageSlot) => (page.kind === 'web' ? page.url : donateFor ? donatePageUrl(donateFor) : null);
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
@@ -328,6 +353,65 @@ export function App(props: Props) {
 
   keyActions.current = { onDonate, fullscreen: enterFullscreen };
 
+  // ---------- 칸 새 창으로 분리 ----------
+  const detachSlot = (slot: number) => {
+    const item = state.slots[slot];
+    if (!isStream(item) && !isPage(item)) return;
+    const id = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const ok = detachHost.open(
+      { id, item, sound: !!audible[slot], donateFor: isPage(item) && item.kind === 'donate' ? donateFor : null },
+      isPage(item) && item.kind === 'donate' && donateFor ? `${donateFor.name} 후원 페이지` : item.name,
+    );
+    if (!ok) {
+      setMessage('새 창을 열지 못했습니다. 팝업을 허용해 주세요');
+      return;
+    }
+    if (focused === slot) exitFullscreen();
+    setDetached((d) => [...d, { id, item }]);
+    dispatch({ type: 'assignPage', slot, page: { kind: 'detached', key: `detached:${id}`, name: item.name, id } });
+    setMessage(null);
+  };
+  /**
+   * 분리 창의 내용을 칸으로 되돌린다.
+   * button(칸의 되돌리기)·return(분리 창의 되돌리기): 분리 표시 칸으로, 그 칸에 다른 방송을 넣었으면 보이는 첫 빈 칸으로
+   * closed(분리 창을 닫음): 분리 표시 칸이 남아 있을 때만 되돌리고, 아니면 버린다
+   */
+  const restoreDetached = (id: string, how: 'button' | 'return' | 'closed') => {
+    const entry = detachedRef.current.find((d) => d.id === id);
+    if (!entry) return;
+    const s = stateRef.current;
+    let slot = s.slots.findIndex((x) => detachedId(x) === id);
+    if (slot < 0 && how !== 'closed') {
+      slot = visibleSlots(s).findIndex((x) => !x);
+      if (slot < 0) {
+        setMessage('빈 칸이 없어 되돌릴 수 없습니다. 칸을 비운 뒤 다시 눌러 주세요');
+        return;
+      }
+    }
+    setDetached((d) => d.filter((x) => x.id !== id));
+    if (how !== 'closed') detachHost.close(id);
+    if (slot >= 0) dispatch({ type: 'restore', slot, item: entry.item });
+    setMessage(null);
+  };
+  const detachedRef = useRef(detached);
+  detachedRef.current = detached;
+  const detachActions = useRef({ restore: restoreDetached, donate: (_id: string) => {} });
+  detachActions.current = {
+    restore: restoreDetached,
+    donate: (id) => {
+      const item = detachedRef.current.find((d) => d.id === id)?.item;
+      if (isStream(item)) donateTo(item);
+    },
+  };
+  useEffect(() => {
+    const offMsg = detachHost.onMessage((id, msg) => (msg.type === 'return' ? detachActions.current.restore(id, 'return') : detachActions.current.donate(id)));
+    const offClosed = detachHost.onClosed((id) => detachActions.current.restore(id, 'closed'));
+    return () => {
+      offMsg();
+      offClosed();
+    };
+  }, [detachHost]);
+
   const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
   const pickPage = (page: PageSlot) => {
     if (pickerSlot === null) return;
@@ -421,7 +505,8 @@ export function App(props: Props) {
             renderTile={(slot) => {
               const item = state.slots[slot] ?? null;
               const creator = isStream(item) ? item : null;
-              const page = item && !isStream(item) ? item : null;
+              const page = isPage(item) ? item : null;
+              const markId = detachedId(item);
               const pageKey = keys[slot];
               // 호스트 칸(1번)은 합방 중 고정, 합방 시청 화면은 모든 칸 고정
               const hostSlot = (!!viewer || !!hosting) && slot === 0;
@@ -473,9 +558,11 @@ export function App(props: Props) {
                     source: tileDrag.drag?.from === slot,
                     onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item && !hostSlot }),
                   }}
-                  onFullscreen={item ? () => enterFullscreen(slot) : undefined}
+                  onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
+                  onDetach={(creator || page) && !hostSlot && !viewer ? () => detachSlot(slot) : undefined}
+                  detached={markId && item ? { name: item.name, onReturn: () => restoreDetached(markId, 'button') } : undefined}
                   onRemove={
-                    item
+                    creator || page
                       ? () => {
                           dispatch({ type: 'clear', slot });
                           // 지운 칸의 플레이어 핸들도 버린다

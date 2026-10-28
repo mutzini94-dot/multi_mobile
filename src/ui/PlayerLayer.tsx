@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
 import type { PageSlot, SlotItem, ViewState } from '../domain/types';
-import { isStream } from '../domain/pages';
+import { isPage, isStream } from '../domain/pages';
 import { playerKeys, visibleCount } from '../layout/layouts';
 import { StreamPlayer } from '../players/StreamPlayer';
 import type { PlayerHandle } from '../players/types';
@@ -101,7 +101,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
       {/* 키 순서로 고정해 그린다: 칸 자리를 바꿔도 iframe이 문서 안에서 옮겨지지 않아 다시 로딩되지 않는다 */}
       {playerKeys(state.slots)
         .map((key, slot) => ({ key, slot, creator: state.slots[slot] }))
-        .filter((p): p is { key: string; slot: number; creator: SlotItem } => !!p.key && !!p.creator)
+        .filter((p): p is { key: string; slot: number; creator: SlotItem } => !!p.key && (isStream(p.creator) || isPage(p.creator))) // 분리 표시는 그리지 않는다
         .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
         .map(({ key, slot, creator }) => {
         // 레이아웃에서 빠진 칸: 지우지 않고 숨겨 둔다 (다시 칸을 늘리면 다시 불러오지 않고 보인다)
@@ -123,7 +123,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
-            {isStream(creator) ? <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} /> : renderPage?.(creator, key)}
+            {isStream(creator) ? <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} /> : isPage(creator) ? renderPage?.(creator, key) : null}
             {/* 페이지 칸은 클릭·입력을 페이지가 받아야 하므로 잡는 층이 없다 (위쪽 바로 끈다) */}
             {onGrab && isStream(creator) && focused === null && !offscreen && <div className="player-layer__grab" onPointerDown={(e) => onGrab(slot, e)} />}
             {isFloating && floating && <span className="player-layer__drag-label">{floating.name}</span>}
