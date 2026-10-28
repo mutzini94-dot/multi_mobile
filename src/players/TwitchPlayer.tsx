@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { loadScript } from './loadScript';
-import type { PlayerHandle } from './types';
+import type { PlayerHandle, StreamStatus } from './types';
 
-export function TwitchPlayer({ channel, onReady }: { channel: string; onReady: (h: PlayerHandle) => void }) {
+export function TwitchPlayer({ channel, onReady, onStatus }: { channel: string; onReady: (h: PlayerHandle) => void; onStatus?: (s: StreamStatus) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
 
   useEffect(() => {
     let alive = true;
@@ -22,6 +24,11 @@ export function TwitchPlayer({ channel, onReady }: { channel: string; onReady: (
           width: '100%',
           height: '100%',
         });
+        // 방송 종료 감지: 채널이 오프라인이 되거나 방송이 끝나면 ended, 다시 켜지면 live
+        const status = (s: StreamStatus) => () => alive && onStatusRef.current?.(s);
+        if (Player.ONLINE) player.addEventListener(Player.ONLINE, status('live'));
+        if (Player.OFFLINE) player.addEventListener(Player.OFFLINE, status('ended'));
+        if (Player.ENDED) player.addEventListener(Player.ENDED, status('ended'));
         player.addEventListener(Player.READY, () => {
           if (!alive) return;
           onReadyRef.current({

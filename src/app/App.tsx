@@ -9,7 +9,7 @@ import { LiveTab } from '../ui/LiveTab';
 import { markConfirmed, needsConfirm } from '../donate/confirmations';
 import { donationWarning, openDonationPopup } from '../donate/donation';
 import { localFavorites, type FavoritesSource } from '../favorites/favorites';
-import type { PlayerHandle } from '../players/types';
+import type { PlayerHandle, StreamStatus } from '../players/types';
 import { useAudioMix } from '../players/useAudioFocus';
 import { usePlaybackPolicy } from '../players/usePlaybackPolicy';
 import { buildJointUrl, decodeJoint, publicBase } from '../share/jointLink';
@@ -312,6 +312,56 @@ export function App(props: Props) {
   useEffect(() => {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
+
+  // ---------- 방송 종료 감지 ----------
+  // 플레이어가 알려 준 상태 (플레이어 키). 칸에서 빠진 방송의 상태는 지운다
+  const [streamStatus, setStreamStatus] = useState<Record<string, StreamStatus>>({});
+  useEffect(() => {
+    setStreamStatus((m) => {
+      const live = Object.keys(m).filter((k) => keys.includes(k));
+      return live.length === Object.keys(m).length ? m : Object.fromEntries(live.map((k) => [k, m[k]]));
+    });
+  }, [keys]);
+  const onStreamStatus = (key: string, s: StreamStatus) => {
+    setStreamStatus((m) => (m[key] === s ? m : { ...m, [key]: s }));
+    // 바꿔 넣을 라이브 방송을 찾을 수 있게 투네이션 즐겨찾기 라이브 상태를 새로 가져온다
+    if (s !== 'live' && toonStatus !== 'waiting-login' && toonStatus !== 'checking' && toonStatus !== 'loading') refreshToonation();
+  };
+  /** 끝난 방송 대신 넣을 방송: 투네이션 즐겨찾기 중 라이브이면서 아직 칸에 없는 첫 방송 */
+  const liveReplacement = (): Creator | null =>
+    toonation.state.creators.find((c) => c.live && !state.slots.some((s) => isStream(s) && s.key === c.key)) ?? null;
+  const replaceSlot = (slot: number, c: Creator) => {
+    const k = keys[slot];
+    dispatch({ type: 'restore', slot, item: c });
+    setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([hk]) => hk !== k)));
+  };
+  const endedSlots = keys.map((k, i) => (k && isStream(state.slots[i]) && streamStatus[k] && streamStatus[k] !== 'live' ? streamStatus[k] : null));
+  // 설정: 방송이 끝나면 라이브 중인 즐겨찾기로 자동으로 바꾸기
+  useEffect(() => {
+    if (!settings.autoReplaceEnded || viewer) return;
+    const slot = endedSlots.findIndex((s, i) => s && i < visibleCount(state));
+    const c = slot >= 0 ? liveReplacement() : null;
+    if (c) replaceSlot(slot, c);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.autoReplaceEnded, endedSlots.join(','), toonation.state.creators]);
+  const endedOverlay = (slot: number) => {
+    const s = endedSlots[slot];
+    const item = state.slots[slot];
+    if (!s || !isStream(item)) return null;
+    const c = viewer ? null : liveReplacement();
+    return (
+      <div className="ended-notice" role="status" aria-label={`${item.name} 방송 상태`}>
+        <strong>{s === 'ended' ? '방송 종료' : '재생할 수 없는 방송'}</strong>
+        {c ? (
+          <button type="button" className="btn btn--donate btn--sm" aria-label={`라이브로 바꾸기 · ${c.name}`} onClick={() => replaceSlot(slot, c)}>
+            라이브로 바꾸기 · {c.name}
+          </button>
+        ) : (
+          !viewer && <span className="muted">라이브 중인 투네이션 즐겨찾기가 없습니다</span>
+        )}
+      </div>
+    );
+  };
 
   // 단축키: 1~9 칸 선택 · M 소리 · F 전체 화면 · D 후원하기 (입력 중이거나 창이 열려 있으면 무시)
   const keyActions = useRef({ onDonate: () => {}, fullscreen: (_slot: number) => {} });
@@ -656,6 +706,8 @@ export function App(props: Props) {
             }
             settling={settling}
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
+            onStatus={onStreamStatus}
+            renderOverlay={endedOverlay}
             renderPage={(page, key) => (
               <PageView
                 page={page}

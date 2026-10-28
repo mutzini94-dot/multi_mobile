@@ -164,6 +164,12 @@ export function SettingsDialog(p: Props) {
             onChange={(v) => p.onChange({ hiddenSlotPlayback: v })}
           />
           <Toggle label="선택하지 않은 칸은 낮은 화질" checked={s.lowQualityOthers} onChange={(v) => p.onChange({ lowQualityOthers: v })} hint="트위치만 (유튜브는 화질 지정을 지원하지 않습니다)" />
+          <Toggle
+            label="방송이 끝나면 라이브 중인 즐겨찾기로 바꾸기"
+            checked={s.autoReplaceEnded}
+            onChange={(v) => p.onChange({ autoReplaceEnded: v })}
+            hint="투네이션 즐겨찾기 중 지금 라이브인 방송으로 자동으로 바꿉니다 (투네이션 로그인 필요)"
+          />
         </Section>
 
         {p.desktop && (

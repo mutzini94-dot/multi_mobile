@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { loadScript } from './loadScript';
-import type { PlayerHandle } from './types';
+import type { PlayerHandle, StreamStatus } from './types';
 
 let apiReady: Promise<void> | null = null;
 
@@ -21,10 +21,22 @@ function whenYouTubeApiReady(): Promise<void> {
   return apiReady;
 }
 
-export function YouTubePlayer({ channel, videoId, onReady }: { channel: string; videoId?: string; onReady: (h: PlayerHandle) => void }) {
+export function YouTubePlayer({
+  channel,
+  videoId,
+  onReady,
+  onStatus,
+}: {
+  channel: string;
+  videoId?: string;
+  onReady: (h: PlayerHandle) => void;
+  onStatus?: (s: StreamStatus) => void;
+}) {
   const ref = useRef<HTMLIFrameElement>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
 
   useEffect(() => {
     let alive = true;
@@ -32,6 +44,13 @@ export function YouTubePlayer({ channel, videoId, onReady }: { channel: string; 
       if (!alive || !ref.current || !window.YT) return;
       const player = new window.YT.Player(ref.current, {
         events: {
+          // 방송 종료 감지: 재생 중(1) → live, 끝남(0) → ended, 오류(꺼진 채널의 라이브 임베드·재생 제한) → unavailable
+          onStateChange: (e: { data: number }) => {
+            if (!alive) return;
+            if (e.data === 1) onStatusRef.current?.('live');
+            else if (e.data === 0) onStatusRef.current?.('ended');
+          },
+          onError: () => alive && onStatusRef.current?.('unavailable'),
           onReady: () => {
             if (!alive) return;
             onReadyRef.current({

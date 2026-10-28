@@ -1,3 +1,6 @@
+/** 방송 상태: 재생 중 · 끝남 · 재생할 수 없음(유튜브 오류: 끝났거나 재생 제한) */
+export type StreamStatus = 'live' | 'ended' | 'unavailable';
+
 export interface PlayerHandle {
   setMuted(muted: boolean): void;
   isMuted(): boolean;

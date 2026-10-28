@@ -10,6 +10,7 @@ test('기본값', () => {
     defaultLayout: 'quad',
     hiddenSlotPlayback: 'keep',
     lowQualityOthers: false,
+    autoReplaceEnded: false,
     videoClick: 'select',
     soundMode: 'single',
     masterVolume: 100,

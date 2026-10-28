@@ -107,3 +107,34 @@ test('유튜브: 라이브 영상 ID를 알면(투네이션 라이브 목록) �
   );
   expect(container.querySelector('iframe')!.getAttribute('src')).toBe('https://www.youtube.com/embed/m8HaYP0qcRM?enablejsapi=1&autoplay=1&mute=1');
 });
+
+test('트위치: 방송이 꺼지면 ended, 다시 켜지면 live (onStatus)', async () => {
+  const listeners: Record<string, () => void> = {};
+  const tw = { setMuted: vi.fn(), getMuted: vi.fn(() => false), addEventListener: vi.fn((e: string, cb: () => void) => (listeners[e] = cb)) };
+  const Player: any = vi.fn(() => tw);
+  Object.assign(Player, { READY: 'ready', ONLINE: 'online', OFFLINE: 'offline', ENDED: 'ended' });
+  (window as any).Twitch = { Player };
+  const onStatus = vi.fn();
+  render(<StreamPlayer creator={mkCreator(1)} onReady={vi.fn()} onStatus={onStatus} />);
+  await waitFor(() => expect(listeners.offline).toBeDefined());
+  listeners.offline();
+  expect(onStatus).toHaveBeenLastCalledWith('ended');
+  listeners.online();
+  expect(onStatus).toHaveBeenLastCalledWith('live');
+  listeners.ended();
+  expect(onStatus).toHaveBeenLastCalledWith('ended');
+});
+
+test('유튜브: 재생이 끝나면 ended, 재생할 수 없으면 unavailable (onStatus)', async () => {
+  let events: any;
+  (window as any).YT = { Player: vi.fn((_el: HTMLIFrameElement, opts: any) => ((events = opts.events), {})) };
+  const onStatus = vi.fn();
+  render(<StreamPlayer creator={mkCreator(1, { platform: 'youtube', channel: UC, key: `youtube:${UC}` })} onReady={vi.fn()} onStatus={onStatus} />);
+  await waitFor(() => expect(events).toBeDefined());
+  events.onStateChange({ data: 1 });
+  expect(onStatus).toHaveBeenLastCalledWith('live');
+  events.onStateChange({ data: 0 });
+  expect(onStatus).toHaveBeenLastCalledWith('ended');
+  events.onError({ data: 150 });
+  expect(onStatus).toHaveBeenLastCalledWith('unavailable');
+});
