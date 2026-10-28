@@ -366,3 +366,9 @@ button:disabled { cursor: not-allowed; }
 .solo__return { background: rgba(255, 255, 255, 0.18); color: #fff; box-shadow: none; }
 .solo__body { position: relative; flex: 1; min-height: 0; }
 .solo__body > * { position: absolute; inset: 0; }
+
+/* ---------- 화면 구성 ---------- */
+.preset-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; }
+.preset-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-md); background: var(--surface); }
+.preset-list__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.preset-list__text .muted { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

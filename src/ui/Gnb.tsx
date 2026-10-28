@@ -27,9 +27,10 @@ interface Props {
   onDonate(): void;
   joint: GnbJoint;
   onSettings?(): void;
+  onPresets?(): void; // 화면 구성 저장·불러오기 (합방 중·시청 화면에서는 없음)
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings, onPresets }: Props) {
   return (
     <header className="gnb">
       {joint.kind === 'viewer' ? (
@@ -70,6 +71,11 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, joint, onSettings }
           </button>
         ))}
       </div>
+      {onPresets && (
+        <button type="button" className="btn btn--ghost" aria-label="화면 구성" title="화면 구성 저장·불러오기" onClick={onPresets}>
+          구성
+        </button>
+      )}
       {joint.kind === 'normal' && (
         <button type="button" className="btn btn--ghost" onClick={joint.onOpen}>
           합방 방송 개설

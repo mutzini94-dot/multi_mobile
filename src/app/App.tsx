@@ -37,6 +37,7 @@ import { loadLastView, saveLastView } from './lastView';
 import { applyLayout } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
+import { PresetsDialog } from '../ui/PresetsDialog';
 import { useTileDrag } from './useTileDrag';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
@@ -87,6 +88,7 @@ export function App(props: Props) {
   const toonation = useToonation(bridge);
   const [settings, updateSettings] = useSettings(kv);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   // 테마: 시스템을 따르거나 라이트·다크로 고정
   useEffect(() => {
@@ -495,6 +497,7 @@ export function App(props: Props) {
         onDonate={onDonate}
         joint={gnbJoint}
         onSettings={() => setSettingsOpen(true)}
+        onPresets={viewer || hosting ? undefined : () => setPresetsOpen(true)}
       />
       <div className="app__body">
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
@@ -692,6 +695,19 @@ export function App(props: Props) {
             }}
           />
         </FavoritesPicker>
+      )}
+      {presetsOpen && (
+        <PresetsDialog
+          kv={kv}
+          current={withDetachedItems(state, detached)}
+          onLoad={(view) => {
+            // 분리 창은 따로 남는다 (칸에 다른 방송을 넣은 것과 같다)
+            exitFullscreen();
+            dispatch({ type: 'replace', state: view });
+            setPresetsOpen(false);
+          }}
+          onClose={() => setPresetsOpen(false)}
+        />
       )}
       {settingsOpen && (
         <SettingsDialog
