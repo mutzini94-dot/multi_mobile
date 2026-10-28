@@ -27,7 +27,14 @@ export interface DonatePage {
   name: string;
 }
 
-export type PageSlot = WebPage | DonatePage;
+/** 채팅 칸: 선택한 방송의 트위치·유튜브 라이브 채팅 */
+export interface ChatPage {
+  kind: 'chat';
+  key: string;
+  name: string;
+}
+
+export type PageSlot = WebPage | DonatePage | ChatPage;
 
 /** 새 창으로 분리한 칸의 자리 표시: 내용은 분리 창에 있고 칸에는 되돌리기·불러오기만 */
 export interface DetachedMark {

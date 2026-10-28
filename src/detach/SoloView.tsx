@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { donatePageUrl, isStream } from '../domain/pages';
+import { chatUrl, donatePageUrl, isStream } from '../domain/pages';
 import type { Creator } from '../domain/types';
 import type { DesktopApi } from '../desktop/desktopApi';
 import { openDonationPopup } from '../donate/donation';
@@ -36,6 +36,7 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
   const { item } = payload;
   const [soundOn, setSoundOn] = useState(payload.sound);
   const [donateFor, setDonateFor] = useState<Creator | null>(payload.donateFor ?? null);
+  const [videoId, setVideoId] = useState<string | null>(payload.videoId ?? null); // 채팅 칸: 유튜브 라이브 영상 ID
   const [onTop, setOnTop] = useState(false);
   const [player, setPlayer] = useState<PlayerHandle | null>(null);
   const page = useRef<PageHandle | null>(null);
@@ -53,12 +54,19 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
     () =>
       link.onMessage((m) => {
         // 메인 화면이 보낸 값도 다시 확인한다
-        if (m.type === 'donateFor') setDonateFor(m.creator ? loadCreator(m.creator) ?? null : null);
+        if (m.type !== 'donateFor') return;
+        setDonateFor(m.creator ? loadCreator(m.creator) ?? null : null);
+        setVideoId(typeof m.videoId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(m.videoId) ? m.videoId : null);
       }),
     [link],
   );
 
-  const title = isStream(item) ? item.name : item.kind === 'donate' ? (donateFor ? `${donateFor.name} 후원 페이지` : '후원 페이지') : item.name;
+  const title = isStream(item)
+    ? item.name
+    : (item.kind === 'donate' || item.kind === 'chat') && donateFor
+      ? `${donateFor.name} ${item.kind === 'donate' ? '후원 페이지' : '채팅'}`
+      : item.name;
+  const embed = desktop ? 'webview' : 'iframe';
   useEffect(() => {
     document.title = `${title} · 멀티뷰 후원`;
   }, [title]);
@@ -106,8 +114,17 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
         ) : item.kind === 'detached' ? null : (
           <PageView
             page={item}
-            url={item.kind === 'web' ? item.url : donateFor ? donatePageUrl(donateFor) : null}
-            embed={desktop ? 'webview' : 'iframe'}
+            url={
+              item.kind === 'web'
+                ? item.url
+                : !donateFor
+                  ? null
+                  : item.kind === 'donate'
+                    ? donatePageUrl(donateFor)
+                    : chatUrl(donateFor, donateFor.videoId ?? videoId, embed, window.location.hostname)
+            }
+            embed={embed}
+            emptyText={item.kind === 'chat' ? '채팅을 볼 방송이 없습니다' : undefined}
             onHandle={(h) => (page.current = h)}
             onOpenWindow={donateFor ? () => openDonationPopup(donateFor, window) : undefined}
           />

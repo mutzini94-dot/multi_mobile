@@ -1,5 +1,5 @@
 import { makeCreator } from '../domain/creatorInput';
-import { makeDonatePage, makeWebPage, isStream } from '../domain/pages';
+import { makeChatPage, makeDonatePage, makeWebPage, isStream } from '../domain/pages';
 import type { Creator, SlotItem } from '../domain/types';
 import { fromBase64Url, toBase64Url } from '../share/jointLink';
 
@@ -11,7 +11,8 @@ export interface SoloPayload {
   id: string; // 분리 창 id (메인 화면과 주고받는 메시지의 주소)
   item: SlotItem; // 방송·웹페이지·후원 페이지
   sound: boolean; // 처음 소리를 켤지 (분리 전 소리가 나던 칸)
-  donateFor?: Creator | null; // 후원 페이지 칸이 처음 따라갈 크리에이터
+  donateFor?: Creator | null; // 후원 페이지·채팅 칸이 처음 따라갈 크리에이터
+  videoId?: string | null; // 채팅 칸: 따라갈 유튜브 방송의 라이브 영상 ID
 }
 
 const PREFIX = '#solo=';
@@ -32,7 +33,7 @@ export function loadCreator(raw: unknown): Creator | null {
 
 export function encodeSolo(p: SoloPayload): string {
   const item = isStream(p.item) ? saveCreator(p.item) : p.item.kind === 'web' ? { kind: 'web', url: p.item.url } : { kind: p.item.kind };
-  const body = { v: 1, id: p.id, item, sound: !!p.sound, ...(p.donateFor ? { donateFor: saveCreator(p.donateFor) } : {}) };
+  const body = { v: 1, id: p.id, item, sound: !!p.sound, ...(p.donateFor ? { donateFor: saveCreator(p.donateFor) } : {}), ...(p.videoId ? { videoId: p.videoId } : {}) };
   return PREFIX + toBase64Url(JSON.stringify(body));
 }
 
@@ -46,9 +47,11 @@ export function decodeSolo(hash: string): SoloPayload | null {
       const w = makeWebPage(String(raw.item.url ?? ''));
       item = w.ok ? w.value : null;
     } else if (raw.item.kind === 'donate') item = makeDonatePage();
+    else if (raw.item.kind === 'chat') item = makeChatPage();
     else item = loadCreator(raw.item);
     if (!item) return null;
-    return { id: raw.id, item, sound: raw.sound === true, donateFor: raw.donateFor ? loadCreator(raw.donateFor) : null };
+    const videoId = typeof raw.videoId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(raw.videoId) ? raw.videoId : null;
+    return { id: raw.id, item, sound: raw.sound === true, donateFor: raw.donateFor ? loadCreator(raw.donateFor) : null, videoId };
   } catch {
     return null;
   }

@@ -1,13 +1,13 @@
 import { makeCreator, type CreatorInput } from '../domain/creatorInput';
 import type { Creator, LayoutKind, SlotItem, ViewState } from '../domain/types';
-import { isStream, makeDonatePage, makeWebPage } from '../domain/pages';
+import { isStream, makeChatPage, makeDonatePage, makeWebPage } from '../domain/pages';
 import { MAX_SLOTS, SLOT_COUNT } from '../layout/layouts';
 import type { KV } from '../storage/safeStorage';
 
 /** 마지막 화면(레이아웃·칸·칸 크기): 다음 실행에서 복원 (설정: 시작할 때 마지막 화면 복원) */
 export const LAST_VIEW_KEY = 'mv.lastView.v1';
 
-type SavedSlot = (CreatorInput & { source: Creator['source'] }) | { kind: 'web'; url: string } | { kind: 'donate' } | null;
+type SavedSlot = (CreatorInput & { source: Creator['source'] }) | { kind: 'web'; url: string } | { kind: 'donate' } | { kind: 'chat' } | null;
 /** 저장 형식 (마지막 화면·화면 구성 저장 공통) */
 export interface SavedView {
   v: 1;
@@ -24,7 +24,7 @@ export function serializeView(state: ViewState): SavedView {
         ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel, source: c.source }
         : c.kind === 'web'
           ? { kind: 'web', url: c.url }
-          : { kind: 'donate' },
+          : { kind: c.kind },
   );
   return { v: 1, layout: state.layout, sizes: state.sizes, slots };
 }
@@ -40,8 +40,8 @@ export function parseView(raw: unknown): ViewState | null {
       slots.push(null);
       continue;
     }
-    if (s.kind === 'donate') {
-      slots.push(makeDonatePage());
+    if (s.kind === 'donate' || s.kind === 'chat') {
+      slots.push(s.kind === 'donate' ? makeDonatePage() : makeChatPage());
       continue;
     }
     if (s.kind === 'web') {

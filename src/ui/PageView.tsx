@@ -17,11 +17,12 @@ interface Props {
   embed: 'webview' | 'iframe'; // 설치형은 webview(어떤 사이트든 표시), 웹은 iframe(사이트가 막으면 안 보임)
   onHandle?(h: PageHandle | null): void;
   onOpenWindow?(): void; // 웹의 후원 페이지 칸: 새 창(팝업)으로 열기
+  emptyText?: string; // 주소가 없을 때 안내
 }
 
 type WebviewEl = HTMLElement & { goBack?(): void; canGoBack?(): boolean; reload?(): void };
 
-export function PageView({ page, url, embed, onHandle, onOpenWindow }: Props) {
+export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText = '후원할 방송 칸을 선택하세요' }: Props) {
   const ref = useRef<HTMLElement | null>(null);
   const onHandleRef = useRef(onHandle);
   onHandleRef.current = onHandle;
@@ -49,7 +50,7 @@ export function PageView({ page, url, embed, onHandle, onOpenWindow }: Props) {
     return () => onHandleRef.current?.(null);
   }, []);
 
-  if (!url) return <div className="page-view page-view--empty">후원할 방송 칸을 선택하세요</div>;
+  if (!url) return <div className="page-view page-view--empty">{emptyText}</div>;
   if (embed === 'webview') {
     // allowpopups: 새 창 요청은 설치형(main.js)이 같은 칸에서 열도록 처리한다. React는 boolean 값을 속성으로 쓰지 않아 문자열로 넘긴다
     const popups = { allowpopups: 'true' } as object;

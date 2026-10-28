@@ -39,6 +39,7 @@ export function YouTubePlayer({ channel, videoId, onReady }: { channel: string; 
               isMuted: () => player.isMuted(),
               setVolume: (v) => player.setVolume(v),
               setPaused: (p) => (p ? player.pauseVideo() : player.playVideo()),
+              videoId: () => player.getVideoData?.()?.video_id || null,
               // 화질 지정(setPlaybackQuality)은 유튜브가 없앴으므로 제공하지 않는다
             });
           },

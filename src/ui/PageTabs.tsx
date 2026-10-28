@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { makeDonatePage, makeWebPage } from '../domain/pages';
+import { makeChatPage, makeDonatePage, makeWebPage } from '../domain/pages';
 import type { PageSlot } from '../domain/types';
 
 /** 불러오기 창 '후원 페이지' 탭 */
@@ -10,6 +10,23 @@ export function DonatePageTab({ onPick, desktop }: { onPick(p: PageSlot): void; 
       {!desktop && <p className="muted">웹에서는 후원 페이지를 칸 안에 띄울 수 없어 칸에서 새 창으로 엽니다. 설치형은 칸 안에 바로 표시됩니다.</p>}
       <button type="button" className="btn btn--donate" onClick={() => onPick(makeDonatePage())}>
         후원 페이지 칸 넣기
+      </button>
+    </div>
+  );
+}
+
+/** 불러오기 창 '채팅' 탭 */
+export function ChatPageTab({ onPick, desktop }: { onPick(p: PageSlot): void; desktop: boolean }) {
+  return (
+    <div className="page-tab">
+      <p>선택한 방송의 트위치·유튜브 라이브 채팅을 이 칸에 띄웁니다. 다른 방송 칸을 선택하면 그 방송의 채팅으로 바뀝니다.</p>
+      <p className="muted">
+        {desktop
+          ? '채팅을 쓰려면 채팅 칸에서 트위치·유튜브에 로그인하세요 (한 번 로그인하면 유지됩니다).'
+          : '웹에서는 채팅 보기만 됩니다. 채팅 입력은 설치형에서 로그인해 쓸 수 있습니다.'}
+      </p>
+      <button type="button" className="btn btn--donate" onClick={() => onPick(makeChatPage())}>
+        채팅 칸 넣기
       </button>
     </div>
   );

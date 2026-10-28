@@ -139,7 +139,7 @@ test('분리한 후원 페이지 창에는 따라갈 크리에이터를 계속 �
   detach(2);
   expect(opened[0].p.donateFor).toMatchObject({ name: 'B' });
   fireEvent.click(tiles()[0].querySelector('.tile__bar')!); // A 선택
-  expect(posted.at(-1)).toEqual([opened[0].p.id, { type: 'donateFor', creator: expect.objectContaining({ name: 'A' }) }]);
+  expect(posted.at(-1)).toEqual([opened[0].p.id, { type: 'donateFor', creator: expect.objectContaining({ name: 'A' }), videoId: null }]);
 });
 
 test('팝업이 막히면 분리하지 않고 알려준다', () => {

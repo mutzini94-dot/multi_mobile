@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
-import { donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
+import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
 import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
-import { DonatePageTab, WebPageTab } from '../ui/PageTabs';
+import { ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
 import { LiveTab } from '../ui/LiveTab';
 import { markConfirmed, needsConfirm } from '../donate/confirmations';
 import { donationWarning, openDonationPopup } from '../donate/donation';
@@ -199,11 +199,39 @@ export function App(props: Props) {
   // 페이지 칸의 뒤로·새로고침 (플레이어 키로 보관)
   const pageHandles = useRef<Record<string, PageHandle>>({});
   const embed = desktop ? 'webview' : 'iframe';
-  // 분리 창에 가 있는 후원 페이지도 따라갈 크리에이터를 알려 준다
+  // 채팅 칸: 유튜브는 라이브 영상 ID로만 채팅을 열 수 있다. 라이브 목록에서 고른 방송은 이미 알고,
+  // 채널로 넣은 방송은 플레이어가 재생을 시작한 뒤 알려 주므로 채팅 칸이 있는 동안 잠깐씩 물어본다
+  const [ytLive, setYtLive] = useState<Record<string, string>>({});
+  const hasChat = state.slots.some((s) => isPage(s) && s.kind === 'chat') || detached.some((d) => isPage(d.item) && d.item.kind === 'chat');
+  const chatVideoId = donateFor?.platform === 'youtube' ? (donateFor.videoId ?? ytLive[donateFor.key] ?? null) : null;
   useEffect(() => {
-    for (const d of detached) if (isPage(d.item) && d.item.kind === 'donate') detachHost.post(d.id, { type: 'donateFor', creator: donateFor });
-  }, [donateFor, detached, detachHost]);
-  const pageUrl = (page: PageSlot) => (page.kind === 'web' ? page.url : donateFor ? donatePageUrl(donateFor) : null);
+    if (!hasChat || !donateFor || donateFor.platform !== 'youtube' || chatVideoId) return;
+    const read = () => {
+      const slot = stateRef.current.slots.findIndex((s) => isStream(s) && s.key === donateFor.key);
+      const k = slot >= 0 ? keys[slot] : null;
+      const id = k ? handles[k]?.videoId?.() : null;
+      if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) setYtLive((m) => (m[donateFor.key] === id ? m : { ...m, [donateFor.key]: id }));
+    };
+    read();
+    const t = setInterval(read, 2000);
+    return () => clearInterval(t);
+  }, [hasChat, donateFor, chatVideoId, keys, handles]);
+  // 분리 창에 가 있는 후원 페이지·채팅도 따라갈 방송을 알려 준다
+  useEffect(() => {
+    for (const d of detached)
+      if (isPage(d.item) && (d.item.kind === 'donate' || d.item.kind === 'chat')) detachHost.post(d.id, { type: 'donateFor', creator: donateFor, videoId: chatVideoId });
+  }, [donateFor, chatVideoId, detached, detachHost]);
+  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  const pageUrl = (page: PageSlot) =>
+    page.kind === 'web' ? page.url : !donateFor ? null : page.kind === 'donate' ? donatePageUrl(donateFor) : chatUrl(donateFor, chatVideoId, embed, host);
+  const pageEmptyText = (page: PageSlot) =>
+    page.kind !== 'chat'
+      ? '후원할 방송 칸을 선택하세요'
+      : donateFor?.platform === 'youtube'
+        ? '유튜브 채팅은 방송이 재생되면 표시됩니다'
+        : '채팅을 볼 방송 칸을 선택하세요';
+  const pageLabel = (page: PageSlot) =>
+    page.kind === 'web' ? page.name : !donateFor ? page.name : `${donateFor.name} ${page.kind === 'donate' ? '후원 페이지' : '채팅'}`;
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
   // 설치형 후원창 자리 (모달/PIP). 앱이 바꾸면(PIP 창의 '모달로' 등) 알려준다
@@ -361,8 +389,14 @@ export function App(props: Props) {
     if (!isStream(item) && !isPage(item)) return;
     const id = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const ok = detachHost.open(
-      { id, item, sound: !!audible[slot], donateFor: isPage(item) && item.kind === 'donate' ? donateFor : null },
-      isPage(item) && item.kind === 'donate' && donateFor ? `${donateFor.name} 후원 페이지` : item.name,
+      {
+        id,
+        item,
+        sound: !!audible[slot],
+        donateFor: isPage(item) && item.kind !== 'web' ? donateFor : null,
+        videoId: isPage(item) && item.kind === 'chat' ? chatVideoId : null,
+      },
+      isPage(item) ? pageLabel(item) : item.name,
     );
     if (!ok) {
       setMessage('새 창을 열지 못했습니다. 팝업을 허용해 주세요');
@@ -544,7 +578,7 @@ export function App(props: Props) {
                   page={
                     page
                       ? {
-                          label: page.kind === 'web' ? page.name : donateFor ? `${donateFor.name} 후원 페이지` : '후원 페이지',
+                          label: pageLabel(page),
                           onBack: () => pageKey && pageHandles.current[pageKey]?.back(),
                           onReload: () => pageKey && pageHandles.current[pageKey]?.reload(),
                           onOpenWindow:
@@ -632,6 +666,7 @@ export function App(props: Props) {
                   else delete pageHandles.current[key];
                 }}
                 onOpenWindow={donateFor ? () => donateTo(donateFor) : undefined}
+                emptyText={pageEmptyText(page)}
               />
             )}
           />
@@ -678,6 +713,7 @@ export function App(props: Props) {
               ),
             },
             { label: '후원 페이지', content: <DonatePageTab desktop={!!desktop} onPick={pickPage} /> },
+            { label: '채팅', content: <ChatPageTab desktop={!!desktop} onPick={pickPage} /> },
             { label: '웹페이지', content: <WebPageTab desktop={!!desktop} onPick={pickPage} /> },
           ]}
           onPick={(creator) => {

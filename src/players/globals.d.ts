@@ -6,6 +6,7 @@ interface YTPlayer {
   setVolume(v: number): void;
   pauseVideo(): void;
   playVideo(): void;
+  getVideoData?(): { video_id?: string };
 }
 interface TwitchPlayer {
   setMuted(muted: boolean): void;
