@@ -7,13 +7,15 @@
 // 개발: `npm run dev` 는 vite 개발 서버(http://localhost:5230)를 띄운 상태에서 실행한다.
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell, Tray, Menu, nativeImage, Notification } = require('electron');
 const { ToonationClient, ORIGIN } = require('./lib/toonation');
 const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
 const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
 const { restoreBounds } = require('./lib/windowBounds');
+const { createAppOptions, APP_OPTION_DEFAULTS } = require('./lib/appOptions');
+const { Updater } = require('./lib/updater');
 const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION } = require('./lib/webviewPolicy');
 const { fillAmountScript, fillMessageScript } = require('./lib/donateFill');
 const { createHandlers } = require('./lib/handlers');
@@ -45,6 +47,11 @@ let server = null;
 let prefs = null; // 설치형 전용 설정 (lib/prefs.js)
 let donate = null; // 후원창 컨트롤러 (lib/donateController.js)
 let appOrigin = null; // 멀티뷰 화면 주소의 origin (분리 창은 이 주소만 연다)
+let appOptions = null; // Windows 시작 시 실행 · 닫으면 트레이로 · 자동 업데이트 (lib/appOptions.js)
+let updater = null; // 자동 업데이트 (lib/updater.js)
+let tray = null;
+let quitting = false; // 트레이 '종료'·업데이트 설치 등 진짜 종료 (창 닫기는 트레이로 숨김)
+const START_HIDDEN = process.argv.includes('--hidden'); // Windows 시작 시 실행: 트레이로만 시작
 const soloWins = new Map(); // 분리 창 id → BrowserWindow
 
 const send = (channel, payload) => win && !win.isDestroyed() && win.webContents.send(channel, payload);
@@ -292,6 +299,54 @@ function plainMessage(msg) {
   }
 }
 
+// ---------------------------------------------------------------- 트레이 · 앱 옵션 · 업데이트
+
+function showMain() {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function quitApp() {
+  quitting = true;
+  app.quit();
+}
+
+function buildTrayMenu() {
+  const o = appOptions.all();
+  const u = updater ? updater.state : { status: 'disabled' };
+  return Menu.buildFromTemplate([
+    { label: '멀티뷰 열기', click: showMain },
+    { type: 'separator' },
+    { label: 'Windows 시작 시 실행', type: 'checkbox', checked: o.autoLaunch, click: (i) => setAppOption('autoLaunch', i.checked) },
+    { label: '창을 닫으면 트레이로', type: 'checkbox', checked: o.closeToTray, click: (i) => setAppOption('closeToTray', i.checked) },
+    u.status === 'downloaded'
+      ? { label: `업데이트 설치 (v${u.version}) 후 다시 시작`, click: () => updater.installNow() }
+      : { label: '업데이트 확인', enabled: !!(updater && updater.au), click: () => updater.check(true) },
+    { type: 'separator' },
+    { label: '종료', click: quitApp },
+  ]);
+}
+
+function createTray() {
+  tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }));
+  tray.setToolTip(APP_NAME);
+  tray.on('click', showMain);
+  tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
+}
+
+function appInfo() {
+  return { version: app.getVersion(), options: appOptions.all(), update: updater ? updater.state : { status: 'disabled' } };
+}
+
+function setAppOption(key, value) {
+  if (!appOptions.set(key, value)) return false;
+  if (key === 'autoUpdate' && value) updater && updater.check();
+  send('mv:app:info', appInfo());
+  return true;
+}
+
 function createWindow(url) {
   const primary = screen.getPrimaryDisplay().workArea;
   const fallback = {
@@ -303,6 +358,7 @@ function createWindow(url) {
   const bounds = restoreBounds(prefs.get('windowBounds'), screen.getAllDisplays().map((d) => d.workArea), fallback, { width: 720, height: 480 });
   win = new BrowserWindow({
     ...bounds,
+    show: !START_HIDDEN || !!process.env.MV_SMOKE_OUT,
     minWidth: 720,
     minHeight: 480,
     title: APP_NAME,
@@ -329,6 +385,18 @@ function createWindow(url) {
     if (!win.isMaximized() && !win.isFullScreen() && !win.isMinimized()) prefs.set('windowBounds', win.getBounds());
   };
   for (const ev of ['moved', 'resized', 'maximize', 'unmaximize']) win.on(ev, remember);
+  // 창을 닫으면 트레이로 숨긴다 (설정). 처음 한 번은 트레이에 있다고 알려 준다
+  win.on('close', (e) => {
+    if (quitting || !appOptions.get('closeToTray') || !tray) return;
+    e.preventDefault();
+    win.hide();
+    if (!prefs.get('trayNoticeShown') && Notification.isSupported()) {
+      prefs.set('trayNoticeShown', true);
+      const n = new Notification({ title: APP_NAME, body: '트레이에서 계속 실행 중입니다. 완전히 끄려면 트레이 아이콘 메뉴에서 종료를 누르세요.', icon: ICON });
+      n.on('click', showMain);
+      n.show();
+    }
+  });
   win.on('closed', () => {
     if (donate) donate.dispose(); // PIP 창도 함께 닫는다
     closeAllSolos();
@@ -423,6 +491,11 @@ function wireIpc() {
     const id = soloIdOf(e);
     if (id) soloWins.get(id).setAlwaysOnTop(!!on, 'floating');
   });
+  // 앱 옵션 · 업데이트 (메인 창의 설정 화면에서)
+  ipcMain.handle('mv:app:info', (e) => (fromWin(e) ? appInfo() : null));
+  ipcMain.handle('mv:app:set', (e, key, value) => fromWin(e) && setAppOption(String(key), value));
+  ipcMain.on('mv:app:checkUpdate', (e) => fromWin(e) && updater && updater.check(true));
+  ipcMain.on('mv:app:installUpdate', (e) => fromWin(e) && updater && updater.installNow());
   ipcMain.on('mv:window:alwaysOnTop', (e, on) => {
     if (!fromWin(e)) return;
     win.setAlwaysOnTop(!!on);
@@ -495,11 +568,21 @@ function runSmoke(outDir) {
         result.donate.bounds = dv.getBounds();
         result.donate.url = dv.webContents.getURL();
         result.donate.inputs = await dv.webContents.executeJavaScript("[...document.querySelectorAll('input[type=text]')].map((i) => i.value)").catch(() => null);
+        result.donate.textareas = await dv.webContents.executeJavaScript("[...document.querySelectorAll('textarea')].map((i) => i.value)").catch(() => null);
         await shot(dv.webContents, 'donate.png');
       }
       if (pipWin && !pipWin.isDestroyed()) {
-        result.pip = { bounds: pipWin.getBounds(), alwaysOnTop: pipWin.isAlwaysOnTop(), chips: await pipWin.webContents.executeJavaScript("[...document.querySelectorAll('#amounts button')].map((b) => b.textContent)").catch(() => null) };
+        result.pip = { bounds: pipWin.getBounds(), alwaysOnTop: pipWin.isAlwaysOnTop(), chips: await pipWin.webContents.executeJavaScript("[...document.querySelectorAll('#amounts button')].map((b) => b.textContent)").catch(() => null), messages: await pipWin.webContents.executeJavaScript("[...document.querySelectorAll('#messages option')].map((o) => o.textContent)").catch(() => null) };
         await shot(pipWin.webContents, 'pip.png');
+      }
+      // MV_SMOKE_TRAY=1: 창을 닫으면 트레이로 숨는지 (닫히지 않고 숨김)
+      if (process.env.MV_SMOKE_TRAY && tray) {
+        result.tray = { options: appOptions.all() };
+        win.close();
+        await new Promise((r) => setTimeout(r, 500));
+        result.tray.afterClose = { destroyed: win.isDestroyed(), visible: !win.isDestroyed() && win.isVisible() };
+        showMain();
+        result.tray.afterShow = { visible: win.isVisible() };
       }
       fs.writeFileSync(path.join(outDir, 'smoke.json'), JSON.stringify(result, null, 2));
       app.quit();
@@ -515,7 +598,11 @@ app.whenReady().then(async () => {
     pipBounds: null,
     windowMaximized: false,
     soloBounds: null,
+    trayNoticeShown: false,
+    ...APP_OPTION_DEFAULTS,
   });
+  appOptions = createAppOptions({ prefs, setLoginItem: (s) => app.setLoginItemSettings(s), packaged: app.isPackaged });
+  appOptions.applyLoginItem();
   ses = session.fromPartition(PARTITION);
   // toon-widget과 같은 정직한 Electron UA (Cloudflare Turnstile이 UA와 client hints를 비교한다).
   const ua = `${WEBKIT_UA} MultiviewDonate/${app.getVersion()} Chrome/${process.versions.chrome} Electron/${process.versions.electron} Safari/537.36`;
@@ -536,13 +623,23 @@ app.whenReady().then(async () => {
     url = `http://localhost:${server.port}/`;
   }
   createWindow(url);
+  if (!process.env.MV_SMOKE_OUT || process.env.MV_SMOKE_TRAY) createTray();
+  updater = new Updater(prefs);
+  updater.on('state', () => send('mv:app:info', appInfo()));
+  updater.on('downloaded', (i) => {
+    if (!Notification.isSupported()) return;
+    const n = new Notification({ title: APP_NAME, body: `새 버전 ${i.version}을 받았습니다. 종료하면 설치되고, 설정에서 바로 설치할 수도 있습니다.`, icon: ICON });
+    n.on('click', showMain);
+    n.show();
+  });
+  updater.start();
 });
 
-app.on('second-instance', () => {
-  if (!win) return;
-  if (win.isMinimized()) win.restore();
-  win.focus();
+app.on('before-quit', () => {
+  quitting = true; // 업데이트 설치·OS 종료 등: 트레이로 숨기지 않고 닫는다
 });
+
+app.on('second-instance', showMain);
 
 app.on('window-all-closed', () => app.quit());
 app.on('will-quit', () => {

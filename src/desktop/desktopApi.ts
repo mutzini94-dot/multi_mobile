@@ -37,7 +37,21 @@ export interface DesktopApi {
   soloPost?(msg: unknown): void;
   onSoloMessage?(cb: (msg: unknown) => void): () => void;
   soloSetAlwaysOnTop?(on: boolean): void;
+  // 앱 옵션 · 업데이트
+  appInfo?(): Promise<AppInfo | null>;
+  setAppOption?(key: AppOption, value: boolean): Promise<boolean>;
+  checkUpdate?(): void;
+  installUpdate?(): void;
+  onAppInfo?(cb: (info: AppInfo) => void): () => void;
 }
+
+/** 설치형 앱 정보: 버전 · 앱 옵션 · 업데이트 상태 (desktop/main.js appInfo) */
+export interface AppInfo {
+  version: string;
+  options: { autoLaunch: boolean; closeToTray: boolean; autoUpdate: boolean };
+  update: { status: 'idle' | 'disabled' | 'checking' | 'downloading' | 'latest' | 'downloaded' | 'error'; version?: string | null; percent?: number; error?: string | null };
+}
+export type AppOption = keyof AppInfo['options'];
 
 /** 후원창 자리: 앱 가운데 모달 또는 항상 위 PIP 창 */
 export type DonateMode = 'modal' | 'pip';

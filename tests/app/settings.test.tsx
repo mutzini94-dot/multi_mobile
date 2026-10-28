@@ -145,3 +145,30 @@ test('설정 창: 방송 시작 알림을 켜면 알림 권한을 묻는다', ()
     vi.unstubAllGlobals();
   }
 });
+
+test('설정 창(설치형): 앱 — Windows 시작 시 실행·트레이·자동 업데이트, 버전과 업데이트 설치', async () => {
+  let push: ((i: unknown) => void) | null = null;
+  const info = { version: '0.1.14', options: { autoLaunch: false, closeToTray: true, autoUpdate: true }, update: { status: 'latest' } };
+  const desktop = desktopApi({
+    appInfo: vi.fn().mockResolvedValue(info),
+    setAppOption: vi.fn().mockResolvedValue(true),
+    checkUpdate: vi.fn(),
+    installUpdate: vi.fn(),
+    onAppInfo: vi.fn((cb) => ((push = cb), () => {})),
+  } as Partial<DesktopApi>);
+  setup({ desktop });
+  const dlg = openSettings();
+  expect(await within(dlg).findByText('버전 0.1.14 · 최신 버전입니다')).toBeInTheDocument();
+  fireEvent.click(within(dlg).getByLabelText('Windows 시작 시 실행'));
+  expect(desktop.setAppOption).toHaveBeenCalledWith('autoLaunch', true);
+  fireEvent.click(within(dlg).getByRole('button', { name: '업데이트 확인' }));
+  expect(desktop.checkUpdate).toHaveBeenCalled();
+  act(() => push?.({ ...info, update: { status: 'downloaded', version: '0.1.15' } }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '지금 설치하고 다시 시작' }));
+  expect(desktop.installUpdate).toHaveBeenCalled();
+});
+
+test('설정 창(웹): 앱 항목은 없다', () => {
+  setup();
+  expect(within(openSettings()).queryByLabelText('Windows 시작 시 실행')).toBeNull();
+});

@@ -19,6 +19,16 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   fillDonate: (amount) => ipcRenderer.send('mv:donate:fill', Number(amount)),
   fillDonateMessage: (message) => ipcRenderer.send('mv:donate:fillMessage', String(message)),
   setAlwaysOnTop: (on) => ipcRenderer.send('mv:window:alwaysOnTop', !!on),
+  // 앱 옵션(Windows 시작 시 실행·닫으면 트레이로·자동 업데이트)과 업데이트
+  appInfo: () => ipcRenderer.invoke('mv:app:info'),
+  setAppOption: (key, value) => ipcRenderer.invoke('mv:app:set', String(key), !!value),
+  checkUpdate: () => ipcRenderer.send('mv:app:checkUpdate'),
+  installUpdate: () => ipcRenderer.send('mv:app:installUpdate'),
+  onAppInfo: (cb) => {
+    const fn = (_e, info) => cb(info);
+    ipcRenderer.on('mv:app:info', fn);
+    return () => ipcRenderer.removeListener('mv:app:info', fn);
+  },
   closeDonate: () => ipcRenderer.send('mv:donate:close'),
   setDonateBounds: (r) => ipcRenderer.send('mv:donate:bounds', { x: +r.x, y: +r.y, width: +r.width, height: +r.height }),
   setDonateMode: (mode) => ipcRenderer.send('mv:donate:mode', mode === 'pip' ? 'pip' : 'modal'),

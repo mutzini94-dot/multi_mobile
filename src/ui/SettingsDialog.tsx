@@ -3,6 +3,7 @@ import type { Creator } from '../domain/types';
 import type { FavoritesSource } from '../favorites/favorites';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import { cleanAmounts, cleanMessages, LIVE_REFRESH_OPTIONS, type Settings } from '../settings/settings';
+import type { AppInfo, AppOption } from '../desktop/desktopApi';
 
 interface Props {
   settings: Settings;
@@ -17,6 +18,26 @@ interface Props {
   favorites: FavoritesSource;
   onExportFavorites(json: string): void;
   onClose(): void;
+  app?: { info: AppInfo | null; onSet(key: AppOption, value: boolean): void; onCheck(): void; onInstall(): void }; // 설치형 앱 옵션 · 업데이트
+}
+
+function updateText(u: AppInfo['update']): string {
+  switch (u.status) {
+    case 'checking':
+      return '업데이트 확인 중…';
+    case 'downloading':
+      return `새 버전 ${u.version ?? ''} 받는 중 ${u.percent ?? 0}%`;
+    case 'downloaded':
+      return `새 버전 ${u.version ?? ''} 준비됨`;
+    case 'latest':
+      return '최신 버전입니다';
+    case 'error':
+      return `업데이트 확인 실패: ${u.error ?? ''}`;
+    case 'disabled':
+      return u.error ?? '자동 업데이트를 쓸 수 없습니다';
+    default:
+      return '업데이트 확인 전';
+  }
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
@@ -109,6 +130,34 @@ export function SettingsDialog(p: Props) {
             닫기
           </button>
         </div>
+
+        {p.app && (
+          <Section title="앱">
+            {p.app.info ? (
+              <>
+                <Toggle label="Windows 시작 시 실행" checked={p.app.info.options.autoLaunch} onChange={(v) => p.app!.onSet('autoLaunch', v)} hint="트레이에 숨긴 채 시작합니다 (방송 시작 알림과 함께 쓰기 좋습니다)" />
+                <Toggle label="창을 닫으면 트레이로" checked={p.app.info.options.closeToTray} onChange={(v) => p.app!.onSet('closeToTray', v)} hint="완전히 끄려면 트레이 아이콘 메뉴의 종료" />
+                <Toggle label="자동 업데이트" checked={p.app.info.options.autoUpdate} onChange={(v) => p.app!.onSet('autoUpdate', v)} hint="새 버전을 받아 두었다가 종료할 때 설치합니다" />
+                <div className="settings__row">
+                  <span>
+                    버전 {p.app.info.version} · {updateText(p.app.info.update)}
+                  </span>
+                  {p.app.info.update.status === 'downloaded' ? (
+                    <button type="button" className="btn btn--donate btn--sm" onClick={p.app.onInstall}>
+                      지금 설치하고 다시 시작
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn--ghost btn--sm" disabled={p.app.info.update.status === 'disabled' || p.app.info.update.status === 'checking' || p.app.info.update.status === 'downloading'} onClick={p.app.onCheck}>
+                      업데이트 확인
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="muted">앱 정보를 불러오는 중…</p>
+            )}
+          </Section>
+        )}
 
         <Section title="화면">
           <Toggle label="시작할 때 마지막 화면 복원" checked={s.restoreLastView} onChange={(v) => p.onChange({ restoreLastView: v })} hint="레이아웃·칸·칸 크기를 그대로 불러옵니다" />

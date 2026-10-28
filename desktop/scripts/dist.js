@@ -20,12 +20,19 @@ if (!fs.existsSync(path.join(root, 'web', 'index.html'))) {
 
 fs.rmSync(tmpOut, { recursive: true, force: true });
 const args = ['--win', 'nsis', '--x64', `--config.directories.output="${tmpOut.replace(/\\/g, '/')}"`, '--publish', 'never'];
+// 자동 업데이트: MV_UPDATE_URL에 업데이트 파일(latest.yml·설치 파일)을 올릴 HTTP(S) 폴더 주소를 주면 앱에 넣는다
+//   MV_UPDATE_URL=https://cdn.example.com/multiview/ npm run dist
+const updateUrl = (process.env.MV_UPDATE_URL || '').trim();
+if (updateUrl) {
+  const url = updateUrl.endsWith('/') ? updateUrl : `${updateUrl}/`;
+  args.push('--config.publish.provider=generic', `--config.publish.url="${url}"`, `--config.extraMetadata.multiview.updateUrl="${url}"`);
+}
 execSync(`npx electron-builder ${args.join(' ')}`, { cwd: root, stdio: 'inherit' });
 
 const dist = path.join(root, 'dist');
 fs.mkdirSync(dist, { recursive: true });
 for (const f of fs.readdirSync(tmpOut)) {
-  if (/\.(exe|blockmap)$/.test(f)) {
+  if (/\.(exe|blockmap)$/.test(f) || f === 'latest.yml') {
     fs.copyFileSync(path.join(tmpOut, f), path.join(dist, f));
     console.log('→', path.join(dist, f));
   }

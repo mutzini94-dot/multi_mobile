@@ -18,7 +18,7 @@ import type { CreatorInput } from '../domain/creatorInput';
 import { HostProfileDialog } from '../ui/HostProfileDialog';
 import { JointShareDialog } from '../ui/JointShareDialog';
 import { createBridge, type ToonationBridge } from '../toonation/bridge';
-import { desktopBridge, getDesktopApi, type DesktopApi, type DonateMode } from '../desktop/desktopApi';
+import { desktopBridge, getDesktopApi, type AppInfo, type DesktopApi, type DonateMode } from '../desktop/desktopApi';
 import { DonateModal } from '../ui/DonateModal';
 import { useToonation } from '../toonation/useToonation';
 import { showLiveNotification, useLiveWatch } from '../toonation/liveWatch';
@@ -300,6 +300,12 @@ export function App(props: Props) {
   useEffect(() => {
     if (loggedIn && settings.monthlyLimit > 0) loadHistory().catch(() => {});
   }, [loggedIn, settings.monthlyLimit, popupClosed, loadHistory]);
+  // 설치형 앱 정보 (버전·앱 옵션·업데이트): 설정 창을 열 때 불러오고, 앱이 바뀌면 알려 준다
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  useEffect(() => desktop?.onAppInfo?.(setAppInfo), [desktop]);
+  useEffect(() => {
+    if (settingsOpen && desktop?.appInfo) desktop.appInfo().then((i) => i && setAppInfo(i), () => {});
+  }, [settingsOpen, desktop]);
   // 설정 창을 열 때도 로그인 상태를 확인한다 (로그아웃 버튼)
   useEffect(() => {
     if (settingsOpen && toonStatus !== 'waiting-login') refreshToonation();
@@ -878,6 +884,19 @@ export function App(props: Props) {
           favorites={favorites}
           onExportFavorites={exportFavorites}
           onClose={() => setSettingsOpen(false)}
+          app={
+            desktop?.appInfo
+              ? {
+                  info: appInfo,
+                  onSet: (key, value) => {
+                    setAppInfo((i) => i && { ...i, options: { ...i.options, [key]: value } });
+                    desktop.setAppOption?.(key, value);
+                  },
+                  onCheck: () => desktop.checkUpdate?.(),
+                  onInstall: () => desktop.installUpdate?.(),
+                }
+              : undefined
+          }
         />
       )}
       {hostDialog && (
