@@ -464,6 +464,9 @@ function runSmoke(outDir) {
       fs.mkdirSync(outDir, { recursive: true });
       result.windowFullScreen = win.isFullScreen();
       result.windowAlwaysOnTop = win.isAlwaysOnTop();
+      result.pageInfo = await win.webContents
+        .executeJavaScript(`({ webviews: [...document.querySelectorAll('webview')].map((w) => [w.getAttribute('partition'), w.getAttribute('src')]), notices: [...document.querySelectorAll('.ended-notice')].map((n) => n.textContent), tileLabels: [...document.querySelectorAll('.tile .tile__name')].map((n) => n.textContent) })`)
+        .catch(() => null);
       result.solos = [...soloWins].map(([id, w]) => ({ id, title: w.getTitle(), url: w.webContents.getURL().slice(0, 60), bounds: w.getBounds(), alwaysOnTop: w.isAlwaysOnTop() }));
       for (const [id, w] of soloWins) await shot(w.webContents, `solo-${id}.png`);
       result.theme = await win.webContents.executeJavaScript('document.documentElement.dataset.theme || null').catch(() => null);
