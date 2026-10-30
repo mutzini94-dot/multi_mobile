@@ -25,7 +25,35 @@ async function collectHistory(client, now) {
   return out;
 }
 
+const DONATE_TAG_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
 function createHandlers({ client, openLogin, resolveYouTube, checkLive = async () => new Map(), logout = async () => {}, now = () => Date.now() }) {
+  /** 즐겨찾기·검색 결과를 웹에 넘길 형식으로: 필요한 필드만, 유튜브 핸들은 UC로, 라이브 여부 */
+  async function toBridgeCreators(list) {
+    const out = [];
+    for (const f of list || []) {
+      const channels = [];
+      for (const c of f.channels || []) {
+        const ch = { platform: c.platform, key: c.key };
+        if (c.platform === 'youtube' && c.key && !c.key.startsWith('UC')) {
+          const ytId = await resolveYouTube(c.key).catch(() => '');
+          if (ytId) ch.ytId = ytId;
+        }
+        channels.push(ch);
+      }
+      out.push({ tag: f.tag, name: f.name, profile: f.profile, channels });
+    }
+    // 라이브 여부 (유튜브·트위치만). 조회가 실패해도 목록은 돌려준다
+    const refs = out.flatMap((f) => f.channels).filter((c) => (c.platform === 'twitch' || c.platform === 'youtube') && c.key);
+    const live = refs.length ? await checkLive(refs.map(({ platform, key }) => ({ platform, key }))).catch(() => new Map()) : new Map();
+    for (const c of refs) {
+      const st = live.get(`${c.platform}:${c.key}`);
+      if (!st) continue;
+      c.live = !!st.live;
+      if (st.live) Object.assign(c, { title: st.title || '', viewers: Number(st.viewers) || 0 });
+    }
+    return out;
+  }
   const wrap = (fn) => async () => {
     try {
       return { ok: true, data: await fn() };
@@ -47,32 +75,22 @@ function createHandlers({ client, openLogin, resolveYouTube, checkLive = async (
       await logout();
       return {};
     }),
-    favorites: wrap(async () => {
-      const list = await client.getFavorites();
-      const out = [];
-      for (const f of list) {
-        const channels = [];
-        for (const c of f.channels || []) {
-          const ch = { platform: c.platform, key: c.key };
-          if (c.platform === 'youtube' && c.key && !c.key.startsWith('UC')) {
-            const ytId = await resolveYouTube(c.key).catch(() => '');
-            if (ytId) ch.ytId = ytId;
-          }
-          channels.push(ch);
-        }
-        out.push({ tag: f.tag, name: f.name, profile: f.profile, channels });
-      }
-      // 라이브 여부 (유튜브·트위치만). 조회가 실패해도 목록은 돌려준다
-      const refs = out.flatMap((f) => f.channels).filter((c) => (c.platform === 'twitch' || c.platform === 'youtube') && c.key);
-      const live = refs.length ? await checkLive(refs.map(({ platform, key }) => ({ platform, key }))).catch(() => new Map()) : new Map();
-      for (const c of refs) {
-        const s = live.get(`${c.platform}:${c.key}`);
-        if (!s) continue;
-        c.live = !!s.live;
-        if (s.live) Object.assign(c, { title: s.title || '', viewers: Number(s.viewers) || 0 });
-      }
-      return out;
-    }),
+    favorites: wrap(async () => toBridgeCreators(await client.getFavorites())),
+    // 투네이션 크리에이터 검색 (로그인 필요): 즐겨찾기와 같은 형식
+    search: async (q) => {
+      const query = typeof q === 'string' ? q.trim() : '';
+      if (!query || query.length > 30) return { ok: false, error: 'BAD_QUERY' };
+      return wrap(async () => toBridgeCreators(await client.search(query)))();
+    },
+    // 투네이션 즐겨찾기 추가·해제
+    bookmark: async (p) => {
+      const tag = p && typeof p.tag === 'string' ? p.tag : '';
+      if (!DONATE_TAG_RE.test(tag)) return { ok: false, error: 'BAD_TAG' };
+      return wrap(async () => {
+        await client.setFavorite(tag, !!(p && p.on));
+        return {};
+      })();
+    },
   };
 }
 

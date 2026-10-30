@@ -17,6 +17,8 @@ export interface DesktopApi {
   logout(): Promise<DesktopResult<object>>;
   favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
   history?(): Promise<DesktopResult<unknown[]>>; // 내 후원 내역 (src/toonation/history.ts DonationRecord)
+  search?(q: string): Promise<DesktopResult<ToonationFavorite[]>>; // 투네이션 크리에이터 검색
+  bookmark?(tag: string, on: boolean): Promise<DesktopResult<object>>; // 투네이션 즐겨찾기 추가·해제
   /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */
   openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[]; messages?: string[] }): void;
   closeDonate(): void;
@@ -64,10 +66,20 @@ export function getDesktopApi(win: Window): DesktopApi | null {
 /** 설치형 앱의 투네이션 기능을 웹의 ToonationBridge 형태로 감싼다. */
 export function desktopBridge(api: DesktopApi): ToonationBridge {
   return {
-    async request<T>(type: BridgeRequest): Promise<T> {
-      const call = { status: api.status, login: api.login, logout: api.logout, favorites: api.favorites, history: api.history }[type];
+    async request<T>(type: BridgeRequest, payload?: unknown): Promise<T> {
+      const p = payload as { tag?: string; on?: boolean } | string | undefined;
+      const calls: Record<BridgeRequest, (() => Promise<DesktopResult<unknown>>) | undefined> = {
+        status: () => api.status(),
+        login: () => api.login(),
+        logout: () => api.logout(),
+        favorites: () => api.favorites(),
+        history: api.history && (() => api.history!()),
+        search: api.search && (() => api.search!(String(p ?? ''))),
+        bookmark: api.bookmark && (() => api.bookmark!(String((p as { tag?: string })?.tag ?? ''), !!(p as { on?: boolean })?.on)),
+      };
+      const call = calls[type];
       if (!call) throw new Error('NOT_SUPPORTED');
-      const res = await call.call(api);
+      const res = await call();
       if (!res || !res.ok) throw new Error(res && !res.ok ? res.error : 'NO_RESPONSE');
       return res.data as T;
     },

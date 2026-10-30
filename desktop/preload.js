@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   logout: () => ipcRenderer.invoke('mv:logout'),
   favorites: () => ipcRenderer.invoke('mv:favorites'),
   history: () => ipcRenderer.invoke('mv:history'),
+  search: (q) => ipcRenderer.invoke('mv:search', String(q)),
+  bookmark: (tag, on) => ipcRenderer.invoke('mv:bookmark', { tag: String(tag), on: !!on }),
   openDonate: (t) =>
     ipcRenderer.send('mv:donate:open', {
       tag: String(t && t.tag),

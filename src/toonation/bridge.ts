@@ -15,10 +15,11 @@ export interface ToonationAccount {
   cash?: number | null; // 캐시 잔액
 }
 
-export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites' | 'history';
+export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites' | 'history' | 'search' | 'bookmark';
 
 export interface ToonationBridge {
-  request<T = unknown>(type: BridgeRequest): Promise<T>;
+  /** payload: search는 검색어, bookmark는 { tag, on } */
+  request<T = unknown>(type: BridgeRequest, payload?: unknown): Promise<T>;
 }
 
 /**
@@ -52,7 +53,7 @@ let seq = 0;
 /** 페이지 ↔ 연동 확장 content script(extension/content/bridge.js) 사이의 postMessage 요청/응답. */
 export function createBridge(win: Window, timeoutMs = 1500): ToonationBridge {
   return {
-    request<T>(type: BridgeRequest) {
+    request<T>(type: BridgeRequest, payload?: unknown) {
       const id = `mv-${Date.now()}-${++seq}`;
       return new Promise<T>((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -68,7 +69,7 @@ export function createBridge(win: Window, timeoutMs = 1500): ToonationBridge {
           else reject(new Error(String(d.error || 'ERROR')));
         }
         win.addEventListener('message', onMessage);
-        win.postMessage({ source: 'mv-page', id, type }, win.location.origin);
+        win.postMessage({ source: 'mv-page', id, type, ...(payload !== undefined ? { payload } : {}) }, win.location.origin);
       });
     },
   };

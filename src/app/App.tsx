@@ -17,6 +17,8 @@ import { DonateModal } from '../ui/DonateModal';
 import { useToonation } from '../toonation/useToonation';
 import { showLiveNotification, useLiveWatch } from '../toonation/liveWatch';
 import { ToonationSection } from '../ui/ToonationSection';
+import { SearchSection } from '../ui/SearchSection';
+import { favoritesFromToonation, type ToonationFavorite } from '../toonation/bridge';
 import { safeStorage, type KV } from '../storage/safeStorage';
 import { DonationBar } from '../ui/DonationBar';
 import { PlayerLayer } from '../ui/PlayerLayer';
@@ -507,6 +509,12 @@ export function App(props: Props) {
     };
   }, [detachHost]);
 
+  // 투네이션 즐겨찾기(라이브 목록의 ♡): 추가·해제한 뒤 목록을 새로 가져온다
+  const favoriteTags = useMemo(() => new Set(toonation.state.creators.map((c) => c.donateId)), [toonation.state.creators]);
+  const toggleToonFavorite = async (c: Creator, on: boolean) => {
+    await bridge.request('bookmark', { tag: c.donateId, on });
+    refreshToonation();
+  };
   const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
   const pickPage = (page: PageSlot) => {
     if (pickerSlot === null) return;
@@ -722,6 +730,8 @@ export function App(props: Props) {
               content: (
                 <LiveTab
                   load={liveSource}
+                  favoriteTags={loggedIn ? favoriteTags : undefined}
+                  onToggleFavorite={loggedIn ? toggleToonFavorite : undefined}
                   onPick={(creator) => {
                     dispatch({ type: 'assign', slot: pickerSlot, creator });
                     setPickerSlot(null);
@@ -738,6 +748,16 @@ export function App(props: Props) {
             setPickerSlot(null);
           }}
         >
+          {toonStatus !== 'no-extension' && (
+            <SearchSection
+              search={async (q) => favoritesFromToonation(await bridge.request<ToonationFavorite[]>('search', q))}
+              onLogin={toonation.login}
+              onPick={(creator) => {
+                dispatch({ type: 'assign', slot: pickerSlot, creator });
+                setPickerSlot(null);
+              }}
+            />
+          )}
           <ToonationSection
             state={toonation.state}
             onLogin={toonation.login}

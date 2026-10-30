@@ -119,3 +119,33 @@ test('logout: 투네이션 로그아웃을 요청하고 결과를 돌려준다',
   assert.deepStrictEqual(await h.logout(), { ok: true, data: {} });
   assert.strictEqual(called, 1);
 });
+
+test('search: 투네이션 크리에이터 검색 결과를 즐겨찾기와 같은 형식으로 (유튜브 핸들은 UC로, 라이브 여부)', async () => {
+  const asked = [];
+  const client = {
+    ...fakeClient(),
+    search: async (q) => (asked.push(q), [{ tag: 't', name: '불도그', profile: 'https://p', channels: [{ platform: 'youtube', key: '@bull', url: 'x' }] }]),
+  };
+  const h = createHandlers({ client, openLogin: () => {}, resolveYouTube: async () => UC, checkLive: async () => new Map([[`youtube:@bull`, { live: true, title: '방송', viewers: 3 }]]) });
+  assert.deepStrictEqual(await h.search('  불도그 '), {
+    ok: true,
+    data: [{ tag: 't', name: '불도그', profile: 'https://p', channels: [{ platform: 'youtube', key: '@bull', ytId: UC, live: true, title: '방송', viewers: 3 }] }],
+  });
+  assert.deepStrictEqual(asked, ['불도그']);
+});
+
+test('search: 검색어는 1~30자', async () => {
+  const h = createHandlers({ client: { ...fakeClient(), search: async () => [] }, openLogin: () => {}, resolveYouTube: async () => '' });
+  assert.deepStrictEqual(await h.search('  '), { ok: false, error: 'BAD_QUERY' });
+  assert.deepStrictEqual(await h.search('x'.repeat(31)), { ok: false, error: 'BAD_QUERY' });
+  assert.deepStrictEqual(await h.search(3), { ok: false, error: 'BAD_QUERY' });
+});
+
+test('bookmark: 투네이션 즐겨찾기 추가·해제 (후원 아이디 확인)', async () => {
+  const calls = [];
+  const h = createHandlers({ client: { ...fakeClient(), setFavorite: async (tag, on) => calls.push([tag, on]) }, openLogin: () => {}, resolveYouTube: async () => '' });
+  assert.deepStrictEqual(await h.bookmark({ tag: 'abc_1', on: true }), { ok: true, data: {} });
+  assert.deepStrictEqual(await h.bookmark({ tag: 'abc', on: false }), { ok: true, data: {} });
+  assert.deepStrictEqual(await h.bookmark({ tag: '../x', on: true }), { ok: false, error: 'BAD_TAG' });
+  assert.deepStrictEqual(calls, [['abc_1', true], ['abc', false]]);
+});

@@ -12,6 +12,7 @@ export interface LiveQuery {
   q: string; // 크리에이터 이름 검색
   order: 'VIEWERS' | 'STREAM_BEGIN'; // 시청자순 · 최신순
   platform: '' | Platform;
+  category?: string; // 카테고리 (게임·토크 등, 목록에 나온 이름)
 }
 
 export interface LiveItem {
@@ -35,7 +36,7 @@ export function liveListUrl(q: LiveQuery): string {
   const p = new URLSearchParams({
     title: '',
     creatorName: q.q.trim(),
-    categoryName: '',
+    categoryName: (q.category ?? '').trim(),
     orderKey: q.order === 'STREAM_BEGIN' ? 'STREAM_BEGIN' : 'VIEWERS',
     isDesc: 'true',
     pageNo: String(Math.max(1, q.page | 0)),

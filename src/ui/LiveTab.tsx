@@ -5,15 +5,25 @@ import type { LiveItem, LivePage, LiveQuery } from '../toonation/liveList';
 interface Props {
   load(q: LiveQuery): Promise<LivePage>;
   onPick(c: Creator): void;
+  favoriteTags?: Set<string>; // 투네이션 즐겨찾기한 후원 아이디 (로그인했을 때만 ♡)
+  onToggleFavorite?(c: Creator, on: boolean): Promise<void>;
 }
 
 const PAGE_SIZE = 20;
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
+/** 목록에 나온 카테고리, 많은 순 8개 */
+function topCategories(items: LiveItem[]): string[] {
+  const n = new Map<string, number>();
+  for (const i of items) if (i.category) n.set(i.category, (n.get(i.category) ?? 0) + 1);
+  return [...n].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([c]) => c);
+}
+
 /** 불러오기 창 '투네이션 라이브' 탭: toon.at/donator?live 목록에서 골라 칸에 넣는다 */
-export function LiveTab({ load, onPick }: Props) {
+export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite }: Props) {
   const [q, setQ] = useState('');
-  const [query, setQuery] = useState<Omit<LiveQuery, 'page' | 'size'>>({ q: '', order: 'VIEWERS', platform: '' });
+  const [query, setQuery] = useState<Omit<LiveQuery, 'page' | 'size'>>({ q: '', order: 'VIEWERS', platform: '', category: '' });
+  const [busyTag, setBusyTag] = useState<string | null>(null);
   const [items, setItems] = useState<LiveItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -63,6 +73,20 @@ export function LiveTab({ load, onPick }: Props) {
           검색
         </button>
       </form>
+      {/* 카테고리: 지금 목록에 나온 카테고리 (많은 순), 고르면 그 카테고리만 */}
+      <div className="live-tab__categories">
+        {query.category ? (
+          <button type="button" className="chip chip--small live-tab__category live-tab__category--on" aria-label={`카테고리 ${query.category} 해제`} onClick={() => setQuery((v) => ({ ...v, category: '' }))}>
+            {query.category} ✕
+          </button>
+        ) : (
+          topCategories(items).map((c) => (
+            <button key={c} type="button" className="chip chip--small live-tab__category" aria-label={`카테고리 ${c}`} onClick={() => setQuery((v) => ({ ...v, category: c }))}>
+              {c}
+            </button>
+          ))
+        )}
+      </div>
       {status === 'error' && (
         <p className="form-error">
           라이브 목록을 불러오지 못했습니다.
@@ -74,7 +98,26 @@ export function LiveTab({ load, onPick }: Props) {
       {status === 'ready' && items.length === 0 && <p className="muted">지금 라이브 중인 방송이 없습니다.</p>}
       <ul className="live-list">
         {items.map(({ creator: c, thumbnail, category }) => (
-          <li key={`${c.key}|${c.donateId}`}>
+          <li key={`${c.key}|${c.donateId}`} className="live-list__row">
+            {onToggleFavorite && favoriteTags && (() => {
+              const fav = favoriteTags.has(c.donateId);
+              return (
+                <button
+                  type="button"
+                  className={`live-item__fav${fav ? ' live-item__fav--on' : ''}`}
+                  aria-label={`${c.name} 즐겨찾기 ${fav ? '해제' : '추가'}`}
+                  title={fav ? '투네이션 즐겨찾기 해제' : '투네이션 즐겨찾기에 추가'}
+                  disabled={busyTag === c.donateId}
+                  onClick={async () => {
+                    setBusyTag(c.donateId);
+                    await onToggleFavorite(c, !fav).catch(() => {});
+                    setBusyTag(null);
+                  }}
+                >
+                  {fav ? '♥' : '♡'}
+                </button>
+              );
+            })()}
             <button type="button" className="live-item" onClick={() => onPick(c)}>
               {thumbnail ? <img className="live-item__thumb" src={thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="live-item__thumb" />}
               <span className="live-item__text">

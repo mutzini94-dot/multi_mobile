@@ -61,6 +61,15 @@ function loadBackground(world) {
       if (!world.loggedIn) return html('<html>login</html>');
       return json({ list: world.favorites, PageInfo: { PageCount: 1 } });
     }
+    if (url.includes('/dapi/donator/search')) {
+      if (!world.loggedIn) return html('<html>login</html>');
+      world.searched = new URL(url).searchParams.get('searchText');
+      return json({ list: world.favorites });
+    }
+    if (url.includes('/dapi/donator/bookmark/')) {
+      world.bookmarked = url.split('/dapi/donator/bookmark/')[1];
+      return { ok: true, status: 200, url: '', text: async () => 'ok', clone() { return this; } };
+    }
     if (url === 'https://gql.twitch.tv/gql') {
       return json({ data: { users: [{ login: 'aaaa', displayName: 'A', stream: world.twitchLive ? { title: '방송 중', viewersCount: 120 } : null }] } });
     }
@@ -138,6 +147,24 @@ test('history: 후원 내역을 모아 필요한 필드만 (Time은 KST 문자�
 test('status: 캐시 잔액을 함께', async () => {
   const { send } = loadBackground(world({ loggedIn: true }));
   assert.deepStrictEqual((await send({ type: 'status' })).data.account.cash, 1200);
+});
+
+test('search: 검색어로 찾고 즐겨찾기와 같은 형식, 검색어 확인', async () => {
+  const w = world({ loggedIn: true, favorites: [{ tag: 'bull', name: '불도그', favorite: 1, channel: [{ url: 'https://www.twitch.tv/aaaa' }] }] });
+  const { send } = loadBackground(w);
+  const r = await send({ type: 'search', payload: '  불도그 ' });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(w.searched, '불도그');
+  assert.strictEqual(r.data[0].tag, 'bull');
+  assert.deepStrictEqual(await send({ type: 'search', payload: '' }), { ok: false, error: 'BAD_QUERY' });
+});
+
+test('bookmark: 즐겨찾기 추가, 잘못된 후원 아이디는 거부', async () => {
+  const w = world({ loggedIn: true });
+  const { send } = loadBackground(w);
+  assert.deepStrictEqual(await send({ type: 'bookmark', payload: { tag: 'abc', on: true } }), { ok: true, data: {} });
+  assert.strictEqual(w.bookmarked, 'abc/1');
+  assert.deepStrictEqual(await send({ type: 'bookmark', payload: { tag: '../x', on: true } }), { ok: false, error: 'BAD_TAG' });
 });
 
 test('login: 공식 로그인 창을 연다', async () => {

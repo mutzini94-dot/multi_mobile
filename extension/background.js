@@ -102,27 +102,46 @@ const handlers = {
   },
   async favorites() {
     await ensureHeaderRules();
-    const list = await client.getFavorites();
-    await resolveYouTubeHandles(list);
-    // 페이지에는 필요한 필드만 넘긴다
-    const out = list.map((f) => ({
-      tag: f.tag,
-      name: f.name,
-      profile: f.profile,
-      channels: f.channels.map((c) => ({ platform: c.platform, key: c.key, ...(c.ytId ? { ytId: c.ytId } : {}) })),
-    }));
-    // 라이브 여부 (유튜브·트위치만). 조회가 실패해도 목록은 돌려준다
-    const refs = out.flatMap((f) => f.channels).filter((c) => (c.platform === 'twitch' || c.platform === 'youtube') && c.key);
-    const live = refs.length ? await checkLive(refs.map(({ platform, key }) => ({ platform, key }))).catch(() => new Map()) : new Map();
-    for (const c of refs) {
-      const s = live.get(`${c.platform}:${c.key}`);
-      if (!s) continue;
-      c.live = !!s.live;
-      if (s.live) Object.assign(c, { title: s.title || '', viewers: Number(s.viewers) || 0 });
-    }
-    return out;
+    return toPageCreators(await client.getFavorites());
+  },
+  /** 투네이션 크리에이터 검색 (로그인 필요): 즐겨찾기와 같은 형식 */
+  async search(q) {
+    const query = typeof q === 'string' ? q.trim() : '';
+    if (!query || query.length > 30) throw new Error('BAD_QUERY');
+    await ensureHeaderRules();
+    return toPageCreators(await client.search(query));
+  },
+  /** 투네이션 즐겨찾기 추가·해제 */
+  async bookmark(p) {
+    const tag = p && typeof p.tag === 'string' ? p.tag : '';
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(tag)) throw new Error('BAD_TAG');
+    await ensureHeaderRules();
+    await client.setFavorite(tag, !!(p && p.on));
+    return {};
   },
 };
+
+/** 즐겨찾기·검색 결과를 페이지에 넘길 형식으로: 필요한 필드만, 유튜브 핸들은 UC로, 라이브 여부 */
+async function toPageCreators(list) {
+  await resolveYouTubeHandles(list);
+  // 페이지에는 필요한 필드만 넘긴다
+  const out = list.map((f) => ({
+    tag: f.tag,
+    name: f.name,
+    profile: f.profile,
+    channels: f.channels.map((c) => ({ platform: c.platform, key: c.key, ...(c.ytId ? { ytId: c.ytId } : {}) })),
+  }));
+  // 라이브 여부 (유튜브·트위치만). 조회가 실패해도 목록은 돌려준다
+  const refs = out.flatMap((f) => f.channels).filter((c) => (c.platform === 'twitch' || c.platform === 'youtube') && c.key);
+  const live = refs.length ? await checkLive(refs.map(({ platform, key }) => ({ platform, key }))).catch(() => new Map()) : new Map();
+  for (const c of refs) {
+    const s = live.get(`${c.platform}:${c.key}`);
+    if (!s) continue;
+    c.live = !!s.live;
+    if (s.live) Object.assign(c, { title: s.title || '', viewers: Number(s.viewers) || 0 });
+  }
+  return out;
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // 이 확장의 content script(멀티뷰 페이지 탭)에서 온 요청만 받는다
@@ -132,7 +151,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ ok: false, error: 'UNKNOWN_REQUEST' });
     return false;
   }
-  handler().then(
+  handler(msg.payload).then(
     (data) => sendResponse({ ok: true, data }),
     (e) => sendResponse({ ok: false, error: e instanceof NotLoggedInError ? 'NOT_LOGGED_IN' : String((e && e.message) || e) }),
   );

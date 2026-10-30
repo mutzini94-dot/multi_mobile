@@ -430,6 +430,9 @@ function wireIpc() {
   for (const name of ['status', 'login', 'logout', 'favorites', 'history']) {
     ipcMain.handle(`mv:${name}`, (e) => (fromWin(e) ? handlers[name]() : { ok: false, error: 'FORBIDDEN' }));
   }
+  // 검색어·즐겨찾기 값을 받는 요청 (값 확인은 handlers)
+  ipcMain.handle('mv:search', (e, q) => (fromWin(e) ? handlers.search(q) : { ok: false, error: 'FORBIDDEN' }));
+  ipcMain.handle('mv:bookmark', (e, p) => (fromWin(e) ? handlers.bookmark(p) : { ok: false, error: 'FORBIDDEN' }));
   const fromPip = (e) => pipWin && !pipWin.isDestroyed() && e.sender === pipWin.webContents;
   ipcMain.on('mv:donate:open', (e, t) => {
     if (!fromWin(e) || !t || !DONATE_TAG_RE.test(String(t.tag))) return;
