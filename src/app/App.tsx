@@ -31,6 +31,8 @@ import { applyLayout } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { PresetsDialog } from '../ui/PresetsDialog';
+import { exportBackup, importBackup } from './backup';
+import { Onboarding, ONBOARDED_KEY } from '../ui/Onboarding';
 import { HistoryDialog } from '../ui/HistoryDialog';
 import { monthTotal, type DonationRecord } from '../toonation/history';
 import { useTileDrag } from './useTileDrag';
@@ -83,6 +85,7 @@ export function App(props: Props) {
   const [settings, updateSettings] = useSettings(kv);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => kv.get(ONBOARDED_KEY) !== '1'); // 처음 사용 안내
   const [historyOpen, setHistoryOpen] = useState(false);
   const [limitAsk, setLimitAsk] = useState<{ creator: Creator; total: number } | null>(null);
 
@@ -511,17 +514,30 @@ export function App(props: Props) {
     setPickerSlot(null);
   };
 
-  const exportFavorites = (json: string) => {
+  const downloadJson = (json: string, fileName: string) => {
     try {
       const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'multiview-favorites.json';
+      a.download = fileName;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
       setMessage('내보내기에 실패했습니다');
     }
+  };
+  const exportFavorites = (json: string) => downloadJson(json, 'multiview-favorites.json');
+  // 설정 전체 백업: 되살리면 저장값을 모두 바꾸므로 화면을 다시 읽어 처음부터 불러온다
+  const exportAll = () => downloadJson(exportBackup(kv), `multiview-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  const importAll = (text: string) => {
+    const r = importBackup(kv, text);
+    if (!r.ok) return r.error;
+    win.location.reload?.();
+    return null;
+  };
+  const closeGuide = () => {
+    kv.set(ONBOARDED_KEY, '1');
+    setGuideOpen(false);
   };
   return (
     <div className={`app${focusedCreator ? ' app--focus' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
@@ -733,6 +749,7 @@ export function App(props: Props) {
           />
         </FavoritesPicker>
       )}
+      {guideOpen && <Onboarding onDone={closeGuide} />}
       {historyOpen && (
         <HistoryDialog
           load={loadHistory}
@@ -791,6 +808,12 @@ export function App(props: Props) {
           onLogout={toonation.logout}
           favorites={favorites}
           onExportFavorites={exportFavorites}
+          onExportBackup={exportAll}
+          onImportBackup={importAll}
+          onShowGuide={() => {
+            setSettingsOpen(false);
+            setGuideOpen(true);
+          }}
           onClose={() => setSettingsOpen(false)}
           app={
             desktop?.appInfo

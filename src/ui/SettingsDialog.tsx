@@ -13,6 +13,9 @@ interface Props {
   onLogout(): void;
   favorites: FavoritesSource;
   onExportFavorites(json: string): void;
+  onExportBackup(): void; // 설정 전체 백업 파일 저장
+  onImportBackup(text: string): string | null; // 오류 메시지 또는 null (성공하면 화면을 다시 읽는다)
+  onShowGuide(): void; // 처음 사용 안내 다시 보기
   onClose(): void;
   app?: { info: AppInfo | null; onSet(key: AppOption, value: boolean): void; onCheck(): void; onInstall(): void }; // 설치형 앱 옵션 · 업데이트
 }
@@ -105,6 +108,14 @@ export function SettingsDialog(p: Props) {
   const [messageText, setMessageText] = useState(s.quickMessages.join('\n'));
   const [limitText, setLimitText] = useState(s.monthlyLimit ? s.monthlyLimit.toLocaleString('ko-KR') : '0');
   const [favMessage, setFavMessage] = useState<string | null>(null);
+
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const onImportBackup = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBackupMessage(p.onImportBackup(await readText(file)));
+  };
 
   const onImport = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -334,6 +345,23 @@ export function SettingsDialog(p: Props) {
             </label>
           </div>
           {favMessage && <p className="muted">{favMessage}</p>}
+        </Section>
+
+        <Section title="백업·안내">
+          <p className="muted">설정·즐겨찾기(그룹 포함)·화면 구성·후원 메시지를 파일 하나로 저장해 두고, 다른 PC나 다시 설치한 뒤 그대로 되살립니다.</p>
+          <div className="settings__actions">
+            <button type="button" className="btn btn--ghost btn--sm" onClick={p.onExportBackup}>
+              백업 파일 저장
+            </button>
+            <label className="btn btn--ghost btn--sm settings__file">
+              백업 불러오기
+              <input type="file" accept="application/json,.json" aria-label="백업 불러오기" onChange={onImportBackup} />
+            </label>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={p.onShowGuide}>
+              사용 안내 다시 보기
+            </button>
+          </div>
+          {backupMessage && <p className="form-error">{backupMessage}</p>}
         </Section>
 
       </div>
