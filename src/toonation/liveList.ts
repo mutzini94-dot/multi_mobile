@@ -11,7 +11,7 @@ export interface LiveQuery {
   size: number;
   q: string; // 크리에이터 이름 검색
   order: 'VIEWERS' | 'STREAM_BEGIN'; // 시청자순 · 최신순
-  platform: '' | Platform;
+  platform: '' | Platform | 'chzzk';
   category?: string; // 카테고리 (게임·토크 등, 목록에 나온 이름)
 }
 
@@ -21,15 +21,29 @@ export interface LiveItem {
   category: string;
 }
 
+/** 칸에서 재생할 수 없는 방송 (치지직): 설치형에서 웹페이지 칸으로 연다 */
+export interface OtherLive {
+  platform: 'chzzk';
+  name: string;
+  tag: string;
+  title: string;
+  viewers: number;
+  url: string; // https://chzzk.naver.com/live/{채널}
+  thumbnail: string;
+  category: string;
+}
+
 export interface LivePage {
   items: LiveItem[];
+  others?: OtherLive[];
   page: number;
   totalPages: number;
   total: number;
 }
 
 const API = 'https://live-streaming.toon.at/api/stream/live-stream-list';
-const PLATFORM_TYPE: Record<Platform, string> = { twitch: '1', youtube: '2' };
+const PLATFORM_TYPE: Record<Platform | 'chzzk', string> = { twitch: '1', youtube: '2', chzzk: '8' };
+const CHZZK_LIVE_RE = /^https:\/\/chzzk\.naver\.com\/live\/[0-9a-f]{32}$/;
 const PLATFORM_OF: Record<number, Platform> = { 1: 'twitch', 2: 'youtube' };
 
 export function liveListUrl(q: LiveQuery): string {
@@ -63,7 +77,23 @@ export async function fetchLiveList(q: LiveQuery, fetchImpl: typeof fetch = fetc
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const d = ((await r.json()) ?? {}).data ?? {};
   const items: LiveItem[] = [];
+  const others: OtherLive[] = [];
   for (const l of Array.isArray(d.content) ? d.content : []) {
+    if (Number(l?.platformType) === 8) {
+      const url = httpsUrl(l.channel);
+      if (CHZZK_LIVE_RE.test(url))
+        others.push({
+          platform: 'chzzk',
+          name: decodeHtml(String(l.creatorName ?? '')).trim().slice(0, 30),
+          tag: String(l.linkTag ?? ''),
+          title: decodeHtml(String(l.title ?? '')).slice(0, 100),
+          viewers: Number(l.viewers) || 0,
+          url,
+          thumbnail: httpsUrl(l.thumbnailImage).replace('{width}x{height}', '320x180'),
+          category: String(l.categoryName ?? ''),
+        });
+      continue;
+    }
     const platform = PLATFORM_OF[Number(l?.platformType)];
     if (!platform) continue;
     const made = makeCreator(
@@ -83,5 +113,5 @@ export async function fetchLiveList(q: LiveQuery, fetchImpl: typeof fetch = fetc
       category: String(l.categoryName ?? ''),
     });
   }
-  return { items, page: q.page, totalPages: Number(d.totalPages) || 1, total: Number(d.totalElements) || items.length };
+  return { items, others, page: q.page, totalPages: Number(d.totalPages) || 1, total: Number(d.totalElements) || items.length };
 }

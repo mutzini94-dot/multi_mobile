@@ -43,3 +43,15 @@ test('fetchLiveList: 유튜브는 라이브 영상 ID(v)를 함께 담는다 (�
   const r = await fetchLiveList({ page: 1, size: 20, q: '', order: 'VIEWERS', platform: '' }, fetchImpl as unknown as typeof fetch);
   expect(r.items.map((i) => i.creator.videoId)).toEqual(['m8HaYP0qcRM', undefined]);
 });
+
+test('fetchLiveList: 치지직 방송은 칸에서 재생할 수 없어 따로 (설치형 웹페이지 칸용 주소)', async () => {
+  const id = 'a'.repeat(32);
+  const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ data: { content: [
+    row({ creatorName: '치지직님', channel: `https://chzzk.naver.com/live/${id}`, platformType: 8, linkTag: 'chz1', title: '켜짐', viewers: 77 }),
+    row({ creatorName: '이상한주소', channel: 'https://evil.example/live/x', platformType: 8 }),
+  ], totalPages: 1 } }), { status: 200 }));
+  const r = await fetchLiveList({ page: 1, size: 20, q: '', order: 'VIEWERS', platform: 'chzzk' }, fetchImpl as unknown as typeof fetch);
+  expect(r.items).toEqual([]);
+  expect(r.others).toEqual([{ platform: 'chzzk', name: '치지직님', tag: 'chz1', title: '켜짐', viewers: 77, url: `https://chzzk.naver.com/live/${id}`, thumbnail: 'https://t/320x180.jpg', category: '게임' }]);
+  expect(new URL(liveListUrl({ page: 1, size: 20, q: '', order: 'VIEWERS', platform: 'chzzk' })).searchParams.get('platformType')).toBe('8');
+});

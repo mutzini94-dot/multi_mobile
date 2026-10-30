@@ -163,3 +163,14 @@ test('투네이션 라이브: 불러오지 못하면 알려준다', async () => 
   fireEvent.click(within(dlg).getByRole('tab', { name: '투네이션 라이브' }));
   expect(await within(dlg).findByText(/라이브 목록을 불러오지 못했습니다/)).toBeInTheDocument();
 });
+
+test('설치형 투네이션 라이브: 치지직 방송은 웹페이지 칸으로 연다 (웹에서는 보이지 않는다)', async () => {
+  const id = 'b'.repeat(32);
+  const lives = vi.fn(async () => ({ ...livePage, others: [{ platform: 'chzzk' as const, name: '치지직님', tag: 'chz1', title: '켜짐', viewers: 77, url: `https://chzzk.naver.com/live/${id}`, thumbnail: '', category: '' }] }));
+  setup({ desktop: desktopApi(), lives });
+  const dlg = openPicker(0);
+  fireEvent.click(within(dlg).getByRole('tab', { name: '투네이션 라이브' }));
+  fireEvent.click(await within(dlg).findByRole('button', { name: /치지직님/ }));
+  expect(within(tiles()[0]).getByText('치지직님 (치지직)')).toBeInTheDocument();
+  expect(webviews().find((w) => w.getAttribute('partition') === 'persist:mvweb')?.getAttribute('src')).toBe(`https://chzzk.naver.com/live/${id}`);
+});
