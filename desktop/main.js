@@ -579,6 +579,7 @@ function runSmoke(outDir) {
       fs.mkdirSync(outDir, { recursive: true });
       result.windowFullScreen = win.isFullScreen();
       result.windowAlwaysOnTop = win.isAlwaysOnTop();
+      result.windowBounds = win.getBounds();
       result.pageInfo = await win.webContents
         .executeJavaScript(`({ webviews: [...document.querySelectorAll('webview')].map((w) => [w.getAttribute('partition'), w.getAttribute('src')]), notices: [...document.querySelectorAll('.ended-notice')].map((n) => n.textContent), tileLabels: [...document.querySelectorAll('.tile .tile__name')].map((n) => n.textContent) })`)
         .catch(() => null);
