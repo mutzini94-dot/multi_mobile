@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
-import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream, makeWebPage } from '../domain/pages';
+import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
 import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
@@ -809,15 +809,6 @@ export function App(props: Props) {
                 <LiveTab
                   load={liveSource}
                   favoriteTags={loggedIn ? favoriteTags : undefined}
-                  // 치지직은 다른 사이트 안에 띄우는 것을 막아 두어, 설치형의 칸 안 브라우저(웹페이지 칸)로만 볼 수 있다
-                  onPickChzzk={
-                    desktop
-                      ? (o) => {
-                          const w = makeWebPage(o.url, `${o.name} (치지직)`);
-                          if (w.ok) pickPage(w.value);
-                        }
-                      : undefined
-                  }
                   onToggleFavorite={loggedIn ? toggleToonFavorite : undefined}
                   onPick={(creator) => {
                     dispatch({ type: 'assign', slot: pickerSlot, creator });

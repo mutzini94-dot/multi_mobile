@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Creator } from '../domain/types';
-import type { LiveItem, LivePage, LiveQuery, OtherLive } from '../toonation/liveList';
+import type { LiveItem, LivePage, LiveQuery } from '../toonation/liveList';
 
 interface Props {
   load(q: LiveQuery): Promise<LivePage>;
   onPick(c: Creator): void;
   favoriteTags?: Set<string>; // 투네이션 즐겨찾기한 후원 아이디 (로그인했을 때만 ♡)
   onToggleFavorite?(c: Creator, on: boolean): Promise<void>;
-  onPickChzzk?(o: OtherLive): void; // 설치형: 치지직 방송을 웹페이지 칸으로 (웹은 띄울 수 없어 목록에서 뺀다)
 }
 
 const PAGE_SIZE = 20;
@@ -21,8 +20,7 @@ function topCategories(items: LiveItem[]): string[] {
 }
 
 /** 불러오기 창 '투네이션 라이브' 탭: toon.at/donator?live 목록에서 골라 칸에 넣는다 */
-export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, onPickChzzk }: Props) {
-  const [others, setOthers] = useState<OtherLive[]>([]);
+export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite }: Props) {
   const [q, setQ] = useState('');
   const [query, setQuery] = useState<Omit<LiveQuery, 'page' | 'size'>>({ q: '', order: 'VIEWERS', platform: '', category: '' });
   const [busyTag, setBusyTag] = useState<string | null>(null);
@@ -40,7 +38,6 @@ export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, onPickCh
         const r = await load({ ...query, page: n, size: PAGE_SIZE });
         if (id !== req.current) return; // 그 사이 검색 조건이 바뀜
         setItems((prev) => (n === 1 ? r.items : [...prev, ...r.items.filter((i) => !prev.some((p) => p.creator.key === i.creator.key))]));
-        setOthers((prev) => (n === 1 ? (r.others ?? []) : [...prev, ...(r.others ?? []).filter((o) => !prev.some((p) => p.url === o.url))]));
         setPage(n);
         setTotalPages(r.totalPages);
         setStatus('ready');
@@ -71,7 +68,6 @@ export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, onPickCh
           <option value="">전체</option>
           <option value="youtube">YouTube</option>
           <option value="twitch">Twitch</option>
-          {onPickChzzk && <option value="chzzk">치지직</option>}
         </select>
         <button type="submit" className="btn btn--ghost btn--sm">
           검색
@@ -99,7 +95,7 @@ export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, onPickCh
           </button>
         </p>
       )}
-      {status === 'ready' && items.length === 0 && (!onPickChzzk || others.length === 0) && <p className="muted">지금 라이브 중인 방송이 없습니다.</p>}
+      {status === 'ready' && items.length === 0 && <p className="muted">지금 라이브 중인 방송이 없습니다.</p>}
       <ul className="live-list">
         {items.map(({ creator: c, thumbnail, category }) => (
           <li key={`${c.key}|${c.donateId}`} className="live-list__row">
@@ -138,24 +134,6 @@ export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, onPickCh
             </button>
           </li>
         ))}
-        {onPickChzzk &&
-          others.map((o) => (
-            <li key={o.url} className="live-list__row">
-              <button type="button" className="live-item" onClick={() => onPickChzzk(o)}>
-                {o.thumbnail ? <img className="live-item__thumb" src={o.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="live-item__thumb" />}
-                <span className="live-item__text">
-                  <span className="live-item__name">
-                    {o.name}
-                    <span className="live-tag">LIVE</span>
-                  </span>
-                  <span className="live-item__title">{o.title}</span>
-                  <span className="muted live-item__meta">
-                    치지직 · 시청자 {o.viewers.toLocaleString('ko-KR')} · 웹페이지 칸으로 열기
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
       </ul>
       {status === 'loading' && <p className="muted">불러오는 중…</p>}
       {status === 'ready' && page < totalPages && (

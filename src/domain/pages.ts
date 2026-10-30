@@ -29,10 +29,10 @@ export function normalizePageUrl(input: string): Result<string> {
 let seq = 0;
 const newKey = (kind: string) => `${kind}:${Date.now().toString(36)}${(++seq).toString(36)}`;
 
-export function makeWebPage(input: string, label?: string): Result<WebPage> {
+export function makeWebPage(input: string): Result<WebPage> {
   const r = normalizePageUrl(input);
   if (!r.ok) return r;
-  const name = label?.trim().slice(0, 40) || new URL(r.value).hostname.replace(/^www\./, '');
+  const name = new URL(r.value).hostname.replace(/^www\./, '');
   return { ok: true, value: { kind: 'web', key: newKey('web'), name, url: r.value } };
 }
 
