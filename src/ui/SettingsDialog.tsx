@@ -192,6 +192,7 @@ export function SettingsDialog(p: Props) {
             ]}
             onChange={(v) => p.onChange({ theme: v })}
           />
+          <Toggle label="칸에 방송 정보 표시" checked={s.showLiveInfo} onChange={(v) => p.onChange({ showLiveInfo: v })} hint="제목·시청자 수·방송한 시간 (투네이션에 등록된 크리에이터)" />
           <Toggle label="단축키" checked={s.shortcuts} onChange={(v) => p.onChange({ shortcuts: v })} hint="1~9 칸 선택 · M 소리 · F 전체 화면 · D 후원하기" />
           {p.desktop && <Toggle label="항상 위에 표시" checked={s.alwaysOnTop} onChange={(v) => p.onChange({ alwaysOnTop: v })} />}
         </Section>

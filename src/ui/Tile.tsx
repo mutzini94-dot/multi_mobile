@@ -17,6 +17,7 @@ interface Props {
   // 페이지 칸(후원 페이지·웹페이지): 위쪽 바가 영상 위에 겹치지 않고 페이지 위에 따로 놓인다. 소리 버튼 없음
   page?: { label: string; onBack?(): void; onReload?(): void; onOpenWindow?(): void };
   onDetach?(): void; // 이 칸을 새 창으로 분리
+  liveInfo?: string; // 방송 정보 한 줄 (시청자 수 · 방송한 시간 · 제목)
   // 새 창으로 분리한 칸: "{이름} · 새 창으로 분리됨"과 되돌리기 · 불러오기(다른 방송 넣기)
   detached?: { name: string; onReturn(): void };
   // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 상단 바 어디든(버튼 제외)·⠿를 눌러 끈다
@@ -130,6 +131,11 @@ export function Tile(props: Props) {
             )}
             <span className="tile__name">{creator.name}</span>
             <span className="tile__platform">{PLATFORM_LABEL[creator.platform]}</span>
+            {props.liveInfo && (
+              <span className="tile__live" aria-label="방송 정보" title={props.liveInfo}>
+                {props.liveInfo}
+              </span>
+            )}
             <button
               type="button"
               className={`sound${audible ? ' sound--on' : ''}`}

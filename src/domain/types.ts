@@ -8,7 +8,7 @@ export interface Creator {
   channel: string; // 유튜브: UC... 채널 ID, 트위치: 소문자 로그인명
   source: 'manual' | 'toonation'; // toonation: 투네이션 계정 즐겨찾기·라이브 목록(검증됨)
   profile?: string; // 프로필 이미지 URL (투네이션 즐겨찾기만)
-  live?: { title: string; viewers: number }; // 라이브 중일 때만 (투네이션 즐겨찾기를 불러온 시점 기준)
+  live?: { title: string; viewers: number; startedAt?: number }; // 라이브 중일 때만 (불러온 시점 기준, startedAt: 방송 시작 ms)
   videoId?: string; // 유튜브 라이브 영상 ID (투네이션 라이브 목록): 채널 임베드가 안 되는 채널도 재생. 저장하지 않는다
 }
 

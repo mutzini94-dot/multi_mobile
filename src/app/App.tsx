@@ -20,6 +20,7 @@ import { ToonationSection } from '../ui/ToonationSection';
 import { SearchSection } from '../ui/SearchSection';
 import { GroupBar, GroupSelect } from '../ui/GroupBar';
 import { useFavoriteGroups } from '../favorites/groups';
+import { formatElapsed, useTileLiveInfo } from '../toonation/tileLive';
 import { favoritesFromToonation, type ToonationFavorite } from '../toonation/bridge';
 import { safeStorage, type KV } from '../storage/safeStorage';
 import { DonationBar } from '../ui/DonationBar';
@@ -524,6 +525,21 @@ export function App(props: Props) {
     refreshToonation();
   };
   const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
+  // 칸 위쪽 바의 방송 정보 (설정). 방송한 시간은 1분마다 다시 그린다
+  const tileLive = useTileLiveInfo({
+    streams: visibleSlots(state).filter(isStream),
+    known: toonation.state.creators,
+    load: liveSource,
+    enabled: settings.showLiveInfo,
+  });
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!Object.values(tileLive).some((i) => i.startedAt)) return;
+    const t = setInterval(() => setClock(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, [tileLive]);
+  const liveLine = (i: { title: string; viewers: number; startedAt?: number }) =>
+    [`${i.viewers.toLocaleString('ko-KR')}명`, i.startedAt ? formatElapsed(Math.max(clock, Date.now()) - i.startedAt) : '', i.title].filter(Boolean).join(' · ');
   const pickPage = (page: PageSlot) => {
     if (pickerSlot === null) return;
     dispatch({ type: 'assignPage', slot: pickerSlot, page });
@@ -581,6 +597,7 @@ export function App(props: Props) {
               const pageKey = keys[slot];
               return (
                 <Tile
+                  liveInfo={creator && tileLive[creator.key] ? liveLine(tileLive[creator.key]) : undefined}
                   creator={creator}
                   selected={state.selected === slot}
                   soundOn={state.soundOn}

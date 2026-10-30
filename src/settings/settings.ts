@@ -10,6 +10,7 @@ export interface Settings {
   hiddenSlotPlayback: 'keep' | 'pause'; // 레이아웃에서 숨긴 칸: 계속 재생 / 정지
   lowQualityOthers: boolean; // 선택하지 않은 칸은 낮은 화질 (트위치만)
   autoReplaceEnded: boolean; // 방송이 끝나면 라이브 중인 투네이션 즐겨찾기로 자동으로 바꾸기
+  showLiveInfo: boolean; // 칸 위쪽 바에 방송 제목·시청자 수·방송한 시간
   videoClick: 'select' | 'player'; // 영상 클릭: 칸 선택(끌기 가능) / 플레이어 재생·정지
   soundMode: 'single' | 'mix'; // 선택한 칸만 소리 / 여러 칸 동시 듣기(칸별 볼륨)
   masterVolume: number; // 0~100
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hiddenSlotPlayback: 'keep',
   lowQualityOthers: false,
   autoReplaceEnded: false,
+  showLiveInfo: true,
   videoClick: 'select',
   soundMode: 'single',
   masterVolume: 100,
@@ -77,6 +79,7 @@ export function normalizeSettings(raw: unknown): Settings {
     hiddenSlotPlayback: oneOf(r.hiddenSlotPlayback, ['keep', 'pause'] as const, d.hiddenSlotPlayback),
     lowQualityOthers: bool(r.lowQualityOthers, d.lowQualityOthers),
     autoReplaceEnded: bool(r.autoReplaceEnded, d.autoReplaceEnded),
+    showLiveInfo: bool(r.showLiveInfo, d.showLiveInfo),
     videoClick: oneOf(r.videoClick, ['select', 'player'] as const, d.videoClick),
     soundMode: oneOf(r.soundMode, ['single', 'mix'] as const, d.soundMode),
     masterVolume: typeof vol === 'number' && Number.isFinite(vol) && vol >= 0 && vol <= 100 ? Math.round(vol) : d.masterVolume,

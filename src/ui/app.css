@@ -411,3 +411,7 @@ span.group-select { display: inline-flex; gap: 4px; max-width: none; }
 span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 12px; }
 .fav-list li { gap: 6px; }
 .fav-list__row--edit { display: flex; align-items: center; }
+
+/* ---------- 칸 방송 정보 ---------- */
+.tile__live { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.tile__live::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--live); vertical-align: 1px; }

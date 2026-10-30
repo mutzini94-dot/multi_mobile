@@ -16,3 +16,6 @@ if (typeof window.PointerEvent === 'undefined') {
   }
   (window as unknown as { PointerEvent: unknown }).PointerEvent = PointerEventPolyfill;
 }
+
+// 테스트는 실제 네트워크를 쓰지 않는다: 주입하지 않은 기본 fetch(투네이션 라이브 목록 등)는 실패로
+globalThis.fetch = (() => Promise.reject(new Error('NO_NETWORK_IN_TESTS'))) as typeof fetch;

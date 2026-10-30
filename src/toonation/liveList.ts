@@ -50,6 +50,14 @@ const decodeHtml = (s: string) =>
   s.replace(/&(amp|lt|gt|quot|#39);/g, (_, e: string) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[e] ?? _);
 const httpsUrl = (s: unknown) => (typeof s === 'string' && /^https?:\/\//.test(s) ? s.replace(/^http:/, 'https:') : '');
 
+/** 방송 시작 시각: 경과 초(streamElapsedTime)로, 없으면 시작 시각(한국 시간, 시간대 표시 없음) */
+function startedAt(l: { streamElapsedTime?: unknown; streamStartTime?: unknown }): { startedAt?: number } {
+  const sec = Number(l.streamElapsedTime);
+  if (Number.isFinite(sec) && sec > 0) return { startedAt: Date.now() - sec * 1000 };
+  const t = Date.parse(`${String(l.streamStartTime ?? '')}+09:00`);
+  return Number.isFinite(t) ? { startedAt: t } : {};
+}
+
 export async function fetchLiveList(q: LiveQuery, fetchImpl: typeof fetch = fetch): Promise<LivePage> {
   const r = await fetchImpl(liveListUrl(q), { headers: { Accept: 'application/json' } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -69,7 +77,7 @@ export async function fetchLiveList(q: LiveQuery, fetchImpl: typeof fetch = fetc
         ...made.value,
         ...(profile ? { profile } : {}),
         ...(platform === 'youtube' && /^[A-Za-z0-9_-]{11}$/.test(String(l.v ?? '')) ? { videoId: String(l.v) } : {}),
-        live: { title: decodeHtml(String(l.title ?? '')).slice(0, 100), viewers: Number(l.viewers) || 0 },
+        live: { title: decodeHtml(String(l.title ?? '')).slice(0, 100), viewers: Number(l.viewers) || 0, ...startedAt(l) },
       },
       thumbnail: httpsUrl(l.thumbnailImage).replace('{width}x{height}', '320x180'),
       category: String(l.categoryName ?? ''),
