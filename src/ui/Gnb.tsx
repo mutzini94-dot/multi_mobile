@@ -22,9 +22,10 @@ interface Props {
   onSettings?(): void;
   onPresets?(): void; // 화면 구성 저장·불러오기
   account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
+  onMini?(): void; // 미니 모드 (방송이 있을 때만)
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini }: Props) {
   return (
     <header className="gnb">
       <span className="gnb__logo">멀티뷰 후원</span>
@@ -45,6 +46,11 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPrese
           </button>
         ))}
       </div>
+      {onMini && (
+        <button type="button" className="btn btn--ghost" aria-label="미니 모드" title="선택한 방송 하나만 작게 보기" onClick={onMini}>
+          미니
+        </button>
+      )}
       {onPresets && (
         <button type="button" className="btn btn--ghost" aria-label="화면 구성" title="화면 구성 저장·불러오기" onClick={onPresets}>
           구성

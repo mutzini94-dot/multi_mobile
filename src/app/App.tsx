@@ -332,10 +332,27 @@ export function App(props: Props) {
     // 브라우저(설치형은 창) 전체 화면도 함께. 지원하지 않거나 거부되면 앱 안에서만 크게 본다
     document.documentElement.requestFullscreen?.().catch(() => {});
   };
+  // 미니 모드: 선택한 방송(없으면 보이는 첫 방송) 하나만, 상단 메뉴 없이. 설치형은 앱 창도 작게·항상 위로
+  const [mini, setMini] = useState(false);
+  const miniRef = useRef(false);
+  const enterMini = () => {
+    const slot = isStream(state.slots[state.selected ?? -1]) ? state.selected! : state.slots.findIndex((s, i) => isStream(s) && i < visibleCount(state));
+    if (slot < 0) return;
+    dispatch({ type: 'select', slot });
+    setFocused(slot);
+    setMini(true);
+    miniRef.current = true;
+    desktop?.setMiniMode?.(true);
+  };
   const exitFullscreen = useCallback(() => {
     setFocused(null);
+    if (miniRef.current) {
+      miniRef.current = false;
+      setMini(false);
+      desktop?.setMiniMode?.(false);
+    }
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-  }, []);
+  }, [desktop]);
   useEffect(() => {
     if (focused === null) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && exitFullscreen();
@@ -598,7 +615,7 @@ export function App(props: Props) {
     setGuideOpen(false);
   };
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
 
       <Gnb
         layout={state.layout}
@@ -607,6 +624,7 @@ export function App(props: Props) {
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
         onPresets={() => setPresetsOpen(true)}
+        onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
       <div className="app__body">
@@ -685,7 +703,7 @@ export function App(props: Props) {
             }}
           />
           {focusedCreator && (
-            <section className="focus-view" aria-label={`${focusedCreator.name} 전체 화면`}>
+            <section className="focus-view" role={mini ? 'region' : undefined} aria-label={`${focusedCreator.name} ${mini ? '미니 모드' : '전체 화면'}`}>
               <div className="focus-view__player" ref={focusEl} />
               <div className="tile__bar focus-view__bar">
                 <span className="tile__name">{focusedCreator.name}</span>
@@ -704,9 +722,15 @@ export function App(props: Props) {
                     </button>
                   </>
                 )}
-                <button type="button" className="btn btn--ghost" aria-label="전체 화면 종료" onClick={exitFullscreen}>
-                  전체 화면 종료 (Esc)
-                </button>
+                {mini ? (
+                  <button type="button" className="btn btn--ghost" aria-label="미니 모드 끝" title="미니 모드 끝 (Esc)" onClick={exitFullscreen}>
+                    ✕
+                  </button>
+                ) : (
+                  <button type="button" className="btn btn--ghost" aria-label="전체 화면 종료" onClick={exitFullscreen}>
+                    전체 화면 종료 (Esc)
+                  </button>
+                )}
               </div>
             </section>
           )}

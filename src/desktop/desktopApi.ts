@@ -27,6 +27,7 @@ export interface DesktopApi {
   fillDonate(amount: number): void; // 빠른 후원: 후원창의 금액만 채운다
   fillDonateMessage?(message: string): void; // 자주 쓰는 메시지: 후원창의 메시지만 채운다
   setAlwaysOnTop(on: boolean): void;
+  setMiniMode?(on: boolean): void; // 미니 모드: 앱 창을 작게·항상 위로 (끄면 되돌린다)
   onDonateClosed(cb: () => void): () => void;
   onDonateMode(cb: (mode: DonateMode) => void): () => void;
   // 칸 분리 창 (src/detach/channel.ts). 메인 화면 쪽

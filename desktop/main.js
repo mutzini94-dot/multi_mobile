@@ -50,6 +50,7 @@ let appOrigin = null; // 멀티뷰 화면 주소의 origin (분리 창은 이 �
 let appOptions = null; // Windows 시작 시 실행 · 닫으면 트레이로 · 자동 업데이트 (lib/appOptions.js)
 let updater = null; // 자동 업데이트 (lib/updater.js)
 let tray = null;
+let miniBefore = null; // 미니 모드 전 창 상태 (미니 모드 동안은 창 위치·크기를 기억하지 않는다)
 let quitting = false; // 트레이 '종료'·업데이트 설치 등 진짜 종료 (창 닫기는 트레이로 숨김)
 const START_HIDDEN = process.argv.includes('--hidden'); // Windows 시작 시 실행: 트레이로만 시작
 const soloWins = new Map(); // 분리 창 id → BrowserWindow
@@ -380,7 +381,7 @@ function createWindow(url) {
   if (prefs.get('alwaysOnTop')) win.setAlwaysOnTop(true); // 웹의 설정이 읽히기 전에도 지난 상태로
   // 창 위치·크기 기억 (최대화·전체 화면일 때는 그 전 크기를 남긴다)
   const remember = () => {
-    if (!win || win.isDestroyed()) return;
+    if (!win || win.isDestroyed() || miniBefore) return;
     prefs.set('windowMaximized', win.isMaximized());
     if (!win.isMaximized() && !win.isFullScreen() && !win.isMinimized()) prefs.set('windowBounds', win.getBounds());
   };
@@ -499,6 +500,26 @@ function wireIpc() {
   ipcMain.handle('mv:app:set', (e, key, value) => fromWin(e) && setAppOption(String(key), value));
   ipcMain.on('mv:app:checkUpdate', (e) => fromWin(e) && updater && updater.check(true));
   ipcMain.on('mv:app:installUpdate', (e) => fromWin(e) && updater && updater.installNow());
+  // 미니 모드: 창을 작게(지금 화면 오른쪽 아래)·항상 위로, 끄면 원래 크기·위치·항상 위로 되돌린다
+  ipcMain.on('mv:window:mini', (e, on) => {
+    if (!fromWin(e)) return;
+    if (on && !miniBefore) {
+      if (win.isFullScreen()) win.setFullScreen(false);
+      miniBefore = { bounds: win.getBounds(), maximized: win.isMaximized(), onTop: win.isAlwaysOnTop() };
+      if (miniBefore.maximized) win.unmaximize();
+      const area = screen.getDisplayMatching(win.getBounds()).workArea;
+      win.setMinimumSize(320, 180);
+      win.setBounds({ width: 480, height: 270, x: area.x + area.width - 480 - 24, y: area.y + area.height - 270 - 24 });
+      win.setAlwaysOnTop(true, 'floating');
+    } else if (!on && miniBefore) {
+      const b = miniBefore;
+      miniBefore = null;
+      win.setMinimumSize(720, 480);
+      win.setBounds(b.bounds);
+      if (b.maximized) win.maximize();
+      win.setAlwaysOnTop(b.onTop);
+    }
+  });
   ipcMain.on('mv:window:alwaysOnTop', (e, on) => {
     if (!fromWin(e)) return;
     win.setAlwaysOnTop(!!on);

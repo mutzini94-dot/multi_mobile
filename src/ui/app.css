@@ -419,3 +419,11 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 /* ---------- 후원 목표 · 내역에서 후원 ---------- */
 .history__bar--goal i { background: var(--success, #2bb673); }
 .history__right { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- 미니 모드 ---------- */
+.app--mini > .gnb, .app--mini > .donation-bar, .app--mini .onboarding { display: none; }
+.app--mini .app__body { padding: 0; }
+.app--mini .stage, .app--mini .focus-view, .app--mini .player-layer__item { border-radius: 0; }
+.app--mini .focus-view__bar { padding: 6px 8px 14px; opacity: 0; transition: opacity 0.15s; }
+.app--mini .focus-view:hover .focus-view__bar, .app--mini .focus-view__bar:focus-within { opacity: 1; }
+.app--mini .focus-view__bar .btn--donate { height: 30px; padding: 0 12px; font-size: 13px; }
