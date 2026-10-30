@@ -107,6 +107,7 @@ export function SettingsDialog(p: Props) {
   const [amountText, setAmountText] = useState(formatAmounts(s.quickAmounts));
   const [messageText, setMessageText] = useState(s.quickMessages.join('\n'));
   const [limitText, setLimitText] = useState(s.monthlyLimit ? s.monthlyLimit.toLocaleString('ko-KR') : '0');
+  const [goalText, setGoalText] = useState(s.monthlyGoal ? s.monthlyGoal.toLocaleString('ko-KR') : '0');
   const [favMessage, setFavMessage] = useState<string | null>(null);
 
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
@@ -287,6 +288,25 @@ export function SettingsDialog(p: Props) {
             onChange={(v) => p.onChange({ liveRefreshMinutes: v })}
           />
           <Toggle label="즐겨찾기 방송 시작 알림" checked={s.liveNotify} onChange={(v) => p.onChange({ liveNotify: v })} hint="라이브 자동 갱신이 켜져 있어야 합니다" />
+          <label className="settings__row">
+            <span>
+              월 후원 목표
+              <small className="muted">이번 달 후원이 목표의 80%·100%에 이르면 알려 줍니다 (0이면 끔)</small>
+            </span>
+            <input
+              aria-label="월 후원 목표"
+              inputMode="numeric"
+              value={goalText}
+              placeholder="예: 30,000"
+              onChange={(e) => setGoalText(e.target.value)}
+              onBlur={() => {
+                const n = Number(goalText.replace(/[,\s원]/g, ''));
+                const v = Number.isInteger(n) && n >= 0 && n <= 100_000_000 ? n : 0;
+                p.onChange({ monthlyGoal: v });
+                setGoalText(v ? v.toLocaleString('ko-KR') : '0');
+              }}
+            />
+          </label>
           <label className="settings__row">
             <span>
               월 후원 한도

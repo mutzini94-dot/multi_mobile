@@ -5,6 +5,8 @@ interface Props {
   load(): Promise<DonationRecord[]>; // 새로 불러오기
   cash: number | null; // 캐시 잔액
   monthlyLimit: number; // 0이면 한도 없음
+  monthlyGoal?: number; // 0이면 목표 없음
+  onDonate?(tag: string, name: string): void; // 크리에이터별 목록에서 바로 후원
   onCharge?(): void; // 캐시 충전 (투네이션 충전 페이지)
   onClose(): void;
 }
@@ -13,7 +15,7 @@ const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 const monthLabel = (m: string) => `${Number(m.slice(0, 4))}년 ${Number(m.slice(5))}월`;
 
 /** 내 후원 내역: 이번 달 합계(한도), 월별·크리에이터별 합계 (최근 13개월) */
-export function HistoryDialog({ load, cash, monthlyLimit, onCharge, onClose }: Props) {
+export function HistoryDialog({ load, cash, monthlyLimit, monthlyGoal = 0, onCharge, onDonate, onClose }: Props) {
   const [items, setItems] = useState<DonationRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +65,16 @@ export function HistoryDialog({ load, cash, monthlyLimit, onCharge, onClose }: P
                 <span className="muted">한도 {won(monthlyLimit)}</span>
               </>
             )}
+            {monthlyGoal > 0 && (
+              <>
+                <span className="history__bar history__bar--goal" aria-hidden="true">
+                  <i style={{ width: `${Math.min(1, thisMonth / monthlyGoal) * 100}%` }} />
+                </span>
+                <span className="muted">
+                  목표 {won(monthlyGoal)} · {Math.floor((thisMonth / monthlyGoal) * 100)}%
+                </span>
+              </>
+            )}
           </div>
         </div>
         {error && <p className="form-error">{error}</p>}
@@ -76,8 +88,15 @@ export function HistoryDialog({ load, cash, monthlyLimit, onCharge, onClose }: P
                 {s.creators.map((c) => (
                   <li key={c.tag || c.creator}>
                     <span>{c.creator || c.tag}</span>
-                    <span className="muted">
-                      {won(c.total)} · {c.count}회
+                    <span className="history__right">
+                      <span className="muted">
+                        {won(c.total)} · {c.count}회
+                      </span>
+                      {onDonate && /^[A-Za-z0-9_-]{1,64}$/.test(c.tag) && (
+                        <button type="button" className="btn btn--ghost btn--sm" aria-label={`${c.creator || c.tag} 후원하기`} onClick={() => onDonate(c.tag, c.creator || c.tag)}>
+                          후원
+                        </button>
+                      )}
                     </span>
                   </li>
                 ))}

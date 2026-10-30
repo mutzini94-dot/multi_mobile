@@ -39,7 +39,7 @@ import { PresetsDialog } from '../ui/PresetsDialog';
 import { exportBackup, importBackup } from './backup';
 import { Onboarding, ONBOARDED_KEY } from '../ui/Onboarding';
 import { HistoryDialog } from '../ui/HistoryDialog';
-import { monthTotal, type DonationRecord } from '../toonation/history';
+import { goalLevel, GOAL_NOTICE_KEY, monthKey, monthTotal, type DonationRecord } from '../toonation/history';
 import { useTileDrag } from './useTileDrag';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
@@ -286,8 +286,34 @@ export function App(props: Props) {
     return clean;
   }, [bridge]);
   useEffect(() => {
-    if (loggedIn && settings.monthlyLimit > 0) loadHistory().catch(() => {});
-  }, [loggedIn, settings.monthlyLimit, popupClosed, loadHistory]);
+    if (loggedIn && (settings.monthlyLimit > 0 || settings.monthlyGoal > 0)) loadHistory().catch(() => {});
+  }, [loggedIn, settings.monthlyLimit, settings.monthlyGoal, popupClosed, loadHistory]);
+  // 후원 목표: 이번 달 합계가 목표의 80%·100%에 이르면 단계마다 한 번 알린다
+  useEffect(() => {
+    if (!history || !(settings.monthlyGoal > 0)) return;
+    const now = Date.now();
+    const total = monthTotal(history, now);
+    const level = goalLevel(total, settings.monthlyGoal);
+    if (!level) return;
+    const month = monthKey(now);
+    let seen = 0;
+    try {
+      const r = JSON.parse(kv.get(GOAL_NOTICE_KEY) ?? 'null');
+      if (r && r.month === month) seen = Number(r.level) || 0;
+    } catch {
+      // 처음
+    }
+    if (level <= seen) return;
+    kv.set(GOAL_NOTICE_KEY, JSON.stringify({ month, level }));
+    const goal = settings.monthlyGoal.toLocaleString('ko-KR');
+    const text =
+      level === 100
+        ? `이번 달 후원 목표 ${goal}원에 이르렀습니다 (${total.toLocaleString('ko-KR')}원)`
+        : `이번 달 후원이 목표 ${goal}원의 80%를 넘었습니다 (${total.toLocaleString('ko-KR')}원)`;
+    setMessage(text);
+    const N = globalThis.Notification;
+    if (N && N.permission === 'granted') new N('후원 목표', { body: text, tag: 'mv-goal' });
+  }, [history, settings.monthlyGoal, kv]);
   // 설치형 앱 정보 (버전·앱 옵션·업데이트): 설정 창을 열 때 불러오고, 앱이 바뀌면 알려 준다
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   useEffect(() => desktop?.onAppInfo?.(setAppInfo), [desktop]);
@@ -805,6 +831,12 @@ export function App(props: Props) {
           load={loadHistory}
           cash={typeof toonation.state.account?.cash === 'number' ? toonation.state.account.cash : null}
           monthlyLimit={settings.monthlyLimit}
+          monthlyGoal={settings.monthlyGoal}
+          onDonate={(tag, name) => {
+            setHistoryOpen(false);
+            // 내역의 크리에이터: 후원 아이디로 후원창만 연다 (방송 채널은 모른다)
+            donateTo({ key: `toonation-tag:${tag}`, name: name.slice(0, 30), donateId: tag, platform: 'twitch', channel: '', source: 'toonation' });
+          }}
           onCharge={() => win.open('https://toon.at/donator/account/charge', '_blank', 'noopener')}
           onClose={() => setHistoryOpen(false)}
         />

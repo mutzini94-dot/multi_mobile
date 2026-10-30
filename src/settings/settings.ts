@@ -18,6 +18,7 @@ export interface Settings {
   quickAmounts: number[]; // 빠른 후원 금액 (설치형)
   quickMessages: string[]; // 자주 쓰는 후원 메시지 (설치형)
   monthlyLimit: number; // 월 후원 한도 (원, 0이면 끔): 이번 달 합계가 넘으면 후원 전에 한 번 더 확인
+  monthlyGoal: number; // 월 후원 목표 (원, 0이면 끔): 목표의 80%·100%에 이르면 알림
   liveRefreshMinutes: 0 | 1 | 3 | 5 | 10; // 즐겨찾기 라이브 자동 갱신 간격 (0 = 끔)
   liveNotify: boolean; // 즐겨찾기 방송 시작 알림
   theme: 'system' | 'light' | 'dark';
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quickAmounts: [1000, 5000, 10000],
   quickMessages: [],
   monthlyLimit: 0,
+  monthlyGoal: 0,
   liveRefreshMinutes: 0,
   liveNotify: false,
   theme: 'system',
@@ -86,6 +88,7 @@ export function normalizeSettings(raw: unknown): Settings {
     donateMode: oneOf(r.donateMode, ['last', 'modal', 'pip'] as const, d.donateMode),
     quickAmounts: r.quickAmounts === undefined ? d.quickAmounts : cleanAmounts(r.quickAmounts),
     quickMessages: cleanMessages(r.quickMessages),
+    monthlyGoal: Number.isInteger(r.monthlyGoal) && (r.monthlyGoal as number) >= 0 && (r.monthlyGoal as number) <= 100_000_000 ? (r.monthlyGoal as number) : d.monthlyGoal,
     monthlyLimit: Number.isInteger(r.monthlyLimit) && (r.monthlyLimit as number) >= 0 && (r.monthlyLimit as number) <= 100_000_000 ? (r.monthlyLimit as number) : d.monthlyLimit,
     liveRefreshMinutes: oneOf(r.liveRefreshMinutes, LIVE_REFRESH_OPTIONS, d.liveRefreshMinutes),
     liveNotify: bool(r.liveNotify, d.liveNotify),

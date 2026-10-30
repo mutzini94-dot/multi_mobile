@@ -46,3 +46,13 @@ export function monthTotal(items: DonationRecord[], now: number): number {
   const m = monthKey(now);
   return items.filter((i) => monthKey(i.at) === m).reduce((s, i) => s + i.cash, 0);
 }
+
+/** 후원 목표 알림: 이번 달 어느 단계까지 알렸는지 ({ month, level }) */
+export const GOAL_NOTICE_KEY = 'mv.goalNotice.v1';
+
+/** 목표 대비 단계: 0 · 80(목표의 80% 이상) · 100(목표 이상) */
+export function goalLevel(total: number, goal: number): 0 | 80 | 100 {
+  if (!(goal > 0)) return 0;
+  if (total >= goal) return 100;
+  return total >= goal * 0.8 ? 80 : 0;
+}

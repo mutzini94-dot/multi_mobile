@@ -43,7 +43,7 @@ test('로그인하면 상단에 캐시 잔액, 누르면 내 후원 내역 (이�
   const dlg = screen.getByRole('dialog', { name: '내 후원 내역' });
   expect(await within(dlg).findByText('4,000원')).toBeInTheDocument(); // 이번 달
   const byCreator = within(dlg).getByRole('list', { name: '크리에이터별' });
-  expect(within(byCreator).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['A5,000원 · 2회', 'B1,000원 · 1회']);
+  expect(within(byCreator).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['A5,000원 · 2회후원', 'B1,000원 · 1회후원']);
   expect(within(within(dlg).getByRole('list', { name: '월별' })).getAllByRole('listitem')).toHaveLength(2);
 });
 

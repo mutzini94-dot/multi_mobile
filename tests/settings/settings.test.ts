@@ -12,6 +12,7 @@ test('기본값', () => {
     lowQualityOthers: false,
     autoReplaceEnded: false,
     showLiveInfo: true,
+    monthlyGoal: 0,
     quickMessages: [],
     monthlyLimit: 0,
     videoClick: 'select',

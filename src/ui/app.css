@@ -415,3 +415,7 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 /* ---------- 칸 방송 정보 ---------- */
 .tile__live { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
 .tile__live::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--live); vertical-align: 1px; }
+
+/* ---------- 후원 목표 · 내역에서 후원 ---------- */
+.history__bar--goal i { background: var(--success, #2bb673); }
+.history__right { display: inline-flex; align-items: center; gap: 6px; }
