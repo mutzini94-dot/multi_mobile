@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   logout: () => ipcRenderer.invoke('mv:logout'),
   favorites: () => ipcRenderer.invoke('mv:favorites'),
   history: () => ipcRenderer.invoke('mv:history'),
+  // 웹 화면 저장값 사본 (포트가 바뀌어도 설정·즐겨찾기가 남도록)
+  webStoreLoad: () => ipcRenderer.invoke('mv:webstore:load'),
+  webStoreSave: (snap) => ipcRenderer.send('mv:webstore:save', snap),
   search: (q) => ipcRenderer.invoke('mv:search', String(q)),
   bookmark: (tag, on) => ipcRenderer.invoke('mv:bookmark', { tag: String(tag), on: !!on }),
   openDonate: (t) =>

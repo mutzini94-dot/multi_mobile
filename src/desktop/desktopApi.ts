@@ -1,4 +1,5 @@
 import type { BridgeRequest, ToonationBridge, ToonationFavorite, ToonationAccount } from '../toonation/bridge';
+import type { WebStoreSnapshot } from '../storage/webStoreSync';
 
 /** 설치형 앱 응답: 메인 프로세스는 예외 대신 { ok, data | error }로 돌려준다 (IPC 오류 메시지 접두어를 피하기 위해). */
 export type DesktopResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -17,6 +18,8 @@ export interface DesktopApi {
   logout(): Promise<DesktopResult<object>>;
   favorites(): Promise<DesktopResult<ToonationFavorite[]>>;
   history?(): Promise<DesktopResult<unknown[]>>; // 내 후원 내역 (src/toonation/history.ts DonationRecord)
+  webStoreLoad?(): Promise<WebStoreSnapshot | null>; // 웹 화면 저장값 사본 (src/storage/webStoreSync.ts)
+  webStoreSave?(snap: WebStoreSnapshot): void;
   search?(q: string): Promise<DesktopResult<ToonationFavorite[]>>; // 투네이션 크리에이터 검색
   bookmark?(tag: string, on: boolean): Promise<DesktopResult<object>>; // 투네이션 즐겨찾기 추가·해제
   /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */

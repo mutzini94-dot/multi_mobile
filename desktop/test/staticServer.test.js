@@ -75,3 +75,30 @@ test('원하는 포트로 열고, 이미 쓰는 중이면 빈 포트로 대신 �
     throw e;
   }
 });
+
+test('원하는 포트가 잠깐 쓰이는 중이면 몇 번 다시 시도해 그 포트로 연다 (방금 닫힌 이전 실행 등)', async () => {
+  const root = fixture();
+  const a = await startStaticServer(root, { port: 0 });
+  const wanted = a.port;
+  setTimeout(() => a.close(), 300); // 0.3초 뒤 비워진다
+  const b = await startStaticServer(root, { port: wanted, retries: 5, retryDelayMs: 150 });
+  try {
+    assert.strictEqual(b.port, wanted);
+    assert.strictEqual(b.fallback, false);
+  } finally {
+    await b.close();
+  }
+});
+
+test('끝까지 쓰는 중이면 빈 포트로 열고 fallback 표시', async () => {
+  const root = fixture();
+  const a = await startStaticServer(root, { port: 0 });
+  try {
+    const b = await startStaticServer(root, { port: a.port, retries: 2, retryDelayMs: 50 });
+    assert.notStrictEqual(b.port, a.port);
+    assert.strictEqual(b.fallback, true);
+    await b.close();
+  } finally {
+    await a.close();
+  }
+});

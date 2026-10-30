@@ -11,6 +11,7 @@ const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell, Tr
 const { ToonationClient, ORIGIN } = require('./lib/toonation');
 const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
+const { createWebStore } = require('./lib/webStore');
 const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
 const { restoreBounds } = require('./lib/windowBounds');
@@ -431,6 +432,10 @@ function wireIpc() {
   for (const name of ['status', 'login', 'logout', 'favorites', 'history']) {
     ipcMain.handle(`mv:${name}`, (e) => (fromWin(e) ? handlers[name]() : { ok: false, error: 'FORBIDDEN' }));
   }
+  // 웹 화면 저장값 사본 (lib/webStore.js): 메인 창만
+  const webStore = createWebStore(path.join(app.getPath('userData'), 'webstore.json'));
+  ipcMain.handle('mv:webstore:load', (e) => (fromWin(e) ? webStore.load() : null));
+  ipcMain.on('mv:webstore:save', (e, snap) => fromWin(e) && webStore.save(snap));
   // 검색어·즐겨찾기 값을 받는 요청 (값 확인은 handlers)
   ipcMain.handle('mv:search', (e, q) => (fromWin(e) ? handlers.search(q) : { ok: false, error: 'FORBIDDEN' }));
   ipcMain.handle('mv:bookmark', (e, p) => (fromWin(e) ? handlers.bookmark(p) : { ok: false, error: 'FORBIDDEN' }));
@@ -643,8 +648,9 @@ app.whenReady().then(async () => {
   let url = DEV_URL;
   if (!DEV) {
     // 고정 포트: localStorage(즐겨찾기·내 방송 정보·설정)는 포트까지 포함한 주소별이라 실행마다 같은 포트여야 유지된다
-    server = await startStaticServer(path.join(__dirname, 'web'), { port: prefs.get('port') });
-    if (server.port !== prefs.get('port')) prefs.set('port', server.port);
+    // 다른 프로그램이 포트를 쓰고 있으면 잠깐 다시 시도하고, 그래도 안 되면 이번 실행만 빈 포트로 연다.
+    // 대체 포트는 저장하지 않는다 (저장하면 다음 실행부터 저장값이 계속 비어 보인다). 저장값은 webStore 사본으로 되살린다
+    server = await startStaticServer(path.join(__dirname, 'web'), { port: prefs.get('port'), retries: 5, retryDelayMs: 400 });
     url = `http://localhost:${server.port}/`;
   }
   createWindow(url);
