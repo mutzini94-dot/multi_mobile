@@ -18,6 +18,8 @@ import { useToonation } from '../toonation/useToonation';
 import { showLiveNotification, useLiveWatch } from '../toonation/liveWatch';
 import { ToonationSection } from '../ui/ToonationSection';
 import { SearchSection } from '../ui/SearchSection';
+import { GroupBar, GroupSelect } from '../ui/GroupBar';
+import { useFavoriteGroups } from '../favorites/groups';
 import { favoritesFromToonation, type ToonationFavorite } from '../toonation/bridge';
 import { safeStorage, type KV } from '../storage/safeStorage';
 import { DonationBar } from '../ui/DonationBar';
@@ -87,6 +89,12 @@ export function App(props: Props) {
   const [settings, updateSettings] = useSettings(kv);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  // 즐겨찾기 그룹: 불러오기 창에서 그룹별로 보기 · 그룹 편집
+  const groups = useFavoriteGroups(kv);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [editGroups, setEditGroups] = useState(false);
+  const inGroup = (c: Creator) => !activeGroup || groups.groupOf(c) === activeGroup;
+  const groupSelect = editGroups ? (c: Creator) => <GroupSelect creator={c} groups={groups} /> : undefined;
   const [guideOpen, setGuideOpen] = useState(() => kv.get(ONBOARDED_KEY) !== '1'); // 처음 사용 안내
   const [historyOpen, setHistoryOpen] = useState(false);
   const [limitAsk, setLimitAsk] = useState<{ creator: Creator; total: number } | null>(null);
@@ -722,6 +730,8 @@ export function App(props: Props) {
       )}
       {pickerSlot !== null && (
         <FavoritesPicker
+          filter={inGroup}
+          rowExtra={groupSelect}
           source={favorites}
           onClose={() => setPickerSlot(null)}
           tabs={[
@@ -748,6 +758,7 @@ export function App(props: Props) {
             setPickerSlot(null);
           }}
         >
+          <GroupBar groups={groups} active={activeGroup} onActive={setActiveGroup} editing={editGroups} onEditing={setEditGroups} />
           {toonStatus !== 'no-extension' && (
             <SearchSection
               search={async (q) => favoritesFromToonation(await bridge.request<ToonationFavorite[]>('search', q))}
@@ -759,6 +770,8 @@ export function App(props: Props) {
             />
           )}
           <ToonationSection
+            filter={inGroup}
+            rowExtra={groupSelect}
             state={toonation.state}
             onLogin={toonation.login}
             onRefresh={toonation.refresh}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Creator } from '../domain/types';
 import type { ToonationState } from '../toonation/useToonation';
 
@@ -6,12 +7,14 @@ interface Props {
   onLogin(): void;
   onRefresh(): void;
   onPick(c: Creator): void;
+  filter?(c: Creator): boolean; // 그룹으로 거르기
+  rowExtra?(c: Creator): ReactNode; // 그룹 편집 중 줄마다 그룹 고르기
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
 /** 불러오기 창 맨 위: 연동 확장·설치형 앱을 통한 투네이션 즐겨찾기 (라이브 중인 크리에이터가 위) */
-export function ToonationSection({ state, onLogin, onRefresh, onPick }: Props) {
+export function ToonationSection({ state, onLogin, onRefresh, onPick, filter, rowExtra }: Props) {
   const busy = state.status === 'idle' || state.status === 'checking' || state.status === 'loading';
   const showList = state.creators.length > 0 && (state.status === 'ready' || busy);
   const liveCount = state.creators.filter((c) => c.live).length;
@@ -44,8 +47,8 @@ export function ToonationSection({ state, onLogin, onRefresh, onPick }: Props) {
       {state.status === 'ready' && state.creators.length === 0 && <p className="muted">유튜브·트위치 채널이 연결된 즐겨찾기가 없습니다.</p>}
       {showList && (
         <ul className="fav-list">
-          {state.creators.map((c) => (
-            <li key={`${c.key}|${c.donateId}`}>
+          {state.creators.filter((c) => !filter || filter(c)).map((c) => (
+            <li key={`${c.key}|${c.donateId}`} className={rowExtra ? 'fav-list__row--edit' : undefined}>
               <button type="button" className={`fav-item fav-item--toon${c.live ? ' fav-item--live' : ''}`} onClick={() => onPick(c)}>
                 <span className={`fav-item__avatar-wrap${c.live ? ' is-live' : ''}`}>
                   {c.profile ? <img src={c.profile} alt="" className="fav-item__avatar" /> : <span className="fav-item__avatar" />}
@@ -65,6 +68,7 @@ export function ToonationSection({ state, onLogin, onRefresh, onPick }: Props) {
                   )}
                 </span>
               </button>
+              {rowExtra?.(c)}
             </li>
           ))}
         </ul>

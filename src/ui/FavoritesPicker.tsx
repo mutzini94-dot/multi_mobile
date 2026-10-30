@@ -9,11 +9,13 @@ interface Props {
   onClose(): void;
   children?: ReactNode; // 맨 위에 넣을 내용 (투네이션 즐겨찾기)
   tabs?: { label: string; content: ReactNode }[]; // '방송' 탭 뒤의 탭들 (투네이션 라이브·후원 페이지·웹페이지)
+  filter?(c: Creator): boolean; // 그룹으로 거르기
+  rowExtra?(c: Creator): ReactNode; // 그룹 편집 중 줄마다 그룹 고르기
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
-export function FavoritesPicker({ source, onPick, onClose, children, tabs = [] }: Props) {
+export function FavoritesPicker({ source, onPick, onClose, children, tabs = [], filter, rowExtra }: Props) {
   const [tab, setTab] = useState(0); // 0: 방송
   const [list, setList] = useState(() => source.list());
   const [name, setName] = useState('');
@@ -66,12 +68,13 @@ export function FavoritesPicker({ source, onPick, onClose, children, tabs = [] }
           <p className="muted">아직 즐겨찾기가 없습니다. 아래에서 크리에이터를 추가하세요.</p>
         ) : (
           <ul className="fav-list">
-            {list.map((c) => (
+            {list.filter((c) => !filter || filter(c)).map((c) => (
               <li key={c.key}>
                 <button type="button" className="fav-item" onClick={() => onPick(c)}>
                   {c.name}
                   <span className="muted"> · {PLATFORM_LABEL[c.platform]} · {c.channel}</span>
                 </button>
+                {rowExtra?.(c)}
                 <button type="button" className="btn btn--ghost" aria-label={`${c.name} 삭제`} onClick={() => setList(source.remove(c.key))}>
                   삭제
                 </button>

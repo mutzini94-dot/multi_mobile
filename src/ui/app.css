@@ -398,3 +398,16 @@ button:disabled { cursor: not-allowed; }
 .live-item__fav { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--ink-mute); font-size: 18px; cursor: pointer; }
 .live-item__fav:hover { background: var(--surface); color: var(--live); }
 .live-item__fav--on { color: var(--live); }
+
+/* ---------- 즐겨찾기 그룹 ---------- */
+.group-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
+.group-bar__item { display: inline-flex; align-items: center; }
+.group-bar__chip { background: var(--surface); color: var(--ink-sub); }
+.group-bar__chip--on { background: var(--primary); color: #fff; }
+.group-bar__remove { width: 22px; height: 22px; font-size: 11px; }
+.group-bar__edit { margin-left: auto; }
+.group-select { flex: none; max-width: 120px; height: 30px; border-radius: var(--r-sm, 6px); font-size: 12px; }
+span.group-select { display: inline-flex; gap: 4px; max-width: none; }
+span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 12px; }
+.fav-list li { gap: 6px; }
+.fav-list__row--edit { display: flex; align-items: center; }
