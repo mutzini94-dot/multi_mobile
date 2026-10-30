@@ -1,5 +1,6 @@
 import type { LayoutKind } from '../domain/types';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
+import logoUrl from '../assets/logo.png';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -29,7 +30,9 @@ interface Props {
 export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound }: Props) {
   return (
     <header className="gnb">
-      <span className="gnb__logo">멀티뷰 후원</span>
+      <span className="gnb__logo">
+        <img className="gnb__logo-img" src={logoUrl} alt="멀티뷰 후원" />
+      </span>
       <div className="gnb__layouts">
         {LAYOUTS.map((l) => (
           <button

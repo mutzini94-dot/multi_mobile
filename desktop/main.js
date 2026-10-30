@@ -26,6 +26,8 @@ const PARTITION = 'persist:toonation';
 const DEV = process.argv.includes('--dev');
 const DEV_URL = 'http://localhost:5230/';
 const ICON = path.join(__dirname, 'build', 'icon.png');
+const LOGO_ICON = path.join(__dirname, 'assets', 'logo-square.png'); // 알림 아이콘 (build/는 설치 파일에 들어가지 않는다)
+const TRAY_ICON = path.join(__dirname, 'assets', 'tray.png'); // 로고 (+OO), tray@2x.png는 고해상도 화면에서 자동으로 쓴다
 const DONATE_TAG_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 // 별도 프로필(설정·로그인)로 설치된 앱 옆에서 한 벌 더 실행: `--profile=<폴더>` (toon-widget과 같음)
@@ -332,7 +334,7 @@ function buildTrayMenu() {
 }
 
 function createTray() {
-  tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }));
+  tray = new Tray(nativeImage.createFromPath(TRAY_ICON));
   tray.setToolTip(APP_NAME);
   tray.on('click', showMain);
   tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
@@ -394,7 +396,7 @@ function createWindow(url) {
     win.hide();
     if (!prefs.get('trayNoticeShown') && Notification.isSupported()) {
       prefs.set('trayNoticeShown', true);
-      const n = new Notification({ title: APP_NAME, body: '트레이에서 계속 실행 중입니다. 완전히 끄려면 트레이 아이콘 메뉴에서 종료를 누르세요.', icon: ICON });
+      const n = new Notification({ title: APP_NAME, body: '트레이에서 계속 실행 중입니다. 완전히 끄려면 트레이 아이콘 메뉴에서 종료를 누르세요.', icon: LOGO_ICON });
       n.on('click', showMain);
       n.show();
     }
@@ -607,7 +609,7 @@ function runSmoke(outDir) {
       }
       // MV_SMOKE_TRAY=1: 창을 닫으면 트레이로 숨는지 (닫히지 않고 숨김)
       if (process.env.MV_SMOKE_TRAY && tray) {
-        result.tray = { options: appOptions.all() };
+        result.tray = { options: appOptions.all(), iconLoaded: !nativeImage.createFromPath(TRAY_ICON).isEmpty(), iconSize: nativeImage.createFromPath(TRAY_ICON).getSize() };
         win.close();
         await new Promise((r) => setTimeout(r, 500));
         result.tray.afterClose = { destroyed: win.isDestroyed(), visible: !win.isDestroyed() && win.isVisible() };
@@ -659,7 +661,7 @@ app.whenReady().then(async () => {
   updater.on('state', () => send('mv:app:info', appInfo()));
   updater.on('downloaded', (i) => {
     if (!Notification.isSupported()) return;
-    const n = new Notification({ title: APP_NAME, body: `새 버전 ${i.version}을 받았습니다. 종료하면 설치되고, 설정에서 바로 설치할 수도 있습니다.`, icon: ICON });
+    const n = new Notification({ title: APP_NAME, body: `새 버전 ${i.version}을 받았습니다. 종료하면 설치되고, 설정에서 바로 설치할 수도 있습니다.`, icon: LOGO_ICON });
     n.on('click', showMain);
     n.show();
   });

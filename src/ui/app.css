@@ -81,7 +81,7 @@ button:disabled { cursor: not-allowed; }
 /* ---------- 헤더 (pc-header: 흰 바, 진한 글자, 아래 구분선) ---------- */
 .gnb { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 20px; background: var(--canvas); border-bottom: 1px solid var(--line); }
 .gnb__logo { margin-right: auto; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
-.gnb__logo::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.gnb__logo-img { display: block; height: 26px; width: auto; }
 .gnb__layouts { display: flex; gap: 2px; padding: 3px; background: var(--surface); border-radius: var(--r-pill); }
 .layout-icon { width: 36px; height: 28px; padding: 6px 8px; display: grid; gap: 2px; background: transparent; border: 0; border-radius: var(--r-pill); }
 .layout-icon i { display: block; background: var(--ink-mute); border-radius: 1.5px; }
