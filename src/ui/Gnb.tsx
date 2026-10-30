@@ -23,9 +23,10 @@ interface Props {
   onPresets?(): void; // 화면 구성 저장·불러오기
   account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
+  sound?: { on: boolean; onToggle(): void }; // 전체 음소거·해제 (단축키 M과 같은 상태)
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound }: Props) {
   return (
     <header className="gnb">
       <span className="gnb__logo">멀티뷰 후원</span>
@@ -46,6 +47,18 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPrese
           </button>
         ))}
       </div>
+      {sound && (
+        <button
+          type="button"
+          className={`btn btn--ghost gnb__mute${sound.on ? '' : ' gnb__mute--on'}`}
+          aria-label={sound.on ? '전체 음소거' : '음소거 해제'}
+          aria-pressed={!sound.on}
+          title={sound.on ? '모든 칸 소리 끄기 (M)' : '소리 다시 켜기 (M)'}
+          onClick={sound.onToggle}
+        >
+          {sound.on ? '🔊 전체 음소거' : '🔇 음소거 해제'}
+        </button>
+      )}
       {onMini && (
         <button type="button" className="btn btn--ghost" aria-label="미니 모드" title="선택한 방송 하나만 작게 보기" onClick={onMini}>
           미니

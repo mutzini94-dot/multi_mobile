@@ -427,3 +427,7 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .app--mini .focus-view__bar { padding: 6px 8px 14px; opacity: 0; transition: opacity 0.15s; }
 .app--mini .focus-view:hover .focus-view__bar, .app--mini .focus-view__bar:focus-within { opacity: 1; }
 .app--mini .focus-view__bar .btn--donate { height: 30px; padding: 0 12px; font-size: 13px; }
+
+/* ---------- 전체 음소거 ---------- */
+.gnb__mute--on { background: var(--live); color: #fff; box-shadow: none; }
+.gnb__mute--on:hover { background: #e23c3c; }

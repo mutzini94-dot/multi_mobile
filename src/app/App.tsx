@@ -624,6 +624,7 @@ export function App(props: Props) {
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
         onPresets={() => setPresetsOpen(true)}
+        sound={{ on: state.soundOn, onToggle: () => dispatch({ type: 'toggleSound' }) }}
         onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
