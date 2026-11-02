@@ -112,3 +112,20 @@ test('후원한 크리에이터가 라이브면 지금 라이브에 후원 횟�
   expect(lives).toHaveBeenCalledWith(expect.objectContaining({ q: '라이브칠' }));
   expect(within(timeline()).getByText('라이브칠에게 1,000캐시 후원')).toBeInTheDocument();
 });
+
+test('로그인 확인은 되는데 즐겨찾기가 막히는 상태에서도 요청을 끝없이 반복하지 않는다', async () => {
+  const kv = safeStorage(undefined);
+  const request = vi.fn(async (type: string) => {
+    if (type === 'status') return { account: { name: '나', cash: 0 } };
+    if (type === 'favorites') throw new Error('NOT_LOGGED_IN');
+    if (type === 'history') return [];
+    return {};
+  });
+  const win = { open: vi.fn(() => ({ closed: false }) as Window), screen: {} as Screen, location: { hash: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
+  render(<App favorites={localFavorites(kv)} kv={kv} win={win} bridge={{ request } as unknown as ToonationBridge} desktop={null} lives={vi.fn(async () => livePage)} />);
+  addActivity(3);
+  await new Promise((r) => setTimeout(r, 500));
+  const n = request.mock.calls.filter(([t]) => t === 'status').length;
+  await new Promise((r) => setTimeout(r, 500));
+  expect(request.mock.calls.filter(([t]) => t === 'status').length).toBe(n);
+});

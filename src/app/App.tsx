@@ -593,16 +593,25 @@ export function App(props: Props) {
       findDonatedLive(donatedToCheck(list, favoriteTagsRef.current), liveSource).then(setDonatedLive, () => setDonatedLive([])),
     [liveSource],
   );
-  // 칸을 넣을 때·칸의 새로고침: 즐겨찾기 라이브와 후원 내역도 새로 불러온다
-  const refreshActivity = useCallback(() => {
-    if (toonStatus !== 'waiting-login') refreshToonation();
+  // 후원 내역을 불러와 후원 크리에이터의 라이브를 확인한다
+  const loadDonatedLive = useCallback(() => {
     if (loggedIn) loadHistory().then(checkDonatedLive, () => setDonatedLive([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn, loadHistory, checkDonatedLive]);
+  // 칸을 넣을 때·칸의 새로고침: 즐겨찾기 라이브도 새로 불러온다
+  const refreshActivity = () => {
+    if (toonStatus !== 'waiting-login') refreshToonation();
+    loadDonatedLive();
+  };
   useEffect(() => {
     if (hasActivity) refreshActivity();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasActivity, loggedIn]);
+  }, [hasActivity]);
+  // 로그인 상태가 바뀌면 후원 쪽만 다시 (즐겨찾기를 다시 부르면 로그인 상태가 또 바뀌어 요청이 끝없이 이어질 수 있다)
+  useEffect(() => {
+    if (!loggedIn) setDonatedLive(null);
+    else if (hasActivity) loadDonatedLive();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
   // 라이브 자동 갱신 주기마다 후원 크리에이터의 라이브만 다시 확인한다 (즐겨찾기는 useLiveWatch가, 후원 내역은 다시 부르지 않는다)
   useEffect(() => {
     if (!hasActivity || !loggedIn || !history || settings.liveRefreshMinutes <= 0) return;

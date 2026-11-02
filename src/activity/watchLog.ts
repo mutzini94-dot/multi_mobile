@@ -29,12 +29,9 @@ export function readWatchLog(kv: KV): WatchEntry[] {
 
 export function recordWatch(kv: KV, creator: Creator, now: number): WatchEntry[] {
   const { live: _live, videoId: _videoId, ...kept } = creator;
-  const log = readWatchLog(kv);
-  const recent = log[0];
-  const next =
-    recent && recent.creator.key === creator.key && now - recent.at < MERGE_MS
-      ? [{ at: now, creator: kept }, ...log.slice(1)]
-      : [{ at: now, creator: kept }, ...log].slice(0, MAX);
+  // 30분 안에 띄운 같은 방송은 지우고 맨 앞에 다시 (사이에 다른 방송을 봤어도)
+  const log = readWatchLog(kv).filter((e) => !(e.creator.key === creator.key && now - e.at < MERGE_MS));
+  const next = [{ at: now, creator: kept }, ...log].slice(0, MAX);
   kv.set(WATCH_LOG_KEY, JSON.stringify(next));
   return next;
 }

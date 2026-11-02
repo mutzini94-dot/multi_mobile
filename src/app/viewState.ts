@@ -1,5 +1,5 @@
 import type { Creator, DetachedMark, LayoutKind, PageSlot, SlotItem, ViewState } from '../domain/types';
-import { isPage, isStream } from '../domain/pages';
+import { isStream } from '../domain/pages';
 import { applyLayout, visibleCount, visibleSlots } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
@@ -70,14 +70,16 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       // 이미 보이는 칸에 있으면 첫 칸과 자리만 바꾼다
       const at = visibleSlots(state).findIndex((s) => isStream(s) && s.key === action.creator.key);
       if (at > 0) return { ...viewReducer(state, { type: 'swap', from: at, to: 0 }), selected: 0, soundOn: true };
-      let s = state;
-      if (isPage(s.slots[0]) && s.slots[0].kind === 'activity') {
-        // 첫 칸이 활동 위젯이면 위젯을 첫 빈 칸(없으면 둘째 칸)으로 옮긴다. 1화면이면 2분할로
+      // 숨긴 칸에 같은 방송이 있으면 비운다 (레이아웃을 되돌렸을 때 같은 방송이 두 칸에 뜨지 않게)
+      let s = { ...state, slots: state.slots.map((x) => (isStream(x) && x.key === action.creator.key ? null : x)) };
+      const first = s.slots[0];
+      if (first && !isStream(first) && (first.kind === 'activity' || first.kind === 'detached')) {
+        // 첫 칸이 활동 위젯·분리 표시면 첫 빈 칸(없으면 둘째 칸)으로 옮긴다. 1화면이면 2분할로
         if (visibleCount(s) < 2) s = applyLayout(s, 'split2');
         const empty = visibleSlots(s).findIndex((x, i) => i > 0 && !x);
         const to = empty > 0 ? empty : 1;
         const slots = s.slots.slice();
-        slots[to] = s.slots[0];
+        slots[to] = first;
         s = { ...s, slots };
       }
       return viewReducer(s, { type: 'assign', slot: 0, creator: action.creator });

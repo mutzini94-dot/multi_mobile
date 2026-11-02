@@ -153,3 +153,19 @@ describe('openFirst: 활동 위젯에서 누른 방송을 첫 번째 칸에', ()
     expect(s.selected).toBe(0);
   });
 });
+
+describe('openFirst: 숨긴 칸·분리 표시', () => {
+  const base = (layout: ViewState['layout'], slots: ViewState['slots']): ViewState => ({ layout, slots: [...slots, ...Array(9 - slots.length).fill(null)], sizes: {}, selected: null, soundOn: false });
+
+  test('숨긴 칸에 같은 방송이 있으면 그 칸을 비워 중복을 만들지 않는다', () => {
+    const s = viewReducer(base('split2', [mkCreator(9), mkCreator(8), mkCreator(2)]), { type: 'openFirst', creator: mkCreator(2) });
+    expect(s.slots[0]).toEqual(mkCreator(2));
+    expect(s.slots.filter((x) => x && 'key' in x && x.key === mkCreator(2).key)).toHaveLength(1);
+  });
+
+  test('첫 칸이 분리 표시면 덮어쓰지 않고 빈 칸으로 옮긴다', () => {
+    const mark = { kind: 'detached' as const, key: 'detached:1', name: '분리', id: 'w1' };
+    const s = viewReducer(base('quad', [mark, mkCreator(1), null, null]), { type: 'openFirst', creator: mkCreator(2) });
+    expect(s.slots.slice(0, 4)).toEqual([mkCreator(2), mkCreator(1), mark, null]);
+  });
+});

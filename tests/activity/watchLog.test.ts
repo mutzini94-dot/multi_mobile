@@ -51,3 +51,14 @@ test('newlyPlaced: 새로 들어온 방송만 (자리 바꿈·페이지 칸은 �
   expect(newlyPlaced([a, b], [b, a])).toEqual([]);
   expect(newlyPlaced([null], [makeChatPage()])).toEqual([]);
 });
+
+test('30분 안에 같은 방송을 다시 띄우면 사이에 다른 방송이 있어도 한 건 (맨 앞으로)', () => {
+  const kv = safeStorage(undefined);
+  recordWatch(kv, mkCreator(1), 0);
+  recordWatch(kv, mkCreator(2), MIN);
+  const log = recordWatch(kv, mkCreator(1), 2 * MIN);
+  expect(log.map((e) => [e.creator.key, e.at])).toEqual([
+    ['twitch:chan_1', 2 * MIN],
+    ['twitch:chan_2', MIN],
+  ]);
+});
