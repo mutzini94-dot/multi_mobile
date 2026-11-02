@@ -79,9 +79,16 @@ export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText =
 function MobileFitWebview({ url, popups, webviewRef }: { url: string; popups: object; webviewRef: React.MutableRefObject<HTMLElement | null> }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
+  const last = useRef(box);
   const measure = () => {
     const el = boxRef.current;
-    if (el) setBox((b) => (b.width === el.clientWidth && b.height === el.clientHeight ? b : { width: el.clientWidth, height: el.clientHeight }));
+    if (!el) return;
+    const next = { width: el.clientWidth, height: el.clientHeight };
+    // 크기가 바뀔 때만 갱신한다. 같은 값이라도 그릴 때마다 setState를 부르면 업데이트가 이어져
+    // (전체 화면 나가기 등) React가 무한 갱신으로 보고 화면 전체를 지운다 (React error #185)
+    if (next.width === last.current.width && next.height === last.current.height) return;
+    last.current = next;
+    setBox(next);
   };
   // 칸 자리가 정해질 때마다(PlayerLayer가 다시 그린다) 잰다. webview가 든 틀에서는 ResizeObserver가 알리지 않을 때가 있다
   useLayoutEffect(measure);
