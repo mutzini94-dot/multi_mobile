@@ -440,3 +440,27 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .crash__desc { margin: 0; color: var(--ink-sub); font-size: 14px; }
 .crash__actions { display: flex; gap: 8px; margin-top: 4px; }
 .crash__detail { margin: 8px 0 0; max-width: 560px; color: var(--ink-mute); font-size: 12px; word-break: break-all; }
+
+/* 활동 위젯 칸: 지금 라이브 + 최근 활동 */
+.activity { width: 100%; height: 100%; overflow-y: auto; padding: 10px 12px; background: var(--canvas); color: var(--ink); font-size: 13px; }
+.activity__section + .activity__section { margin-top: 14px; }
+.activity__title { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-sub); }
+.activity__notice { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px; border-radius: var(--r-md); background: var(--surface); color: var(--ink-sub); }
+.activity__notice p { margin: 0; }
+.activity__live, .activity__timeline { list-style: none; margin: 0; padding: 0; }
+.activity__live li + li { margin-top: 4px; }
+.activity__live-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: var(--r-md); background: var(--surface); color: inherit; text-align: left; cursor: pointer; }
+.activity__live-item:hover { background: var(--surface-2); }
+.activity__avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--primary-soft); color: var(--primary); font-weight: 700; font-size: 12px; }
+.activity__live-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.activity__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity__meta { color: var(--ink-mute); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity__why { flex: none; padding: 1px 6px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink-sub); font-size: 10px; }
+.activity__badge-live { flex: none; padding: 0 5px; border-radius: 6px; background: var(--live); color: #fff; font-size: 9px; font-weight: 700; vertical-align: middle; }
+.activity__badge-off { flex: none; color: var(--ink-mute); font-size: 11px; }
+.activity__row { display: flex; align-items: center; gap: 8px; padding: 5px 2px; border-bottom: 1px solid var(--line); }
+.activity__row-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.activity__row-btn:hover .activity__text { color: var(--primary); }
+.activity__time { flex: none; width: 40px; color: var(--ink-mute); font-size: 11px; }
+.activity__icon { flex: none; width: 16px; text-align: center; }
+.activity__text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
