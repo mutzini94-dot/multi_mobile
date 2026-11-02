@@ -722,7 +722,11 @@ export function App(props: Props) {
                           onBack: page.kind === 'activity' ? undefined : () => pageKey && pageHandles.current[pageKey]?.back(),
                           onReload: page.kind === 'activity' ? refreshActivity : () => pageKey && pageHandles.current[pageKey]?.reload(),
                           onOpenWindow:
-                            page.kind === 'web' ? () => win.open(page.url, '_blank', 'noopener') : !desktop && donateFor ? () => donateTo(donateFor) : undefined,
+                            page.kind === 'web'
+                              ? () => win.open(page.url, '_blank', 'noopener')
+                              : page.kind !== 'activity' && !desktop && donateFor
+                                ? () => donateTo(donateFor)
+                                : undefined,
                         }
                       : undefined
                   }

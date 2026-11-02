@@ -88,6 +88,15 @@ test('활동 위젯 칸에는 새 창 분리 버튼이 없다', () => {
   expect(within(tiles()[3]).queryByRole('button', { name: /새 창/ })).toBeNull();
 });
 
+test('방송을 고른 뒤에도 활동 위젯 칸에는 새 창 열기·뒤로 버튼이 없고 새로고침은 있다', () => {
+  setup();
+  addActivity(3);
+  pickFav(0, 'A');
+  expect(within(tiles()[3]).queryByRole('button', { name: /새 창/ })).toBeNull();
+  expect(within(tiles()[3]).queryByRole('button', { name: '뒤로' })).toBeNull();
+  expect(within(tiles()[3]).getByRole('button', { name: '새로고침' })).toBeInTheDocument();
+});
+
 test('로그인 안 했으면 라이브 자리에 로그인 안내', () => {
   setup();
   addActivity(3);
