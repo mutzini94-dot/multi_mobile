@@ -1,4 +1,5 @@
 import { initialViewState, viewReducer } from '../../src/app/viewState';
+import { makeActivityPage } from '../../src/domain/pages';
 import { applyLayout, SLOT_COUNT, MAX_SLOTS, visibleSlots } from '../../src/layout/layouts';
 import { mkCreator } from '../helpers/fixtures';
 import type { ViewState } from '../../src/domain/types';
@@ -120,5 +121,35 @@ describe('swap (칸 자리 바꾸기)', () => {
     const split = applyLayout(two, 'split2');
     expect(viewReducer(split, { type: 'swap', from: 0, to: 3 })).toBe(split);
     expect(viewReducer(two, { type: 'swap', from: -1, to: 2 })).toBe(two);
+  });
+});
+
+describe('openFirst: 활동 위젯에서 누른 방송을 첫 번째 칸에', () => {
+  const quad = (slots: ViewState['slots']): ViewState => ({ layout: 'quad', slots: [...slots, ...Array(9 - slots.length).fill(null)], sizes: {}, selected: null, soundOn: false });
+  const W = makeActivityPage();
+
+  test('첫 칸에 넣고 선택한다', () => {
+    const s = viewReducer(quad([mkCreator(9), mkCreator(1), null, null]), { type: 'openFirst', creator: mkCreator(2) });
+    expect(s.slots.slice(0, 4)).toEqual([mkCreator(2), mkCreator(1), null, null]);
+    expect(s.selected).toBe(0);
+    expect(s.soundOn).toBe(true);
+  });
+
+  test('이미 다른 칸에 있으면 첫 칸과 자리만 바꾼다 (중복 없음)', () => {
+    const s = viewReducer(quad([mkCreator(9), mkCreator(2), null, null]), { type: 'openFirst', creator: mkCreator(2) });
+    expect(s.slots.slice(0, 4)).toEqual([mkCreator(2), mkCreator(9), null, null]);
+    expect(s.selected).toBe(0);
+  });
+
+  test('첫 칸이 활동 위젯이면 위젯은 첫 빈 칸으로', () => {
+    const s = viewReducer(quad([W, mkCreator(1), null, null]), { type: 'openFirst', creator: mkCreator(2) });
+    expect(s.slots.slice(0, 4)).toEqual([mkCreator(2), mkCreator(1), W, null]);
+  });
+
+  test('1화면에서 위젯뿐이면 2분할로 바꿔 방송은 첫 칸, 위젯은 둘째 칸', () => {
+    const s = viewReducer({ ...quad([W]), layout: 'single' }, { type: 'openFirst', creator: mkCreator(2) });
+    expect(s.layout).toBe('split2');
+    expect(s.slots.slice(0, 2)).toEqual([mkCreator(2), W]);
+    expect(s.selected).toBe(0);
   });
 });

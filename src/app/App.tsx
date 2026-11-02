@@ -215,7 +215,7 @@ export function App(props: Props) {
   }, [donateFor, chatVideoId, detached, detachHost]);
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
   const pageUrl = (page: PageSlot) =>
-    page.kind === 'web' ? page.url : !donateFor ? null : page.kind === 'donate' ? donatePageUrl(donateFor) : chatUrl(donateFor, chatVideoId, embed, host);
+    page.kind === 'web' ? page.url : page.kind === 'activity' || !donateFor ? null : page.kind === 'donate' ? donatePageUrl(donateFor) : chatUrl(donateFor, chatVideoId, embed, host);
   const pageEmptyText = (page: PageSlot) =>
     page.kind !== 'chat'
       ? '후원할 방송 칸을 선택하세요'
@@ -223,7 +223,7 @@ export function App(props: Props) {
         ? '유튜브 채팅은 방송이 재생되면 표시됩니다'
         : '채팅을 볼 방송 칸을 선택하세요';
   const pageLabel = (page: PageSlot) =>
-    page.kind === 'web' ? page.name : !donateFor ? page.name : `${donateFor.name} ${page.kind === 'donate' ? '후원 페이지' : '채팅'}`;
+    page.kind === 'web' || page.kind === 'activity' || !donateFor ? page.name : `${donateFor.name} ${page.kind === 'donate' ? '후원 페이지' : '채팅'}`;
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
   // 설치형 후원창 자리 (모달/PIP). 앱이 바꾸면(PIP 창의 '모달로' 등) 알려준다

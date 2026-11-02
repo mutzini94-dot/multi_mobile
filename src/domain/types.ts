@@ -34,7 +34,14 @@ export interface ChatPage {
   name: string;
 }
 
-export type PageSlot = WebPage | DonatePage | ChatPage;
+/** 활동 위젯 칸: 즐겨찾기·후원 크리에이터의 라이브와 시청·후원·설정 변경 기록 */
+export interface ActivityPage {
+  kind: 'activity';
+  key: string;
+  name: string;
+}
+
+export type PageSlot = WebPage | DonatePage | ChatPage | ActivityPage;
 
 /** 새 창으로 분리한 칸의 자리 표시: 내용은 분리 창에 있고 칸에는 되돌리기·불러오기만 */
 export interface DetachedMark {

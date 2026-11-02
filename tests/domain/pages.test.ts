@@ -1,4 +1,4 @@
-import { donatePageUrl, followDonateCreator, isStream, makeDonatePage, makeWebPage, normalizePageUrl } from '../../src/domain/pages';
+import { donatePageUrl, followDonateCreator, isPage, isStream, makeActivityPage, makeDonatePage, makeWebPage, normalizePageUrl } from '../../src/domain/pages';
 import { viewReducer, initialViewState } from '../../src/app/viewState';
 import { loadLastView, saveLastView } from '../../src/app/lastView';
 import { safeStorage } from '../../src/storage/safeStorage';
@@ -84,4 +84,19 @@ test('마지막 화면 복원: 이상한 주소의 웹페이지 칸은 버린다
   const kv = safeStorage(undefined);
   kv.set('mv.lastView.v1', JSON.stringify({ v: 1, layout: 'quad', sizes: {}, slots: [{ kind: 'web', url: 'javascript:alert(1)' }, null, null, null] }));
   expect(loadLastView(kv)!.slots[0]).toBeNull();
+});
+
+test('활동 위젯 칸은 페이지 칸', () => {
+  const p = makeActivityPage();
+  expect(p).toMatchObject({ kind: 'activity', name: '활동 위젯' });
+  expect(isPage(p)).toBe(true);
+  expect(isStream(p)).toBe(false);
+});
+
+test('활동 위젯 칸도 마지막 화면으로 저장·복원된다', () => {
+  const kv = safeStorage(undefined);
+  const slots = Array(9).fill(null);
+  slots[1] = makeActivityPage();
+  saveLastView(kv, { ...initialViewState, slots });
+  expect(loadLastView(kv)?.slots[1]).toMatchObject({ kind: 'activity', name: '활동 위젯' });
 });

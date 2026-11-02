@@ -1,5 +1,5 @@
 import type { Result } from './creatorInput';
-import type { ChatPage, Creator, DonatePage, PageSlot, SlotItem, ViewState, WebPage } from './types';
+import type { ActivityPage, ChatPage, Creator, DonatePage, PageSlot, SlotItem, ViewState, WebPage } from './types';
 import { visibleSlots } from '../layout/layouts';
 
 /** 칸 내용이 방송인지 (후원 페이지·웹페이지 칸이 아닌지) */
@@ -9,7 +9,7 @@ export function isStream(item: SlotItem | null | undefined): item is Creator {
 
 /** 후원 페이지·웹페이지 칸 (분리 표시는 아님) */
 export function isPage(item: SlotItem | null | undefined): item is PageSlot {
-  return !!item && 'kind' in item && (item.kind === 'web' || item.kind === 'donate' || item.kind === 'chat');
+  return !!item && 'kind' in item && (item.kind === 'web' || item.kind === 'donate' || item.kind === 'chat' || item.kind === 'activity');
 }
 
 /** 웹페이지 칸 주소: 주소만 넣으면 https://, http·https만 허용 */
@@ -44,6 +44,11 @@ export function makeDonatePage(): DonatePage {
 /** 채팅 칸: 선택한 방송의 라이브 채팅을 따라 보여준다 */
 export function makeChatPage(): ChatPage {
   return { kind: 'chat', key: newKey('chat'), name: '채팅' };
+}
+
+/** 활동 위젯 칸: 즐겨찾기·후원 크리에이터의 라이브와 최근 활동 */
+export function makeActivityPage(): ActivityPage {
+  return { kind: 'activity', key: newKey('activity'), name: '활동 위젯' };
 }
 
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;

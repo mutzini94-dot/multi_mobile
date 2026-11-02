@@ -1,6 +1,6 @@
 import type { Creator, DetachedMark, LayoutKind, PageSlot, SlotItem, ViewState } from '../domain/types';
-import { isStream } from '../domain/pages';
-import { applyLayout, visibleCount } from '../layout/layouts';
+import { isPage, isStream } from '../domain/pages';
+import { applyLayout, visibleCount, visibleSlots } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
   layout: 'quad',
@@ -18,6 +18,7 @@ export type ViewAction =
   | { type: 'clear'; slot: number }
   | { type: 'select'; slot: number }
   | { type: 'swap'; from: number; to: number } // 칸 자리 바꾸기 (빈 칸이면 옮기기)
+  | { type: 'openFirst'; creator: Creator } // 활동 위젯에서 누른 방송을 첫 번째 칸에
   | { type: 'toggleSound' }
   | { type: 'setSizes'; group: string; sizes: number[] }
   | { type: 'replace'; state: ViewState };
@@ -64,6 +65,22 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       // 선택은 방송을 따라간다
       const selected = state.selected === action.from ? action.to : state.selected === action.to ? action.from : state.selected;
       return { ...state, slots, selected };
+    }
+    case 'openFirst': {
+      // 이미 보이는 칸에 있으면 첫 칸과 자리만 바꾼다
+      const at = visibleSlots(state).findIndex((s) => isStream(s) && s.key === action.creator.key);
+      if (at > 0) return { ...viewReducer(state, { type: 'swap', from: at, to: 0 }), selected: 0, soundOn: true };
+      let s = state;
+      if (isPage(s.slots[0]) && s.slots[0].kind === 'activity') {
+        // 첫 칸이 활동 위젯이면 위젯을 첫 빈 칸(없으면 둘째 칸)으로 옮긴다. 1화면이면 2분할로
+        if (visibleCount(s) < 2) s = applyLayout(s, 'split2');
+        const empty = visibleSlots(s).findIndex((x, i) => i > 0 && !x);
+        const to = empty > 0 ? empty : 1;
+        const slots = s.slots.slice();
+        slots[to] = s.slots[0];
+        s = { ...s, slots };
+      }
+      return viewReducer(s, { type: 'assign', slot: 0, creator: action.creator });
     }
     case 'toggleSound':
       return { ...state, soundOn: !state.soundOn };
