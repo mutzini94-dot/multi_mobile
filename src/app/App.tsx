@@ -4,7 +4,12 @@ import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/cha
 import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
 import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
-import { ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
+import { ActivityPageTab, ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
+import { ActivityWidget } from '../ui/ActivityWidget';
+import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
+import { readSettingsLog, recordSettings } from '../activity/settingsLog';
+import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
+import { buildTimeline } from '../activity/timeline';
 import { LiveTab } from '../ui/LiveTab';
 import { donationWarning, openDonationPopup } from '../donate/donation';
 import { localFavorites, type FavoritesSource } from '../favorites/favorites';
@@ -123,6 +128,15 @@ export function App(props: Props) {
   useEffect(() => {
     saveLastView(kv, withDetachedItems(state, detached));
   }, [kv, state, detached]);
+  // 활동 위젯: 칸에 새로 띄운 방송은 시청 기록으로 (시작할 때 복원된 칸은 빼고)
+  const [watchLog, setWatchLog] = useState(() => readWatchLog(kv));
+  const prevSlots = useRef(state.slots);
+  useEffect(() => {
+    const placed = newlyPlaced(prevSlots.current, state.slots);
+    prevSlots.current = state.slots;
+    if (placed.length) setWatchLog(placed.reduce((_, c) => recordWatch(kv, c, Date.now()), readWatchLog(kv)));
+  }, [kv, state.slots]);
+  const [settingsLog, setSettingsLog] = useState(() => readSettingsLog(kv));
   const [message, setMessage] = useState<string | null>(null);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [popupCreator, setPopupCreator] = useState<Creator | null>(null);
@@ -269,6 +283,7 @@ export function App(props: Props) {
     // 방송 시작 알림을 켜면 알림 권한을 묻는다
     const N = globalThis.Notification;
     if (patch.liveNotify && N?.permission === 'default') Promise.resolve(N.requestPermission()).catch(() => {});
+    setSettingsLog(recordSettings(kv, settings, patch, Date.now()));
     updateSettings(patch);
   };
   // 시작할 때 로그인 상태(캐시 잔액)를 확인한다
@@ -568,6 +583,39 @@ export function App(props: Props) {
     refreshToonation();
   };
   const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
+  // 활동 위젯: 후원한 크리에이터 중 라이브 (즐겨찾기 라이브는 투네이션 즐겨찾기 목록이 이미 안다)
+  const hasActivity = state.slots.some((s) => isPage(s) && s.kind === 'activity');
+  const [donatedLive, setDonatedLive] = useState<LiveTarget[] | null>(null);
+  const favoriteTagsRef = useRef(favoriteTags);
+  favoriteTagsRef.current = favoriteTags;
+  const checkDonatedLive = useCallback(
+    (list: DonationRecord[]) =>
+      findDonatedLive(donatedToCheck(list, favoriteTagsRef.current), liveSource).then(setDonatedLive, () => setDonatedLive([])),
+    [liveSource],
+  );
+  // 칸을 넣을 때·칸의 새로고침: 즐겨찾기 라이브와 후원 내역도 새로 불러온다
+  const refreshActivity = useCallback(() => {
+    if (toonStatus !== 'waiting-login') refreshToonation();
+    if (loggedIn) loadHistory().then(checkDonatedLive, () => setDonatedLive([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn, loadHistory, checkDonatedLive]);
+  useEffect(() => {
+    if (hasActivity) refreshActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActivity, loggedIn]);
+  // 라이브 자동 갱신 주기마다 후원 크리에이터의 라이브만 다시 확인한다 (즐겨찾기는 useLiveWatch가, 후원 내역은 다시 부르지 않는다)
+  useEffect(() => {
+    if (!hasActivity || !loggedIn || !history || settings.liveRefreshMinutes <= 0) return;
+    const id = setInterval(() => checkDonatedLive(history), settings.liveRefreshMinutes * 60_000);
+    return () => clearInterval(id);
+  }, [hasActivity, loggedIn, history, settings.liveRefreshMinutes, checkDonatedLive]);
+  const activityLive = !loggedIn ? null : donatedLive === null ? null : mergeLive(toonation.state.creators, donatedLive);
+  const activityIsLive = (key: string): boolean | null => {
+    const fav = toonation.state.creators.find((c) => c.key === key);
+    if (fav) return !!fav.live;
+    if (donatedLive?.some((t) => t.creator.key === key)) return true;
+    return tileLive[key] ? true : null;
+  };
   // 칸 위쪽 바의 방송 정보 (설정). 방송한 시간은 1분마다 다시 그린다
   const tileLive = useTileLiveInfo({
     streams: visibleSlots(state).filter(isStream),
@@ -671,8 +719,8 @@ export function App(props: Props) {
                     page
                       ? {
                           label: pageLabel(page),
-                          onBack: () => pageKey && pageHandles.current[pageKey]?.back(),
-                          onReload: () => pageKey && pageHandles.current[pageKey]?.reload(),
+                          onBack: page.kind === 'activity' ? undefined : () => pageKey && pageHandles.current[pageKey]?.back(),
+                          onReload: page.kind === 'activity' ? refreshActivity : () => pageKey && pageHandles.current[pageKey]?.reload(),
                           onOpenWindow:
                             page.kind === 'web' ? () => win.open(page.url, '_blank', 'noopener') : !desktop && donateFor ? () => donateTo(donateFor) : undefined,
                         }
@@ -687,7 +735,7 @@ export function App(props: Props) {
                     onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item }),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
-                  onDetach={creator || page ? () => detachSlot(slot) : undefined}
+                  onDetach={creator || (page && page.kind !== 'activity') ? () => detachSlot(slot) : undefined}
                   detached={markId && item ? { name: item.name, onReturn: () => restoreDetached(markId, 'button') } : undefined}
                   onRemove={
                     creator || page
@@ -754,19 +802,31 @@ export function App(props: Props) {
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
             onStatus={onStreamStatus}
             renderOverlay={endedOverlay}
-            renderPage={(page, key) => (
-              <PageView
-                page={page}
-                url={pageUrl(page)}
-                embed={embed}
-                onHandle={(h) => {
-                  if (h) pageHandles.current[key] = h;
-                  else delete pageHandles.current[key];
-                }}
-                onOpenWindow={donateFor ? () => donateTo(donateFor) : undefined}
-                emptyText={pageEmptyText(page)}
-              />
-            )}
+            renderPage={(page, key) =>
+              page.kind === 'activity' ? (
+                <ActivityWidget
+                  loggedIn={loggedIn}
+                  live={activityLive}
+                  timeline={buildTimeline(watchLog, loggedIn ? history : null, settingsLog)}
+                  isLive={activityIsLive}
+                  now={Math.max(clock, Date.now())}
+                  onOpen={(creator) => dispatch({ type: 'openFirst', creator })}
+                  onLogin={toonation.login}
+                />
+              ) : (
+                <PageView
+                  page={page}
+                  url={pageUrl(page)}
+                  embed={embed}
+                  onHandle={(h) => {
+                    if (h) pageHandles.current[key] = h;
+                    else delete pageHandles.current[key];
+                  }}
+                  onOpenWindow={donateFor ? () => donateTo(donateFor) : undefined}
+                  emptyText={pageEmptyText(page)}
+                />
+              )
+            }
           />
         </div>
       </div>
@@ -817,6 +877,7 @@ export function App(props: Props) {
                 />
               ),
             },
+            { label: '활동 위젯', content: <ActivityPageTab onPick={pickPage} /> },
             { label: '후원 페이지', content: <DonatePageTab desktop={!!desktop} onPick={pickPage} /> },
             { label: '채팅', content: <ChatPageTab desktop={!!desktop} onPick={pickPage} /> },
             { label: '웹페이지', content: <WebPageTab desktop={!!desktop} onPick={pickPage} /> },

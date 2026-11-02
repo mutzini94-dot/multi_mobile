@@ -1,6 +1,18 @@
 import { useState, type FormEvent } from 'react';
-import { makeChatPage, makeDonatePage, makeWebPage } from '../domain/pages';
+import { makeActivityPage, makeChatPage, makeDonatePage, makeWebPage } from '../domain/pages';
 import type { PageSlot } from '../domain/types';
+
+/** 불러오기 창 '활동 위젯' 탭 */
+export function ActivityPageTab({ onPick }: { onPick(p: PageSlot): void }) {
+  return (
+    <div className="page-tab">
+      <p>즐겨찾기했거나 후원한 적 있는 크리에이터 중 지금 방송 중인 사람과, 내가 본 방송·후원·설정 변경 기록을 이 칸에 모아 보여 줍니다. 방송을 누르면 첫 번째 칸에 뜹니다.</p>
+      <button type="button" className="btn btn--donate" onClick={() => onPick(makeActivityPage())}>
+        활동 위젯 칸 넣기
+      </button>
+    </div>
+  );
+}
 
 /** 불러오기 창 '후원 페이지' 탭 */
 export function DonatePageTab({ onPick, desktop }: { onPick(p: PageSlot): void; desktop: boolean }) {

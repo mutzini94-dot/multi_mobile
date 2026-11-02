@@ -71,7 +71,7 @@ const webviews = () => [...document.querySelectorAll('webview')];
 test('불러오기 창: 방송·투네이션 라이브·후원 페이지·웹페이지 탭', () => {
   setup();
   const dlg = openPicker(0);
-  expect(within(dlg).getAllByRole('tab').map((t) => t.textContent)).toEqual(['방송', '투네이션 라이브', '후원 페이지', '채팅', '웹페이지']);
+  expect(within(dlg).getAllByRole('tab').map((t) => t.textContent)).toEqual(['방송', '투네이션 라이브', '활동 위젯', '후원 페이지', '채팅', '웹페이지']);
 });
 
 test('웹페이지: 주소를 넣으면 그 칸에 사이트가 열린다 (웹은 iframe)', () => {
