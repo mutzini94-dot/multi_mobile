@@ -54,7 +54,9 @@ export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText =
   if (embed === 'webview') {
     // allowpopups: 새 창 요청은 설치형(main.js)이 같은 칸에서 열도록 처리한다. React는 boolean 값을 속성으로 쓰지 않아 문자열로 넘긴다
     const popups = { allowpopups: 'true' } as object;
-    return <webview ref={ref} className="page-view" src={url} partition={page.kind === 'donate' ? DONATE_PARTITION : WEB_PARTITION} {...popups} />;
+    // 후원 페이지는 화면 폭으로 PC판·모바일판을 고른다: 칸이 넓어도 휴대폰 폭으로 띄워 모바일판으로 (설치형은 페이지가 보는 UA도 모바일)
+    const mobile = page.kind === 'donate' ? ' page-view--mobile' : '';
+    return <webview ref={ref} className={`page-view${mobile}`} src={url} partition={page.kind === 'donate' ? DONATE_PARTITION : WEB_PARTITION} {...popups} />;
   }
   if (page.kind === 'donate') {
     // 투네이션 후원 페이지는 다른 페이지 안에 띄우는 것을 막아 두었다 (설치형은 칸 안에 표시)

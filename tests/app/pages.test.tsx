@@ -101,6 +101,9 @@ test('설치형: 웹페이지는 칸 안 브라우저(webview)로, 후원 페이
   const [web, donate] = [webviews().find((w) => w.getAttribute('partition') === 'persist:mvweb'), webviews().find((w) => w.getAttribute('partition') === 'persist:toonation')];
   expect(web?.getAttribute('src')).toBe('https://www.youtube.com/');
   expect(donate?.getAttribute('src')).toBe('https://toon.at/donate/don1');
+  // 후원 페이지는 화면 폭으로 PC판·모바일판을 고르므로, 칸이 넓어도 휴대폰 폭으로 띄워 모바일판으로
+  expect(donate).toHaveClass('page-view--mobile');
+  expect(web).not.toHaveClass('page-view--mobile');
 });
 
 test('후원 페이지 칸은 선택한 방송 크리에이터를 따라간다', () => {

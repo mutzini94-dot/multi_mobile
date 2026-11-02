@@ -19,6 +19,7 @@ const { createAppOptions, APP_OPTION_DEFAULTS } = require('./lib/appOptions');
 const { Updater } = require('./lib/updater');
 const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION } = require('./lib/webviewPolicy');
 const { fillAmountScript, fillMessageScript } = require('./lib/donateFill');
+const { useMobileDonatePage } = require('./lib/mobileDonate');
 const { createHandlers } = require('./lib/handlers');
 
 const APP_NAME = '멀티뷰 후원';
@@ -86,6 +87,7 @@ function setupTileWebview(wc) {
   if (donateTile) {
     allowPopups(wc);
     useGoogleUa(wc);
+    useMobileDonatePage(wc, process.versions.chrome); // 후원 페이지는 모바일판
     wc.on('dom-ready', () => {
       if (isDonateUrl(wc.getURL())) wc.insertCSS(DONATE_ONLY_CSS).catch(() => {});
     });
@@ -172,6 +174,7 @@ function createDonateView() {
   if (typeof view.setBorderRadius === 'function') view.setBorderRadius(8);
   allowPopups(view.webContents);
   useGoogleUa(view.webContents);
+  useMobileDonatePage(view.webContents, process.versions.chrome); // 후원 페이지는 모바일판
   view.webContents.on('dom-ready', () => {
     if (/^https:\/\/toon\.at\/donate\//.test(view.webContents.getURL())) view.webContents.insertCSS(DONATE_ONLY_CSS).catch(() => {});
   });

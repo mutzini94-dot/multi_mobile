@@ -308,6 +308,7 @@ button:disabled { cursor: not-allowed; }
 .tile__bar-gap { flex: 1 1 auto !important; }
 .tile--page .tile__bar > .sound:first-of-type { margin-left: 0; }
 .page-view { display: flex; width: 100%; height: 100%; border: 0; background: #fff; }
+.page-view--mobile { max-width: 480px; margin: 0 auto; }
 .page-view--empty { flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center; background: var(--canvas); color: var(--ink-sub); font-size: 14px; }
 
 /* ---------- 불러오기 창 탭 ---------- */
