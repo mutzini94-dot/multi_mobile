@@ -158,6 +158,18 @@ describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
     expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
   });
 
+  test('선택된 칸은 잡는 층이 없어 클릭이 플레이어로 간다 (재생 버튼 등) — 끌기는 위쪽 바로', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B'); // 1번 칸이 선택된 상태
+    expect(grab(1)).toBeNull();
+    expect(grab(0)).not.toBeNull();
+    pressAt(grab(0)); // 0번 칸을 짧게 눌러 선택하면
+    drop();
+    expect(grab(0)).toBeNull(); // 이제 0번 칸 영상은 플레이어가 직접 받는다
+    expect(grab(1)).not.toBeNull();
+  });
+
   test('바의 버튼을 누르는 것은 끌기를 시작하지 않는다', () => {
     setup();
     pick(0, 'A');

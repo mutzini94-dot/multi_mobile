@@ -127,8 +127,9 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
           >
             {isStream(creator) ? <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} onStatus={(s) => onStatus?.(key, s)} /> : isPage(creator) ? renderPage?.(creator, key) : null}
             {!offscreen && renderOverlay?.(slot, key)}
-            {/* 페이지 칸은 클릭·입력을 페이지가 받아야 하므로 잡는 층이 없다 (위쪽 바로 끈다) */}
-            {onGrab && isStream(creator) && focused === null && !offscreen && <div className="player-layer__grab" onPointerDown={(e) => onGrab(slot, e)} />}
+            {/* 페이지 칸은 클릭·입력을 페이지가 받아야 하므로 잡는 층이 없다 (위쪽 바로 끈다).
+                선택된 칸도 없다: 첫 클릭은 칸 선택, 그다음부터는 플레이어가 직접 받는다 (재생 버튼·트위치 시청 시작 등) */}
+            {onGrab && isStream(creator) && state.selected !== slot && focused === null && !offscreen && <div className="player-layer__grab" onPointerDown={(e) => onGrab(slot, e)} />}
             {isFloating && floating && <span className="player-layer__drag-label">{floating.name}</span>}
             {/* 선택 강조: iframe 위에 겹쳐 그려야 영상에 가려지지 않는다 (클릭은 통과) */}
             {state.selected === slot && <span className="player-layer__highlight" aria-hidden="true" />}

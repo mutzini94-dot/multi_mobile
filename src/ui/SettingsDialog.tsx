@@ -182,6 +182,7 @@ export function SettingsDialog(p: Props) {
               ['player', '플레이어 재생·정지'],
             ]}
             onChange={(v) => p.onChange({ videoClick: v })}
+            hint="칸 선택: 선택된 칸은 영상을 눌러 플레이어를 조작"
           />
           <Select
             label="테마"
