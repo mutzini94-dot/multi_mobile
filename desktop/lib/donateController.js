@@ -13,7 +13,7 @@ function createDonateController({ main, createView, createPipWindow, donateUrl, 
   let tag = null;
   let name = null;
 
-  const titleOf = (n) => `${n}에게 후원 · 멀티뷰 후원`;
+  const titleOf = (n) => `${n}에게 후원 · 투네이션 후원 브라우저`;
 
   function layoutPip() {
     if (!pip || pip.isDestroyed() || !view) return;

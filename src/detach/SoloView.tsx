@@ -68,7 +68,7 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
       : item.name;
   const embed = desktop ? 'webview' : 'iframe';
   useEffect(() => {
-    document.title = `${title} · 멀티뷰 후원`;
+    document.title = `${title} · 투네이션 후원 브라우저`;
   }, [title]);
 
   const barButton = (label: string, text: string, fn: () => void, on = false) => (

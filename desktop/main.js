@@ -1,5 +1,5 @@
 'use strict';
-// 멀티뷰 후원 — 설치형(Electron). toon-widget(투네이션 후원 위젯)과 같은 방식:
+// 투네이션 후원 브라우저(멀티뷰) — 설치형(Electron). toon-widget(투네이션 후원 위젯)과 같은 방식:
 //   - 전용 세션(persist:toonation)에서 공식 로그인 창을 띄우고, 같은 세션으로 계정·즐겨찾기를 가져온다
 //     (비밀번호는 다루지 않는다)
 //   - 후원창(WebContentsView, 같은 로그인 세션)은 메인 창 가운데 모달 또는 항상 위 PIP 창으로 띄운다
@@ -21,16 +21,17 @@ const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION
 const { fillAmountScript, fillMessageScript } = require('./lib/donateFill');
 const { useMobileDonatePage } = require('./lib/mobileDonate');
 const { createHandlers } = require('./lib/handlers');
+const { APP_NAME, appUserModelId, userDataDir } = require('./lib/appIdentity');
 
-const APP_NAME = '멀티뷰 후원';
 const PARTITION = 'persist:toonation';
 const DEV = process.argv.includes('--dev');
 const DEV_URL = 'http://localhost:5230/';
-const ICON = path.join(__dirname, 'build', 'icon.png');
+const ICON = path.join(__dirname, 'assets', 'icon.ico'); // 창·작업 표시줄 아이콘 (build/는 설치 파일에 들어가지 않는다)
 const LOGO_ICON = path.join(__dirname, 'assets', 'logo-square.png'); // 알림 아이콘 (build/는 설치 파일에 들어가지 않는다)
 const TRAY_ICON = path.join(__dirname, 'assets', 'tray.png'); // 로고 (+OO), tray@2x.png는 고해상도 화면에서 자동으로 쓴다
 const DONATE_TAG_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
+app.setPath('userData', userDataDir(app.getPath('appData')));
 // 별도 프로필(설정·로그인)로 설치된 앱 옆에서 한 벌 더 실행: `--profile=<폴더>` (toon-widget과 같음)
 const profileArg = process.argv.find((a) => a.startsWith('--profile='));
 if (profileArg) app.setPath('userData', path.resolve(profileArg.slice('--profile='.length)));
@@ -39,7 +40,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
 }
-app.setAppUserModelId('at.toon.donator.multiview');
+app.setAppUserModelId(appUserModelId(app.isPackaged));
 // 방송은 사용자가 고르는 즉시 재생된다
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
@@ -324,7 +325,7 @@ function buildTrayMenu() {
   const o = appOptions.all();
   const u = updater ? updater.state : { status: 'disabled' };
   return Menu.buildFromTemplate([
-    { label: '멀티뷰 열기', click: showMain },
+    { label: '열기', click: showMain },
     { type: 'separator' },
     { label: 'Windows 시작 시 실행', type: 'checkbox', checked: o.autoLaunch, click: (i) => setAppOption('autoLaunch', i.checked) },
     { label: '창을 닫으면 트레이로', type: 'checkbox', checked: o.closeToTray, click: (i) => setAppOption('closeToTray', i.checked) },

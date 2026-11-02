@@ -31,7 +31,7 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPrese
   return (
     <header className="gnb">
       <span className="gnb__logo">
-        <img className="gnb__logo-img" src={logoUrl} alt="멀티뷰 후원" />
+        <img className="gnb__logo-img" src={logoUrl} alt="투네이션 후원 브라우저" />
       </span>
       <div className="gnb__layouts">
         {LAYOUTS.map((l) => (

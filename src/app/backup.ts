@@ -26,7 +26,7 @@ export function importBackup(kv: KV, text: string): Result<number> {
     return fail('백업 파일을 읽을 수 없습니다');
   }
   const r = raw as { app?: unknown; v?: unknown; data?: unknown };
-  if (!r || r.app !== APP || r.v !== 1 || !r.data || typeof r.data !== 'object' || Array.isArray(r.data)) return fail('멀티뷰 후원 백업 파일이 아닙니다');
+  if (!r || r.app !== APP || r.v !== 1 || !r.data || typeof r.data !== 'object' || Array.isArray(r.data)) return fail('투네이션 후원 브라우저 백업 파일이 아닙니다');
   const entries = Object.entries(r.data as Record<string, unknown>);
   for (const [k, v] of entries) {
     if (!BACKUP_KEYS.includes(k) || typeof v !== 'string' || v.length > MAX_VALUE) return fail('백업 파일의 내용이 올바르지 않습니다');

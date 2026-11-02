@@ -39,7 +39,7 @@ test('방송: 전체 창에 플레이어, 처음 소리(분리 전 소리 나던
   expect(handle.setMuted).toHaveBeenLastCalledWith(false);
   expect(handle.setVolume).toHaveBeenLastCalledWith(40);
   expect(document.documentElement.dataset.theme).toBe('dark');
-  expect(document.title).toBe('A · 멀티뷰 후원');
+  expect(document.title).toBe('A · 투네이션 후원 브라우저');
   fireEvent.click(screen.getByRole('button', { name: '소리 끄기' }));
   expect(handle.setMuted).toHaveBeenLastCalledWith(true);
 });

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'" />
-    <title>후원 · 멀티뷰 후원</title>
+    <title>후원 · 투네이션 후원 브라우저</title>
     <style>
       /* 투네이션 디자인 토큰 (src/ui/app.css와 같은 값) */
       :root { --primary: #519cff; --ink: #212529; --ink-sub: #464c54; --line: #dee5ec; --surface: #edf1f6; --live: #f84949; }
@@ -43,7 +43,7 @@
     <script>
       const titleEl = document.getElementById('title');
       const setTitle = (t) => {
-        titleEl.textContent = String(t || '').replace(/ · 멀티뷰 후원$/, '');
+        titleEl.textContent = String(t || '').replace(/ · 투네이션 후원 브라우저$/, '');
         document.title = t || '';
       };
       setTitle(new URLSearchParams(location.search).get('title'));
