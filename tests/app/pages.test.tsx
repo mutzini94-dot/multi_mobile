@@ -101,8 +101,9 @@ test('설치형: 웹페이지는 칸 안 브라우저(webview)로, 후원 페이
   const [web, donate] = [webviews().find((w) => w.getAttribute('partition') === 'persist:mvweb'), webviews().find((w) => w.getAttribute('partition') === 'persist:toonation')];
   expect(web?.getAttribute('src')).toBe('https://www.youtube.com/');
   expect(donate?.getAttribute('src')).toBe('https://toon.at/donate/don1');
-  // 후원 페이지는 화면 폭으로 PC판·모바일판을 고르므로, 칸이 넓어도 휴대폰 폭으로 띄워 모바일판으로
+  // 후원 페이지는 화면 폭으로 PC판·모바일판을 고르므로, 칸 크기에 맞춰 키우는 틀 안에서 모바일판으로 (mobileFit)
   expect(donate).toHaveClass('page-view--mobile');
+  expect(donate?.parentElement).toHaveClass('page-view-fit');
   expect(web).not.toHaveClass('page-view--mobile');
 });
 

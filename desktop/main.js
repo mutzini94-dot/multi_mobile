@@ -551,8 +551,12 @@ function runSmoke(outDir) {
         await new Promise((r) => setTimeout(r, Number(process.env.MV_SMOKE_WAIT) || 8000));
         // 시나리오가 window.__mvInput에 남긴 실제 입력(마우스)을 보낸다: [{ type, x, y }, ...]
         const input = await win.webContents.executeJavaScript('window.__mvInput || []').catch(() => []);
+        // MV_SMOKE_CDP_INPUT=1: 브라우저 입력 경로(CDP Input)로 보낸다 — 칸 webview 안까지 닿는다 (sendInputEvent는 앱 화면에만)
+        const cdp = !!process.env.MV_SMOKE_CDP_INPUT && input.length > 0;
+        if (cdp) win.webContents.debugger.attach('1.3');
         for (const ev of input) {
-          win.webContents.sendInputEvent({ button: 'left', clickCount: 1, ...ev });
+          if (cdp) await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type: ev.type === 'mouseDown' ? 'mousePressed' : ev.type === 'mouseUp' ? 'mouseReleased' : 'mouseMoved', x: ev.x, y: ev.y, button: 'left', clickCount: 1 });
+          else win.webContents.sendInputEvent({ button: 'left', clickCount: 1, ...ev });
           await new Promise((r) => setTimeout(r, 40));
         }
         if (input.length) await new Promise((r) => setTimeout(r, 1000));
