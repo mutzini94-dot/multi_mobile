@@ -433,3 +433,10 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 /* ---------- 전체 음소거 ---------- */
 .gnb__mute--on { background: var(--live); color: #fff; box-shadow: none; }
 .gnb__mute--on:hover { background: #e23c3c; }
+
+/* 화면 오류 안내 (까만 창 대신) */
+.crash { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: var(--canvas); color: var(--ink); text-align: center; }
+.crash__title { margin: 0; font-size: 18px; font-weight: 700; }
+.crash__desc { margin: 0; color: var(--ink-sub); font-size: 14px; }
+.crash__actions { display: flex; gap: 8px; margin-top: 4px; }
+.crash__detail { margin: 8px 0 0; max-width: 560px; color: var(--ink-mute); font-size: 12px; word-break: break-all; }
