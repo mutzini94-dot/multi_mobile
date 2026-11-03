@@ -58,30 +58,62 @@ function startedAt(l: { streamElapsedTime?: unknown; streamStartTime?: unknown }
   return Number.isFinite(t) ? { startedAt: t } : {};
 }
 
+/** 라이브 목록 API 항목 한 개 → LiveItem (재생 못 하는 플랫폼·잘못된 항목은 null) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toLiveItem(l: any): LiveItem | null {
+  const platform = PLATFORM_OF[Number(l?.platformType)];
+  if (!platform) return null;
+  const made = makeCreator(
+    { name: decodeHtml(String(l.creatorName ?? '')).trim().slice(0, 30), donateId: String(l.linkTag ?? ''), platform, channel: String(l.channel ?? '') },
+    'toonation',
+  );
+  if (!made.ok) return null;
+  const profile = httpsUrl(l.creatorProfileImageUrl);
+  return {
+    creator: {
+      ...made.value,
+      ...(profile ? { profile } : {}),
+      ...(platform === 'youtube' && /^[A-Za-z0-9_-]{11}$/.test(String(l.v ?? '')) ? { videoId: String(l.v) } : {}),
+      live: { title: decodeHtml(String(l.title ?? '')).slice(0, 100), viewers: Number(l.viewers) || 0, ...startedAt(l) },
+    },
+    thumbnail: httpsUrl(l.thumbnailImage).replace('{width}x{height}', '320x180'),
+    category: String(l.categoryName ?? ''),
+  };
+}
+
 export async function fetchLiveList(q: LiveQuery, fetchImpl: typeof fetch = fetch): Promise<LivePage> {
   const r = await fetchImpl(liveListUrl(q), { headers: { Accept: 'application/json' } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const d = ((await r.json()) ?? {}).data ?? {};
   const items: LiveItem[] = [];
   for (const l of Array.isArray(d.content) ? d.content : []) {
-    const platform = PLATFORM_OF[Number(l?.platformType)];
-    if (!platform) continue;
-    const made = makeCreator(
-      { name: decodeHtml(String(l.creatorName ?? '')).trim().slice(0, 30), donateId: String(l.linkTag ?? ''), platform, channel: String(l.channel ?? '') },
-      'toonation',
-    );
-    if (!made.ok) continue;
-    const profile = httpsUrl(l.creatorProfileImageUrl);
-    items.push({
-      creator: {
-        ...made.value,
-        ...(profile ? { profile } : {}),
-        ...(platform === 'youtube' && /^[A-Za-z0-9_-]{11}$/.test(String(l.v ?? '')) ? { videoId: String(l.v) } : {}),
-        live: { title: decodeHtml(String(l.title ?? '')).slice(0, 100), viewers: Number(l.viewers) || 0, ...startedAt(l) },
-      },
-      thumbnail: httpsUrl(l.thumbnailImage).replace('{width}x{height}', '320x180'),
-      category: String(l.categoryName ?? ''),
-    });
+    const item = toLiveItem(l);
+    if (item) items.push(item);
   }
   return { items, page: q.page, totalPages: Number(d.totalPages) || 1, total: Number(d.totalElements) || items.length };
+}
+
+/** 인기라이브 (toon.at/donator?live 첫 탭): 추천 채널 묶음과 LIVE TOP 50 */
+export interface PopularLive {
+  groups: { name: string; items: LiveItem[] }[];
+  top: LiveItem[];
+}
+
+const STREAM_API = 'https://live-streaming.toon.at/api/stream';
+
+async function getData(url: string, fetchImpl: typeof fetch): Promise<unknown> {
+  const r = await fetchImpl(url, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return ((await r.json()) ?? {}).data;
+}
+
+const toItems = (list: unknown): LiveItem[] => (Array.isArray(list) ? list.map(toLiveItem).filter((i): i is LiveItem => !!i) : []);
+
+export async function fetchPopularLive(fetchImpl: typeof fetch = fetch): Promise<PopularLive> {
+  const recom = await getData(`${STREAM_API}/recom-stream-main`, fetchImpl);
+  const top = await getData(`${STREAM_API}/top-stream-list`, fetchImpl);
+  const groups = (Array.isArray(recom) ? recom : [])
+    .map((g) => ({ name: `추천 ${decodeHtml(String(g?.groupNameKr ?? '')).trim()} 채널`, items: toItems(g?.lives) }))
+    .filter((g) => g.items.length > 0);
+  return { groups, top: toItems(top) };
 }

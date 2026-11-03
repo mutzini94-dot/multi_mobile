@@ -25,9 +25,10 @@ interface Props {
   account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
   sound?: { on: boolean; onToggle(): void }; // 전체 음소거·해제 (단축키 M과 같은 상태)
+  onLive?(): void; // 추천 라이브 (투네이션 라이브 목록)
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound, onLive }: Props) {
   return (
     <header className="gnb">
       <span className="gnb__logo">
@@ -50,6 +51,12 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPrese
           </button>
         ))}
       </div>
+      {onLive && (
+        <button type="button" className="btn btn--ghost gnb__live" aria-label="추천 라이브" title="투네이션에서 지금 방송 중인 라이브" onClick={onLive}>
+          <span className="gnb__live-dot" aria-hidden="true" />
+          추천 라이브
+        </button>
+      )}
       {sound && (
         <button
           type="button"

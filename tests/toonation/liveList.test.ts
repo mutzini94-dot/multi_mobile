@@ -1,4 +1,4 @@
-import { fetchLiveList, liveListUrl } from '../../src/toonation/liveList';
+import { fetchLiveList, fetchPopularLive, liveListUrl } from '../../src/toonation/liveList';
 
 const row = (o: object) => ({ title: '방송', channel: '', creatorName: '이름', creatorProfileImageUrl: 'https://p/x.png', thumbnailImage: 'https://t/{width}x{height}.jpg', categoryName: '게임', platformType: 1, viewers: 10, linkTag: 'tag1', v: null, ...o });
 
@@ -42,4 +42,27 @@ test('fetchLiveList: 유튜브는 라이브 영상 ID(v)를 함께 담는다 (�
   ], totalPages: 1 } }), { status: 200 }));
   const r = await fetchLiveList({ page: 1, size: 20, q: '', order: 'VIEWERS', platform: '' }, fetchImpl as unknown as typeof fetch);
   expect(r.items.map((i) => i.creator.videoId)).toEqual(['m8HaYP0qcRM', undefined]);
+});
+
+test('fetchPopularLive: 인기라이브 — 추천 채널 묶음(recom-stream-main)과 LIVE TOP 50(top-stream-list)', async () => {
+  const UC = 'UC' + 'c'.repeat(22);
+  const calls: string[] = [];
+  const fetchImpl = vi.fn(async (url: string) => {
+    calls.push(url);
+    if (url.endsWith('/recom-stream-main'))
+      return new Response(JSON.stringify({ data: [
+        { groupNameKr: '토크', lives: [row({ creatorName: '토크1', channel: 'https://www.twitch.tv/talk1', linkTag: 't1' }), row({ creatorName: '치지직', platformType: 8 })] },
+        { groupNameKr: '게임', lives: [] },
+      ] }), { status: 200 });
+    return new Response(JSON.stringify({ data: [row({ creatorName: '탑1', channel: `https://youtube.com/channel/${UC}/live`, platformType: 2, linkTag: 'y1', viewers: 4302 })] }), { status: 200 });
+  });
+  const r = await fetchPopularLive(fetchImpl as unknown as typeof fetch);
+  expect(calls).toEqual(['https://live-streaming.toon.at/api/stream/recom-stream-main', 'https://live-streaming.toon.at/api/stream/top-stream-list']);
+  expect(r.groups.map((g) => [g.name, g.items.map((i) => i.creator.name)])).toEqual([['추천 토크 채널', ['토크1']]]); // 빈 묶음·재생 못 하는 플랫폼은 뺀다
+  expect(r.top.map((i) => [i.creator.name, i.creator.live?.viewers])).toEqual([['탑1', 4302]]);
+});
+
+test('fetchPopularLive: HTTP 오류는 예외', async () => {
+  const fetchImpl = vi.fn(async () => new Response('x', { status: 500 }));
+  await expect(fetchPopularLive(fetchImpl as unknown as typeof fetch)).rejects.toThrow('500');
 });

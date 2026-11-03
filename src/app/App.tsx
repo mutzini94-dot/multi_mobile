@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
 import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
-import { fetchLiveList, type LivePage, type LiveQuery } from '../toonation/liveList';
+import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type PopularLive } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ActivityPageTab, ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
 import { ActivityWidget } from '../ui/ActivityWidget';
+import { RecommendLiveDialog } from '../ui/RecommendLiveDialog';
+import { RecommendLive } from '../ui/RecommendLive';
+import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
@@ -56,6 +59,7 @@ interface Props {
   bridge?: ToonationBridge;
   desktop?: DesktopApi | null; // 설치형 앱의 window.multiviewDesktop (없으면 웹 방식)
   lives?: (q: LiveQuery) => Promise<LivePage>; // 투네이션 라이브 목록 (테스트에서 바꿔 끼움)
+  popular?: () => Promise<PopularLive>; // 인기라이브 (테스트에서 바꿔 끼움)
   detachHost?: DetachHost; // 칸 분리 창 통로 (테스트에서 바꿔 끼움)
 }
 
@@ -103,6 +107,9 @@ export function App(props: Props) {
   const groupSelect = editGroups ? (c: Creator) => <GroupSelect creator={c} groups={groups} /> : undefined;
   const [guideOpen, setGuideOpen] = useState(() => kv.get(ONBOARDED_KEY) !== '1'); // 처음 사용 안내
   const [historyOpen, setHistoryOpen] = useState(false);
+  // 상단 '추천 라이브': 고른 방송을 넣을 칸을 묻는다
+  const [liveOpen, setLiveOpen] = useState(false);
+  const [livePick, setLivePick] = useState<Creator | null>(null);
   const [limitAsk, setLimitAsk] = useState<{ creator: Creator; total: number } | null>(null);
 
   // 테마: 시스템을 따르거나 라이트·다크로 고정
@@ -583,6 +590,7 @@ export function App(props: Props) {
     refreshToonation();
   };
   const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
+  const popularSource = useMemo(() => props.popular ?? (() => fetchPopularLive()), [props.popular]);
   // 활동 위젯: 후원한 크리에이터 중 라이브 (즐겨찾기 라이브는 투네이션 즐겨찾기 목록이 이미 안다)
   const hasActivity = state.slots.some((s) => isPage(s) && s.kind === 'activity');
   const [donatedLive, setDonatedLive] = useState<LiveTarget[] | null>(null);
@@ -680,6 +688,7 @@ export function App(props: Props) {
         canDonate={!!donateTarget}
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
+        onLive={() => setLiveOpen(true)}
         onPresets={() => setPresetsOpen(true)}
         sound={{ on: state.soundOn, onToggle: () => dispatch({ type: 'toggleSound' }) }}
         onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
@@ -923,6 +932,30 @@ export function App(props: Props) {
             }}
           />
         </FavoritesPicker>
+      )}
+      {liveOpen && (
+        <RecommendLiveDialog onClose={() => setLiveOpen(false)}>
+          <RecommendLive
+            loadPopular={popularSource}
+            load={liveSource}
+            favoriteTags={loggedIn ? favoriteTags : undefined}
+            onToggleFavorite={loggedIn ? toggleToonFavorite : undefined}
+            onPick={setLivePick}
+          />
+        </RecommendLiveDialog>
+      )}
+      {livePick && (
+        <SlotPickerDialog
+          layout={state.layout}
+          slots={visibleSlots(state)}
+          name={livePick.name}
+          onClose={() => setLivePick(null)}
+          onPick={(slot) => {
+            dispatch({ type: 'assign', slot, creator: livePick });
+            setLivePick(null);
+            setLiveOpen(false);
+          }}
+        />
       )}
       {guideOpen && <Onboarding onDone={closeGuide} />}
       {historyOpen && (

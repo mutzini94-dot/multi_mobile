@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Creator } from '../domain/types';
 import type { LiveItem, LivePage, LiveQuery } from '../toonation/liveList';
+import { LiveCard } from './LiveCard';
 
 interface Props {
   load(q: LiveQuery): Promise<LivePage>;
   onPick(c: Creator): void;
   favoriteTags?: Set<string>; // 투네이션 즐겨찾기한 후원 아이디 (로그인했을 때만 ♡)
   onToggleFavorite?(c: Creator, on: boolean): Promise<void>;
+  variant?: 'list' | 'grid'; // grid: 추천 라이브 창의 카드 모양 (toon.at/donator?live)
 }
 
 const PAGE_SIZE = 20;
@@ -20,7 +22,7 @@ function topCategories(items: LiveItem[]): string[] {
 }
 
 /** 불러오기 창 '투네이션 라이브' 탭: toon.at/donator?live 목록에서 골라 칸에 넣는다 */
-export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite }: Props) {
+export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, variant = 'list' }: Props) {
   const [q, setQ] = useState('');
   const [query, setQuery] = useState<Omit<LiveQuery, 'page' | 'size'>>({ q: '', order: 'VIEWERS', platform: '', category: '' });
   const [busyTag, setBusyTag] = useState<string | null>(null);
@@ -54,6 +56,27 @@ export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite }: Props)
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setQuery((v) => ({ ...v, q }));
+  };
+
+  const favButton = (c: Creator) => {
+    if (!onToggleFavorite || !favoriteTags) return null;
+    const fav = favoriteTags.has(c.donateId);
+    return (
+      <button
+        type="button"
+        className={`live-item__fav${fav ? ' live-item__fav--on' : ''}`}
+        aria-label={`${c.name} 즐겨찾기 ${fav ? '해제' : '추가'}`}
+        title={fav ? '투네이션 즐겨찾기 해제' : '투네이션 즐겨찾기에 추가'}
+        disabled={busyTag === c.donateId}
+        onClick={async () => {
+          setBusyTag(c.donateId);
+          await onToggleFavorite(c, !fav).catch(() => {});
+          setBusyTag(null);
+        }}
+      >
+        {fav ? '♥' : '♡'}
+      </button>
+    );
   };
 
   return (
@@ -96,45 +119,37 @@ export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite }: Props)
         </p>
       )}
       {status === 'ready' && items.length === 0 && <p className="muted">지금 라이브 중인 방송이 없습니다.</p>}
-      <ul className="live-list">
-        {items.map(({ creator: c, thumbnail, category }) => (
-          <li key={`${c.key}|${c.donateId}`} className="live-list__row">
-            {onToggleFavorite && favoriteTags && (() => {
-              const fav = favoriteTags.has(c.donateId);
-              return (
-                <button
-                  type="button"
-                  className={`live-item__fav${fav ? ' live-item__fav--on' : ''}`}
-                  aria-label={`${c.name} 즐겨찾기 ${fav ? '해제' : '추가'}`}
-                  title={fav ? '투네이션 즐겨찾기 해제' : '투네이션 즐겨찾기에 추가'}
-                  disabled={busyTag === c.donateId}
-                  onClick={async () => {
-                    setBusyTag(c.donateId);
-                    await onToggleFavorite(c, !fav).catch(() => {});
-                    setBusyTag(null);
-                  }}
-                >
-                  {fav ? '♥' : '♡'}
-                </button>
-              );
-            })()}
-            <button type="button" className="live-item" onClick={() => onPick(c)}>
-              {thumbnail ? <img className="live-item__thumb" src={thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="live-item__thumb" />}
-              <span className="live-item__text">
-                <span className="live-item__name">
-                  {c.name}
-                  <span className="live-tag">LIVE</span>
+      {variant === 'grid' ? (
+        <ul className="live-grid">
+          {items.map((i) => (
+            <li key={`${i.creator.key}|${i.creator.donateId}`}>
+              <LiveCard item={i} onPick={() => onPick(i.creator)} extra={favButton(i.creator)} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="live-list">
+          {items.map(({ creator: c, thumbnail, category }) => (
+            <li key={`${c.key}|${c.donateId}`} className="live-list__row">
+              {favButton(c)}
+              <button type="button" className="live-item" onClick={() => onPick(c)}>
+                {thumbnail ? <img className="live-item__thumb" src={thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="live-item__thumb" />}
+                <span className="live-item__text">
+                  <span className="live-item__name">
+                    {c.name}
+                    <span className="live-tag">LIVE</span>
+                  </span>
+                  <span className="live-item__title">{c.live?.title}</span>
+                  <span className="muted live-item__meta">
+                    {PLATFORM_LABEL[c.platform]} · 시청자 {(c.live?.viewers ?? 0).toLocaleString('ko-KR')}
+                    {category ? ` · ${category}` : ''}
+                  </span>
                 </span>
-                <span className="live-item__title">{c.live?.title}</span>
-                <span className="muted live-item__meta">
-                  {PLATFORM_LABEL[c.platform]} · 시청자 {(c.live?.viewers ?? 0).toLocaleString('ko-KR')}
-                  {category ? ` · ${category}` : ''}
-                </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {status === 'loading' && <p className="muted">불러오는 중…</p>}
       {status === 'ready' && page < totalPages && (
         <button type="button" className="btn btn--ghost live-tab__more" onClick={() => fetchPage(page + 1)}>
