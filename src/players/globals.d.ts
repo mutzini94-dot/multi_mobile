@@ -14,6 +14,7 @@ interface TwitchPlayer {
   setVolume(v: number): void; // 0~1
   pause(): void;
   play(): void;
+  isPaused?(): boolean;
   setQuality(group: string): void;
   getQualities?(): { group: string }[];
   addEventListener(event: string, cb: () => void): void;

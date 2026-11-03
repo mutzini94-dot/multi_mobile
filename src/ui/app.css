@@ -500,3 +500,9 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .live-card__title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-card__name { color: var(--ink-mute); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-card .live-item__fav { position: absolute; top: 4px; right: 4px; }
+
+/* 트위치 칸 일시정지·재생 (마우스를 올리면 보인다, '선택됨' 표시 위) */
+.player-pause { position: absolute; left: 10px; bottom: 40px; z-index: 2; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 13px; letter-spacing: -2px; cursor: pointer; opacity: 0; transition: opacity 0.15s, background 0.15s; }
+.player-layer__item:hover .player-pause, .player-pause:focus-visible { opacity: 1; }
+.player-pause:hover { background: rgba(0, 0, 0, 0.8); }
+.player-layer--dragging .player-pause { display: none; }

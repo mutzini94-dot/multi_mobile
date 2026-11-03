@@ -26,9 +26,10 @@ interface Props {
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
   sound?: { on: boolean; onToggle(): void }; // 전체 음소거·해제 (단축키 M과 같은 상태)
   onLive?(): void; // 추천 라이브 (투네이션 라이브 목록)
+  onReloadAll?(): void; // 전체 새로고침 (모든 칸)
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound, onLive }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound, onLive, onReloadAll }: Props) {
   return (
     <header className="gnb">
       <span className="gnb__logo">
@@ -55,6 +56,11 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPrese
         <button type="button" className="btn btn--ghost gnb__live" aria-label="추천 라이브" title="투네이션에서 지금 방송 중인 라이브" onClick={onLive}>
           <span className="gnb__live-dot" aria-hidden="true" />
           추천 라이브
+        </button>
+      )}
+      {onReloadAll && (
+        <button type="button" className="btn btn--ghost" aria-label="전체 새로고침" title="모든 칸의 방송·페이지를 다시 불러오기" onClick={onReloadAll}>
+          ⟳ 전체 새로고침
         </button>
       )}
       {sound && (

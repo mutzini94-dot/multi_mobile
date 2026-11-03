@@ -177,6 +177,11 @@ export function App(props: Props) {
 
   // 플레이어 핸들: 플레이어 키(방송 기준, layouts.playerKeys)로 보관해 칸 자리를 바꿔도 그대로 쓴다
   const [handles, setHandles] = useState<Record<string, PlayerHandle>>({});
+  // 전체 새로고침: 바뀌면 모든 칸의 플레이어·페이지를 다시 띄운다
+  const [reloadSeq, setReloadSeq] = useState(0);
+  // 트위치 칸 일시정지 버튼 (유튜브는 플레이어 자체 버튼)
+  const [pausedKeys, setPausedKeys] = useState<Record<string, boolean>>({});
+  const [tileSeq, setTileSeq] = useState<Record<string, number>>({});
   const keys = useMemo(() => playerKeys(state.slots), [state.slots]);
   const handleList = useMemo(() => keys.map((k) => (k ? handles[k] ?? null : null)), [keys, handles]);
   // 소리·재생 (설정: 소리 방식·기본 볼륨·숨긴 칸 재생·낮은 화질)
@@ -424,6 +429,33 @@ export function App(props: Props) {
     if (c) replaceSlot(slot, c);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.autoReplaceEnded, endedSlots.join(','), toonation.state.creators]);
+  const pauseControl = (slot: number, key: string) => {
+    const item = state.slots[slot];
+    if (!isStream(item) || item.platform !== 'twitch') return null;
+    const paused = !!pausedKeys[key];
+    return (
+      <button
+        type="button"
+        className="player-pause"
+        aria-label={`${item.name} ${paused ? '재생' : '일시정지'}`}
+        title={paused ? '재생' : '일시정지'}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          const h = handles[key];
+          const now = h?.isPaused?.() ?? paused; // 플레이어 안에서 직접 멈췄을 수도 있다
+          h?.setPaused?.(!now);
+          setPausedKeys((p) => ({ ...p, [key]: !now }));
+          // 웹 브라우저의 트위치 임베드는 멈춘 뒤 재생 요청을 무시하기도 한다: 그대로면 그 칸만 다시 띄운다 (라이브는 지금 시점부터)
+          if (now && h?.isPaused)
+            setTimeout(() => {
+              if (h.isPaused?.()) setTileSeq((t) => ({ ...t, [key]: (t[key] ?? 0) + 1 }));
+            }, 1500);
+        }}
+      >
+        {paused ? '▶' : '❚❚'}
+      </button>
+    );
+  };
   const endedOverlay = (slot: number) => {
     const s = endedSlots[slot];
     const item = state.slots[slot];
@@ -689,6 +721,11 @@ export function App(props: Props) {
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
         onLive={() => setLiveOpen(true)}
+        onReloadAll={() => {
+          setReloadSeq((n) => n + 1);
+          setPausedKeys({});
+          if (hasActivity) refreshActivity();
+        }}
         onPresets={() => setPresetsOpen(true)}
         sound={{ on: state.soundOn, onToggle: () => dispatch({ type: 'toggleSound' }) }}
         onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
@@ -824,6 +861,9 @@ export function App(props: Props) {
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
             onStatus={onStreamStatus}
             renderOverlay={endedOverlay}
+            renderControls={pauseControl}
+            reloadSeq={reloadSeq}
+            tileSeq={tileSeq}
             renderPage={(page, key) =>
               page.kind === 'activity' ? (
                 <ActivityWidget
