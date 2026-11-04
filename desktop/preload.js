@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   webStoreSave: (snap) => ipcRenderer.send('mv:webstore:save', snap),
   search: (q) => ipcRenderer.invoke('mv:search', String(q)),
   bookmark: (tag, on) => ipcRenderer.invoke('mv:bookmark', { tag: String(tag), on: !!on }),
+  signatures: (tag) => ipcRenderer.invoke('mv:signatures', String(tag)),
   openDonate: (t) =>
     ipcRenderer.send('mv:donate:open', {
       tag: String(t && t.tag),

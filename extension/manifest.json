@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "멀티뷰 후원 연동",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "멀티뷰 후원 브라우저에서 투네이션 로그인과 즐겨찾기 목록을 불러옵니다.",
   "background": {
     "service_worker": "background.js"

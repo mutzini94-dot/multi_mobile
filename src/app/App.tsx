@@ -4,7 +4,9 @@ import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/cha
 import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
 import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type PopularLive } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
-import { ActivityPageTab, ChatPageTab, DonatePageTab, WebPageTab } from '../ui/PageTabs';
+import { ActivityPageTab, ChatPageTab, DonatePageTab, SignaturePageTab, WebPageTab } from '../ui/PageTabs';
+import { SignatureView } from '../ui/SignatureView';
+import { parseSignatures } from '../toonation/signatures';
 import { ActivityWidget } from '../ui/ActivityWidget';
 import { RecommendLiveDialog } from '../ui/RecommendLiveDialog';
 import { RecommendLive } from '../ui/RecommendLive';
@@ -241,7 +243,7 @@ export function App(props: Props) {
   }, [donateFor, chatVideoId, detached, detachHost]);
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
   const pageUrl = (page: PageSlot) =>
-    page.kind === 'web' ? page.url : page.kind === 'activity' || !donateFor ? null : page.kind === 'donate' ? donatePageUrl(donateFor) : chatUrl(donateFor, chatVideoId, embed, host);
+    page.kind === 'web' ? page.url : page.kind === 'activity' || page.kind === 'signature' || !donateFor ? null : page.kind === 'donate' ? donatePageUrl(donateFor) : chatUrl(donateFor, chatVideoId, embed, host);
   const pageEmptyText = (page: PageSlot) =>
     page.kind !== 'chat'
       ? '후원할 방송 칸을 선택하세요'
@@ -249,7 +251,11 @@ export function App(props: Props) {
         ? '유튜브 채팅은 방송이 재생되면 표시됩니다'
         : '채팅을 볼 방송 칸을 선택하세요';
   const pageLabel = (page: PageSlot) =>
-    page.kind === 'web' || page.kind === 'activity' || !donateFor ? page.name : `${donateFor.name} ${page.kind === 'donate' ? '후원 페이지' : '채팅'}`;
+    page.kind === 'web' || page.kind === 'activity' || !donateFor
+      ? page.name
+      : `${donateFor.name} ${page.kind === 'donate' ? '후원 페이지' : page.kind === 'signature' ? '시그니처' : '채팅'}`;
+  // 시그니처 칸: 선택한 방송 크리에이터의 시그니처 (로그인 없이도)
+  const loadSignatures = useCallback((tag: string) => bridge.request<unknown[]>('signatures', tag).then(parseSignatures), [bridge]);
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
   // 설치형 후원창 자리 (모달/PIP). 앱이 바꾸면(PIP 창의 '모달로' 등) 알려준다
@@ -774,12 +780,17 @@ export function App(props: Props) {
                     page
                       ? {
                           label: pageLabel(page),
-                          onBack: page.kind === 'activity' ? undefined : () => pageKey && pageHandles.current[pageKey]?.back(),
-                          onReload: page.kind === 'activity' ? refreshActivity : () => pageKey && pageHandles.current[pageKey]?.reload(),
+                          onBack: page.kind === 'activity' || page.kind === 'signature' ? undefined : () => pageKey && pageHandles.current[pageKey]?.back(),
+                          onReload:
+                            page.kind === 'activity'
+                              ? refreshActivity
+                              : page.kind === 'signature'
+                                ? () => pageKey && setTileSeq((t) => ({ ...t, [pageKey]: (t[pageKey] ?? 0) + 1 })) // 칸을 다시 띄워 새로 불러온다
+                                : () => pageKey && pageHandles.current[pageKey]?.reload(),
                           onOpenWindow:
                             page.kind === 'web'
                               ? () => win.open(page.url, '_blank', 'noopener')
-                              : page.kind !== 'activity' && !desktop && donateFor
+                              : page.kind !== 'activity' && page.kind !== 'signature' && !desktop && donateFor
                                 ? () => donateTo(donateFor)
                                 : undefined,
                         }
@@ -794,7 +805,7 @@ export function App(props: Props) {
                     onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item }),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
-                  onDetach={creator || (page && page.kind !== 'activity') ? () => detachSlot(slot) : undefined}
+                  onDetach={creator || (page && page.kind !== 'activity' && page.kind !== 'signature') ? () => detachSlot(slot) : undefined}
                   detached={markId && item ? { name: item.name, onReturn: () => restoreDetached(markId, 'button') } : undefined}
                   onRemove={
                     creator || page
@@ -865,7 +876,9 @@ export function App(props: Props) {
             reloadSeq={reloadSeq}
             tileSeq={tileSeq}
             renderPage={(page, key) =>
-              page.kind === 'activity' ? (
+              page.kind === 'signature' ? (
+                <SignatureView creator={donateFor} load={loadSignatures} />
+              ) : page.kind === 'activity' ? (
                 <ActivityWidget
                   loggedIn={loggedIn}
                   live={activityLive}
@@ -941,6 +954,7 @@ export function App(props: Props) {
             },
             { label: '활동 위젯', content: <ActivityPageTab onPick={pickPage} /> },
             { label: '후원 페이지', content: <DonatePageTab desktop={!!desktop} onPick={pickPage} /> },
+            { label: '시그니처', content: <SignaturePageTab onPick={pickPage} /> },
             { label: '채팅', content: <ChatPageTab desktop={!!desktop} onPick={pickPage} /> },
             { label: '웹페이지', content: <WebPageTab desktop={!!desktop} onPick={pickPage} /> },
           ]}

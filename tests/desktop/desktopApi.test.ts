@@ -38,3 +38,10 @@ test('desktopBridge: login은 로그인 창을 연다', async () => {
   await desktopBridge(a).request('login');
   expect(a.login).toHaveBeenCalled();
 });
+
+test('desktopBridge: signatures는 후원 아이디를 넘기고, 앱이 지원하지 않으면 NOT_SUPPORTED', async () => {
+  const signatures = vi.fn().mockResolvedValue({ ok: true, data: [{ Hash: 'h' }] });
+  await expect(desktopBridge(api({ signatures })).request('signatures', 'tag1')).resolves.toEqual([{ Hash: 'h' }]);
+  expect(signatures).toHaveBeenCalledWith('tag1');
+  await expect(desktopBridge(api()).request('signatures', 'tag1')).rejects.toThrow('NOT_SUPPORTED');
+});

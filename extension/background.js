@@ -111,6 +111,12 @@ const handlers = {
     await ensureHeaderRules();
     return toPageCreators(await client.search(query));
   },
+  /** 크리에이터 시그니처 목록 (로그인 없이도) */
+  async signatures(tag) {
+    if (typeof tag !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(tag)) throw new Error('BAD_TAG');
+    await ensureHeaderRules();
+    return client.getSignatures(tag);
+  },
   /** 투네이션 즐겨찾기 추가·해제 */
   async bookmark(p) {
     const tag = p && typeof p.tag === 'string' ? p.tag : '';

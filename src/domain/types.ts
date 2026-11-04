@@ -41,7 +41,14 @@ export interface ActivityPage {
   name: string;
 }
 
-export type PageSlot = WebPage | DonatePage | ChatPage | ActivityPage;
+/** 시그니처 칸: 선택한 방송 크리에이터의 투네이션 시그니처 목록 */
+export interface SignaturePage {
+  kind: 'signature';
+  key: string;
+  name: string;
+}
+
+export type PageSlot = WebPage | DonatePage | ChatPage | ActivityPage | SignaturePage;
 
 /** 새 창으로 분리한 칸의 자리 표시: 내용은 분리 창에 있고 칸에는 되돌리기·불러오기만 */
 export interface DetachedMark {

@@ -15,10 +15,10 @@ export interface ToonationAccount {
   cash?: number | null; // 캐시 잔액
 }
 
-export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites' | 'history' | 'search' | 'bookmark';
+export type BridgeRequest = 'status' | 'login' | 'logout' | 'favorites' | 'history' | 'search' | 'bookmark' | 'signatures';
 
 export interface ToonationBridge {
-  /** payload: search는 검색어, bookmark는 { tag, on } */
+  /** payload: search는 검색어, signatures는 후원 아이디, bookmark는 { tag, on } */
   request<T = unknown>(type: BridgeRequest, payload?: unknown): Promise<T>;
 }
 

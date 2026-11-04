@@ -116,11 +116,11 @@ class ToonationClient {
     this.ses = ses;
   }
 
-  async request(path, { json = true, allowAnon = false } = {}) {
+  async request(path, { json = true, allowAnon = false, headers = {} } = {}) {
     const url = path.startsWith('http') ? path : `${ORIGIN}${path}`;
     const r = await this.ses.fetch(url, {
       credentials: 'include',
-      headers: { Accept: 'application/json, text/plain, */*', Referer: `${ORIGIN}/donator` },
+      headers: { Accept: 'application/json, text/plain, */*', Referer: `${ORIGIN}/donator`, ...headers },
       bypassCustomProtocolHandlers: true,
     });
     // Electron's session.fetch may leave r.url empty; logged-out redirects are also caught by the HTML check below.
@@ -342,6 +342,26 @@ class ToonationClient {
         message: decodeHtml(String(r.Message || '')).replace(/^video:/, ''),
       })),
     };
+  }
+
+  /**
+   * 크리에이터 시그니처 목록 (후원 페이지의 '시그니처' 탭, 로그인 없이도):
+   * GET /dapi/donator/sign_token → 토큰 문자열, GET /dapi/donate/{tag} (Authorization: Bearer 토큰) → Conf.Signature.Signatures
+   */
+  async getSignatures(tag) {
+    const token = String((await this.request('/dapi/donator/sign_token', { json: false, allowAnon: true })) || '').trim();
+    const j = await this.request(`/dapi/donate/${encodeURIComponent(tag)}`, { allowAnon: true, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const list = (j && j.Conf && j.Conf.Signature && j.Conf.Signature.Signatures) || [];
+    // 화면에 쓰는 필드만
+    return (Array.isArray(list) ? list : []).map((s) => ({
+      Hash: s.Hash,
+      Name: s.Name,
+      Cash: s.Cash,
+      DonationCount: s.DonationCount,
+      Enabled: s.Enabled,
+      IsRandom: s.IsRandom,
+      Thumbnail: s.Thumbnail,
+    }));
   }
 
   chargeUrl() {

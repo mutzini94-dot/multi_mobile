@@ -49,8 +49,13 @@ function loadBackground(world) {
   };
   const json = (o) => ({ ok: true, status: 200, url: '', text: async () => JSON.stringify(o), clone() { return this; } });
   const html = (s) => ({ ok: true, status: 200, url: '', text: async () => s, clone() { return this; } });
-  const fetch = async (url) => {
+  const fetch = async (url, opts = {}) => {
     world.fetched.push(String(url));
+    if (url.endsWith('/dapi/donator/sign_token')) return html('TOK  ');
+    if (url.includes('/dapi/donate/')) {
+      world.auth = (opts.headers || {}).Authorization;
+      return json({ Conf: { Signature: { Signatures: [{ Hash: 'h1', Name: '시그', Cash: 5000, DonationCount: 2, Enabled: 1, IsRandom: 0, Thumbnail: 1, Message: '비밀' }] } } });
+    }
     if (url.includes('/dapi/donator/common')) return json({ Account: world.loggedIn ? { DisplayName: '나', TitleHash: 'h', Cash: 1200 } : null });
     if (url.includes('/dapi/donator/mypage/donation_history')) {
       if (!world.loggedIn) return html('<html>login</html>');
@@ -249,4 +254,16 @@ test('manifest: 필요한 권한만, 멀티뷰 주소에서만 중계', () => {
   assert.deepStrictEqual(m.host_permissions.sort(), ['https://gql.twitch.tv/*', 'https://toon.at/*', 'https://www.youtube.com/*']);
   assert.deepStrictEqual(m.content_scripts, [{ matches: ['http://localhost:5230/*', 'http://127.0.0.1:5230/*'], js: ['content/bridge.js'], run_at: 'document_start' }]);
   assert.strictEqual(m.externally_connectable, undefined);
+});
+
+test('signatures: 로그인 없이도 시그니처 목록 (sign_token 사용, 필요한 필드만)', async () => {
+  const w = world();
+  const { send } = loadBackground(w);
+  assert.deepStrictEqual(await send({ type: 'signatures', payload: 'tg_1' }), {
+    ok: true,
+    data: [{ Hash: 'h1', Name: '시그', Cash: 5000, DonationCount: 2, Enabled: 1, IsRandom: 0, Thumbnail: 1 }],
+  });
+  assert.strictEqual(w.auth, 'Bearer TOK');
+  assert.ok(w.fetched.includes('https://toon.at/dapi/donate/tg_1'));
+  assert.deepStrictEqual(await send({ type: 'signatures', payload: '../x' }), { ok: false, error: 'BAD_TAG' });
 });

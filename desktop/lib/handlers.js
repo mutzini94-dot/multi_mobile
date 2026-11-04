@@ -82,6 +82,11 @@ function createHandlers({ client, openLogin, resolveYouTube, checkLive = async (
       if (!query || query.length > 30) return { ok: false, error: 'BAD_QUERY' };
       return wrap(async () => toBridgeCreators(await client.search(query)))();
     },
+    // 크리에이터 시그니처 목록 (로그인 없이도)
+    signatures: async (tag) => {
+      if (typeof tag !== 'string' || !DONATE_TAG_RE.test(tag)) return { ok: false, error: 'BAD_TAG' };
+      return wrap(() => client.getSignatures(tag))();
+    },
     // 투네이션 즐겨찾기 추가·해제
     bookmark: async (p) => {
       const tag = p && typeof p.tag === 'string' ? p.tag : '';

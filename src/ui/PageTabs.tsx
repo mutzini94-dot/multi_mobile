@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { makeActivityPage, makeChatPage, makeDonatePage, makeWebPage } from '../domain/pages';
+import { makeActivityPage, makeSignaturePage, makeChatPage, makeDonatePage, makeWebPage } from '../domain/pages';
 import type { PageSlot } from '../domain/types';
 
 /** 불러오기 창 '활동 위젯' 탭 */
@@ -9,6 +9,18 @@ export function ActivityPageTab({ onPick }: { onPick(p: PageSlot): void }) {
       <p>즐겨찾기했거나 후원한 적 있는 크리에이터 중 지금 방송 중인 사람과, 내가 본 방송·후원·설정 변경 기록을 이 칸에 모아 보여 줍니다. 방송을 누르면 첫 번째 칸에 뜹니다.</p>
       <button type="button" className="btn btn--donate" onClick={() => onPick(makeActivityPage())}>
         활동 위젯 칸 넣기
+      </button>
+    </div>
+  );
+}
+
+/** 불러오기 창 '시그니처' 탭 */
+export function SignaturePageTab({ onPick }: { onPick(p: PageSlot): void }) {
+  return (
+    <div className="page-tab">
+      <p>선택한 방송 크리에이터의 투네이션 시그니처 목록(이름·금액·사용 횟수)을 이 칸에 띄웁니다. 이름·금액으로 찾고 인기순·금액순·이름순으로 정렬할 수 있습니다. 다른 방송 칸을 선택하면 그 크리에이터의 시그니처로 바뀝니다.</p>
+      <button type="button" className="btn btn--donate" onClick={() => onPick(makeSignaturePage())}>
+        시그니처 칸 넣기
       </button>
     </div>
   );

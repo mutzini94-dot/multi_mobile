@@ -1,5 +1,5 @@
 import type { Result } from './creatorInput';
-import type { ActivityPage, ChatPage, Creator, DonatePage, PageSlot, SlotItem, ViewState, WebPage } from './types';
+import type { ActivityPage, SignaturePage, ChatPage, Creator, DonatePage, PageSlot, SlotItem, ViewState, WebPage } from './types';
 import { visibleSlots } from '../layout/layouts';
 
 /** 칸 내용이 방송인지 (후원 페이지·웹페이지 칸이 아닌지) */
@@ -9,7 +9,7 @@ export function isStream(item: SlotItem | null | undefined): item is Creator {
 
 /** 후원 페이지·웹페이지 칸 (분리 표시는 아님) */
 export function isPage(item: SlotItem | null | undefined): item is PageSlot {
-  return !!item && 'kind' in item && (item.kind === 'web' || item.kind === 'donate' || item.kind === 'chat' || item.kind === 'activity');
+  return !!item && 'kind' in item && (item.kind === 'web' || item.kind === 'donate' || item.kind === 'chat' || item.kind === 'activity' || item.kind === 'signature');
 }
 
 /** 웹페이지 칸 주소: 주소만 넣으면 https://, http·https만 허용 */
@@ -49,6 +49,11 @@ export function makeChatPage(): ChatPage {
 /** 활동 위젯 칸: 즐겨찾기·후원 크리에이터의 라이브와 최근 활동 */
 export function makeActivityPage(): ActivityPage {
   return { kind: 'activity', key: newKey('activity'), name: '활동 위젯' };
+}
+
+/** 시그니처 칸: 선택한 방송 크리에이터의 시그니처 목록을 따라 보여준다 */
+export function makeSignaturePage(): SignaturePage {
+  return { kind: 'signature', key: newKey('signature'), name: '시그니처' };
 }
 
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;

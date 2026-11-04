@@ -22,6 +22,7 @@ export interface DesktopApi {
   webStoreSave?(snap: WebStoreSnapshot): void;
   search?(q: string): Promise<DesktopResult<ToonationFavorite[]>>; // 투네이션 크리에이터 검색
   bookmark?(tag: string, on: boolean): Promise<DesktopResult<object>>; // 투네이션 즐겨찾기 추가·해제
+  signatures?(tag: string): Promise<DesktopResult<unknown[]>>; // 크리에이터 시그니처 (src/toonation/signatures.ts)
   /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */
   openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[]; messages?: string[] }): void;
   closeDonate(): void;
@@ -80,6 +81,7 @@ export function desktopBridge(api: DesktopApi): ToonationBridge {
         history: api.history && (() => api.history!()),
         search: api.search && (() => api.search!(String(p ?? ''))),
         bookmark: api.bookmark && (() => api.bookmark!(String((p as { tag?: string })?.tag ?? ''), !!(p as { on?: boolean })?.on)),
+        signatures: api.signatures && (() => api.signatures!(String(p ?? ''))),
       };
       const call = calls[type];
       if (!call) throw new Error('NOT_SUPPORTED');
