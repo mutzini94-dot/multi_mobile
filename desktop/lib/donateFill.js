@@ -84,31 +84,22 @@ function selectSignatureScript(name, tag, cash, key) {
       return 'waiting';
     }
     if (popupOpen) {
-      const item = popupItems().find(match);
-      if (item) {
-        if (!/(^|\\s)_SelectedItem_/.test(image(item).className)) { image(item).click(); return 'focused'; }
-        // 넓은 화면은 항목 안 '사용하기', 모바일은 아래 '선택하기'
-        const go = [...item.querySelectorAll('button')].find(vis) || submit();
-        if (!go) return 'waiting';
-        st.applied = true;
-        go.click();
-        return 'applied';
-      }
-      const s = search();
-      if (!s) {
-        // 모바일: 위쪽 돋보기 버튼을 눌러야 검색 칸이 나온다
-        const open = [...document.querySelectorAll('button.ScreenButton')].filter(vis).find((b) => { const d = b.querySelector('path'); return !!d && (d.getAttribute('d') || '').startsWith('M15.5 14h'); });
-        if (open) { open.click(); return 'search-open'; }
-        return 'waiting';
-      }
-      // 검색어를 넣은 다음 차례에 검색한다 (같은 순간에 누르면 페이지가 이전 검색어로 찾는다)
-      if (s.value !== Q) {
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(s, Q);
-        s.dispatchEvent(new Event('input', { bubbles: true }));
-        st.searched = null;
-        return 'typed';
-      }
+      // 전체보기 창은 나눠서 불러오므로(시그니처가 많으면 처음엔 일부만) 먼저 검색해 좁힌다
       if (st.searched !== Q) {
+        const s = search();
+        if (!s) {
+          // 모바일: 위쪽 돋보기 버튼을 눌러야 검색 칸이 나온다
+          const open = [...document.querySelectorAll('button.ScreenButton')].filter(vis).find((b) => { const d = b.querySelector('path'); return !!d && (d.getAttribute('d') || '').startsWith('M15.5 14h'); });
+          if (open && !st.opened) { st.opened = true; open.click(); return 'search-open'; }
+          if (!open) st.searched = Q; // 검색 칸이 없는 화면이면 목록에서 바로 찾는다
+          return 'waiting';
+        }
+        // 검색어를 넣은 다음 차례에 검색한다 (같은 순간에 누르면 페이지가 이전 검색어로 찾는다)
+        if (s.value !== Q) {
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(s, Q);
+          s.dispatchEvent(new Event('input', { bubbles: true }));
+          return 'typed';
+        }
         for (const t of ['keydown', 'keypress', 'keyup']) s.dispatchEvent(new KeyboardEvent(t, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
         const box = s.closest('.Input');
         const icon = box && box.querySelector(':scope > .InputContainer > span');
@@ -116,7 +107,20 @@ function selectSignatureScript(name, tag, cash, key) {
         st.searched = Q;
         return 'searched';
       }
-      return 'waiting';
+      const item = popupItems().find(match);
+      if (!item) {
+        // 검색 결과가 그려지지 않은 채로 멈추기도 한다: 한동안 안 보이면 다시 검색한다
+        st.miss = (st.miss || 0) + 1;
+        if (st.miss > 4) { st.miss = 0; st.searched = null; st.opened = false; }
+        return 'waiting';
+      }
+      if (!/(^|\\s)_SelectedItem_/.test(image(item).className)) { image(item).click(); return 'focused'; }
+      // 넓은 화면은 항목 안 '사용하기', 모바일은 아래 '선택하기'
+      const go = [...item.querySelectorAll('button')].find(vis) || submit();
+      if (!go) return 'waiting';
+      st.applied = true;
+      go.click();
+      return 'applied';
     }
     const tab = [...document.querySelectorAll('#baselayout .TabItem')].find((t) => t.textContent.trim() === '시그니처');
     if (!tab) return document.querySelector('#baselayout .TabItem') ? 'no-signature-tab' : 'waiting';
@@ -132,7 +136,7 @@ function selectSignatureScript(name, tag, cash, key) {
 const DONE = new Set(['ok', 'no-signature-tab']);
 
 /** 후원창이 뜨고 페이지가 그려질 때까지 시그니처 고르기를 되풀이한다 (view: 지금 후원창 WebContentsView를 돌려주는 함수) */
-async function selectSignature(view, name, tag, cash, { tries = 30, interval = 400 } = {}) {
+async function selectSignature(view, name, tag, cash, { tries = 60, interval = 400 } = {}) {
   const code = selectSignatureScript(name, tag, cash, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   let last = 'timeout';
   for (let i = 0; i < tries; i++) {

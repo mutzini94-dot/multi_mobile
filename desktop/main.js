@@ -615,6 +615,8 @@ function runSmoke(outDir) {
         result.donate.url = dv.webContents.getURL();
         result.donate.inputs = await dv.webContents.executeJavaScript("[...document.querySelectorAll('input[type=text]')].map((i) => i.value)").catch(() => null);
         result.donate.textareas = await dv.webContents.executeJavaScript("[...document.querySelectorAll('textarea')].map((i) => i.value)").catch(() => null);
+        // MV_SMOKE_DONATE_SCRIPT=<js 파일>: 후원창 페이지에서 실행해 결과를 남긴다 (점검용)
+        if (process.env.MV_SMOKE_DONATE_SCRIPT) result.donate.probe = await dv.webContents.executeJavaScript(fs.readFileSync(process.env.MV_SMOKE_DONATE_SCRIPT, 'utf8'), true).catch((e) => String(e));
         await shot(dv.webContents, 'donate.png');
       }
       if (pipWin && !pipWin.isDestroyed()) {
