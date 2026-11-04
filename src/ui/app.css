@@ -514,7 +514,8 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .signature__tools { display: flex; gap: 6px; }
 .signature__tools input { width: 140px; }
 .signature__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
-.signature-card { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.signature-card { display: flex; flex-direction: column; gap: 2px; width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.signature-card:hover .signature-card__thumb, .signature-card:focus-visible .signature-card__thumb { box-shadow: 0 0 0 2px var(--primary); }
 .signature-card__thumb { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; overflow: hidden; border-radius: var(--r-md); background: var(--surface); color: var(--ink-mute); font-size: 22px; }
 .signature-card__thumb img { width: 100%; height: 100%; object-fit: cover; }
 .signature-card__name { margin-top: 4px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

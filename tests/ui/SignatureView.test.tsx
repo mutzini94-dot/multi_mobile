@@ -70,3 +70,10 @@ test('다른 크리에이터를 선택하면 그 크리에이터의 시그니처
   expect(await screen.findByText('둘 시그니처 · 1개')).toBeInTheDocument();
   expect(screen.getByLabelText('시그니처 검색')).toHaveValue('');
 });
+
+test('시그니처를 누르면 그 시그니처로 후원하기 (onPick)', async () => {
+  const onPick = vi.fn();
+  render(<SignatureView creator={creator} load={vi.fn(async () => sigs)} onPick={onPick} />);
+  fireEvent.click(await screen.findByRole('button', { name: '딱밤 · 5,000캐시 시그니처로 후원하기' }));
+  expect(onPick).toHaveBeenCalledWith(sigs[1]);
+});

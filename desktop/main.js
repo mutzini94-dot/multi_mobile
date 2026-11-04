@@ -18,7 +18,7 @@ const { restoreBounds } = require('./lib/windowBounds');
 const { createAppOptions, APP_OPTION_DEFAULTS } = require('./lib/appOptions');
 const { Updater } = require('./lib/updater');
 const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION } = require('./lib/webviewPolicy');
-const { fillAmountScript, fillMessageScript } = require('./lib/donateFill');
+const { fillAmountScript, fillMessageScript, selectSignature } = require('./lib/donateFill');
 const { useMobileDonatePage } = require('./lib/mobileDonate');
 const { createHandlers } = require('./lib/handlers');
 const { APP_NAME, appUserModelId, userDataDir } = require('./lib/appIdentity');
@@ -473,6 +473,11 @@ function wireIpc() {
       return;
     }
     v.webContents.executeJavaScript(code).catch(() => {});
+  });
+  // 시그니처로 후원: 막 연 후원창의 시그니처 탭에서 그 시그니처를 고른다 (페이지가 그려질 때까지 되풀이, 후원 버튼은 사용자가)
+  ipcMain.handle('mv:donate:signature', (e, p) => {
+    if (!fromWin(e) || !p) return 'forbidden';
+    return selectSignature(() => donate.view(), String(p.name), String(p.tag)).catch(() => 'error');
   });
   ipcMain.on('mv:donate:fill', (e, amount) => {
     if (!(fromWin(e) || fromPip(e))) return;

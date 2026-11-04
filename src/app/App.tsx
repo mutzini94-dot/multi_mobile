@@ -6,7 +6,7 @@ import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type Po
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ActivityPageTab, ChatPageTab, DonatePageTab, SignaturePageTab, WebPageTab } from '../ui/PageTabs';
 import { SignatureView } from '../ui/SignatureView';
-import { parseSignatures } from '../toonation/signatures';
+import { parseSignatures, type Signature } from '../toonation/signatures';
 import { ActivityWidget } from '../ui/ActivityWidget';
 import { RecommendLiveDialog } from '../ui/RecommendLiveDialog';
 import { RecommendLive } from '../ui/RecommendLive';
@@ -550,6 +550,23 @@ export function App(props: Props) {
     }
     openPopup(c);
   };
+  // 시그니처로 후원: 후원창을 열고 그 시그니처를 골라 둔다 (설치형). 웹 팝업은 다른 사이트라 고르는 방법을 알린다
+  const donateSignature = (s: Signature) => {
+    if (!donateFor) return;
+    const tag = donateFor.donateId;
+    const label = `'${s.name}'(${s.cash.toLocaleString('ko-KR')}캐시)`;
+    const manual = `후원창의 시그니처 탭에서 ${label}를 골라 주세요`;
+    donateTo(donateFor);
+    if (!desktop?.selectSignature) {
+      setMessage(manual);
+      return;
+    }
+    setMessage(`후원창에서 ${label} 시그니처를 고르는 중…`);
+    desktop.selectSignature(s.name, tag).then(
+      (r) => setMessage(r === 'ok' ? `후원창에 ${label} 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요` : manual),
+      () => setMessage(manual),
+    );
+  };
   const onDonate = () => {
     if (donateTarget) donateTo(donateTarget);
   };
@@ -877,7 +894,7 @@ export function App(props: Props) {
             tileSeq={tileSeq}
             renderPage={(page, key) =>
               page.kind === 'signature' ? (
-                <SignatureView creator={donateFor} load={loadSignatures} />
+                <SignatureView creator={donateFor} load={loadSignatures} onPick={donateSignature} />
               ) : page.kind === 'activity' ? (
                 <ActivityWidget
                   loggedIn={loggedIn}

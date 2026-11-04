@@ -5,10 +5,11 @@ import { filterSignatures, sortSignatures, SIGNATURE_SORTS, type Signature, type
 interface Props {
   creator: Creator | null; // 선택한 방송의 크리에이터 (없으면 안내)
   load(tag: string): Promise<Signature[]>;
+  onPick?(s: Signature): void; // 누르면 그 시그니처로 후원하기
 }
 
 /** 시그니처 칸: 선택한 방송 크리에이터의 시그니처 목록 (검색·정렬) */
-export function SignatureView({ creator, load }: Props) {
+export function SignatureView({ creator, load, onPick }: Props) {
   const tag = creator?.donateId ?? '';
   const [list, setList] = useState<Signature[] | null>(null);
   const [error, setError] = useState(false);
@@ -64,13 +65,19 @@ export function SignatureView({ creator, load }: Props) {
       {shown.length > 0 && (
         <ul className="signature__grid" aria-label="시그니처 목록">
           {shown.map((s) => (
-            <li key={s.hash} className="signature-card">
-              <span className="signature-card__thumb">{s.image ? <img src={s.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span aria-hidden="true">♪</span>}</span>
-              <span className="signature-card__name" title={s.name}>
-                {s.name}
-              </span>
-              <span className="signature-card__cash">{s.cash.toLocaleString('ko-KR')}캐시</span>
-              <span className="signature-card__count">{s.count.toLocaleString('ko-KR')}회</span>
+            <li key={s.hash}>
+              <button
+                type="button"
+                className="signature-card"
+                aria-label={`${s.name} · ${s.cash.toLocaleString('ko-KR')}캐시 시그니처로 후원하기`}
+                title="이 시그니처로 후원하기"
+                onClick={() => onPick?.(s)}
+              >
+                <span className="signature-card__thumb">{s.image ? <img src={s.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span aria-hidden="true">♪</span>}</span>
+                <span className="signature-card__name">{s.name}</span>
+                <span className="signature-card__cash">{s.cash.toLocaleString('ko-KR')}캐시</span>
+                <span className="signature-card__count">{s.count.toLocaleString('ko-KR')}회</span>
+              </button>
             </li>
           ))}
         </ul>
