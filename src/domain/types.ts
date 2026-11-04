@@ -25,6 +25,7 @@ export interface DonatePage {
   kind: 'donate';
   key: string;
   name: string;
+  pin?: Creator; // 이 방송에 고정 (없으면 선택한 방송을 따라간다)
 }
 
 /** 채팅 칸: 선택한 방송의 트위치·유튜브 라이브 채팅 */
@@ -32,6 +33,7 @@ export interface ChatPage {
   kind: 'chat';
   key: string;
   name: string;
+  pin?: Creator;
 }
 
 /** 활동 위젯 칸: 즐겨찾기·후원 크리에이터의 라이브와 시청·후원·설정 변경 기록 */
@@ -46,6 +48,7 @@ export interface SignaturePage {
   kind: 'signature';
   key: string;
   name: string;
+  pin?: Creator;
 }
 
 export type PageSlot = WebPage | DonatePage | ChatPage | ActivityPage | SignaturePage;

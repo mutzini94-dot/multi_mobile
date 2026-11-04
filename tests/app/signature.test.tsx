@@ -103,3 +103,31 @@ test('설치형: 시그니처를 고르지 못하면 직접 고르라고 알린�
   fireEvent.click(await addSignatureTile());
   expect(await screen.findByText("후원창의 시그니처 탭에서 'A의시그'(5,000캐시)를 골라 주세요 (자동 선택 실패: timeout:popup)")).toBeInTheDocument();
 });
+
+test('설치형: 그 크리에이터의 후원 페이지 칸이 있으면 새 후원창 대신 그 칸에서 시그니처를 고른다', async () => {
+  const proto = HTMLElement.prototype as unknown as { getWebContentsId?: () => number };
+  proto.getWebContentsId = () => 42;
+  try {
+    const selectSignature = vi.fn().mockResolvedValue('ok');
+    const desktop = {
+      status: vi.fn().mockResolvedValue({ ok: true, data: { account: null } }),
+      login: vi.fn(), logout: vi.fn(),
+      favorites: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      signatures: vi.fn().mockResolvedValue({ ok: true, data: [{ Hash: 'h1', Name: 'A의시그', Cash: 5000, DonationCount: 1, Enabled: 1, IsRandom: 0, Thumbnail: 0 }] }),
+      selectSignature,
+      openDonate: vi.fn(), closeDonate: vi.fn(), setDonateBounds: vi.fn(), setDonateMode: vi.fn(), fillDonate: vi.fn(), setAlwaysOnTop: vi.fn(),
+      onDonateClosed: vi.fn(() => () => {}), onDonateMode: vi.fn(() => () => {}),
+    } as unknown as DesktopApi;
+    setup(desktop);
+    pickFav(0, 'A');
+    const dlg = openPicker(2);
+    fireEvent.click(within(dlg).getByRole('tab', { name: '후원 페이지' }));
+    fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 칸 넣기' }));
+    fireEvent.click(await addSignatureTile());
+    expect(selectSignature).toHaveBeenCalledWith('A의시그', 'tagA', 5000, 42);
+    expect(desktop.openDonate).not.toHaveBeenCalled();
+    expect(await screen.findByText("후원 페이지 칸에 'A의시그'(5,000캐시) 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요")).toBeInTheDocument();
+  } finally {
+    delete proto.getWebContentsId;
+  }
+});

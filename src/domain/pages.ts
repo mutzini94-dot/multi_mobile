@@ -56,6 +56,17 @@ export function makeSignaturePage(): SignaturePage {
   return { kind: 'signature', key: newKey('signature'), name: '시그니처' };
 }
 
+/** 방송에 고정할 수 있는 칸 (선택한 방송을 따라가는 칸) */
+export function isPinnable(item: SlotItem | null | undefined): item is DonatePage | ChatPage | SignaturePage {
+  return isPage(item) && (item.kind === 'donate' || item.kind === 'chat' || item.kind === 'signature');
+}
+
+/** 페이지 칸이 보여 줄 방송: 고정한 방송 > 따라가는 방송(선택한 방송) */
+export function pageTarget(page: PageSlot, follow: Creator | null): Creator | null {
+  if (!isPinnable(page)) return null;
+  return page.pin ?? follow;
+}
+
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
 /**

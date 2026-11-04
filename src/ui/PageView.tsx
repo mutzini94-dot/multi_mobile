@@ -6,6 +6,7 @@ import type { PageSlot } from '../domain/types';
 export interface PageHandle {
   back(): void;
   reload(): void;
+  webContentsId?(): number | null; // 설치형 webview의 페이지 id (후원 페이지 칸에서 시그니처 고르기)
 }
 
 /** 설치형 webview 세션: 후원 페이지는 앱의 투네이션 로그인 세션, 웹페이지는 따로 */
@@ -45,6 +46,14 @@ export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText =
           else (el as WebviewEl | null)?.reload?.();
         } catch {
           // 아직 페이지를 읽기 전
+        }
+      },
+      webContentsId: () => {
+        try {
+          const id = (ref.current as (HTMLElement & { getWebContentsId?(): number }) | null)?.getWebContentsId?.();
+          return Number.isInteger(id) ? (id as number) : null;
+        } catch {
+          return null; // 아직 붙기 전
         }
       },
     });

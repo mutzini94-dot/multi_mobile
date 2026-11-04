@@ -15,7 +15,7 @@ interface Props {
   onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
   volume?: { value: number; onChange(v: number): void }; // 여러 칸 동시 듣기: 칸별 볼륨
   // 페이지 칸(후원 페이지·웹페이지): 위쪽 바가 영상 위에 겹치지 않고 페이지 위에 따로 놓인다. 소리 버튼 없음
-  page?: { label: string; onBack?(): void; onReload?(): void; onOpenWindow?(): void };
+  page?: { label: string; onBack?(): void; onReload?(): void; onOpenWindow?(): void; pin?: { name: string | null; onClick(): void } }; // pin: 📌 방송에 고정 (name = 고정한 방송)
   onDetach?(): void; // 이 칸을 새 창으로 분리
   liveInfo?: string; // 방송 정보 한 줄 (시청자 수 · 방송한 시간 · 제목)
   // 새 창으로 분리한 칸: "{이름} · 새 창으로 분리됨"과 되돌리기 · 불러오기(다른 방송 넣기)
@@ -29,6 +29,8 @@ interface Props {
     source: boolean; // 지금 끄고 있는 방송의 원래 자리
     onPress(e: PointerEvent): void;
   };
+  acceptCard?: boolean; // 추천 라이브·활동 위젯·퀵패널 카드를 끌어 이 칸에 놓을 수 있다 (놓기는 App이 창 전체에서 받는다)
+  cardOver?: boolean; // 카드를 이 칸 위로 끌고 있다
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
@@ -55,9 +57,10 @@ export function Tile(props: Props) {
     );
   return (
     <div
-      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${dnd?.over ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
+      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${dnd?.over || props.cardOver ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
       data-slot={dnd?.slot}
       data-drop={dnd?.canDrop ? '1' : undefined}
+      data-card={props.acceptCard ? '1' : undefined}
     >
       {filled && <div className="tile__player" ref={playerSlotRef} />}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
@@ -107,6 +110,21 @@ export function Tile(props: Props) {
             )}
             <span className="tile__name">{page.label}</span>
             <span className="tile__bar-gap" />
+            {page.pin && (
+              <button
+                type="button"
+                className={`sound tile__pin${page.pin.name ? ' tile__pin--on' : ''}`}
+                aria-label={page.pin.name ? `${page.pin.name}에 고정됨 · 바꾸기` : '방송에 고정'}
+                aria-pressed={!!page.pin.name}
+                title={page.pin.name ? `${page.pin.name} 방송에 고정됨 (누르면 바꾸기·해제)` : '선택한 방송을 따라가는 대신 한 방송에 고정'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  page.pin!.onClick();
+                }}
+              >
+                📌
+              </button>
+            )}
             {barButton('뒤로', '←', page.onBack)}
             {barButton('새로고침', '⟳', page.onReload)}
             {barButton('새 창으로 열기', '↗', page.onOpenWindow)}

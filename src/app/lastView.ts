@@ -7,7 +7,7 @@ import type { KV } from '../storage/safeStorage';
 /** 마지막 화면(레이아웃·칸·칸 크기): 다음 실행에서 복원 (설정: 시작할 때 마지막 화면 복원) */
 export const LAST_VIEW_KEY = 'mv.lastView.v1';
 
-type SavedSlot = (CreatorInput & { source: Creator['source'] }) | { kind: 'web'; url: string } | { kind: 'donate' } | { kind: 'chat' } | { kind: 'activity' } | { kind: 'signature' } | null;
+type SavedSlot = (CreatorInput & { source: Creator['source'] }) | { kind: 'web'; url: string } | { kind: 'donate' | 'chat' | 'signature'; pin?: CreatorInput & { source: Creator['source'] } } | { kind: 'activity' } | null;
 /** 저장 형식 (마지막 화면·화면 구성 저장 공통) */
 export interface SavedView {
   v: 1;
@@ -24,7 +24,9 @@ export function serializeView(state: ViewState): SavedView {
         ? { name: c.name, donateId: c.donateId, platform: c.platform, channel: c.channel, source: c.source }
         : c.kind === 'web'
           ? { kind: 'web', url: c.url }
-          : { kind: c.kind },
+          : c.kind !== 'activity' && c.pin
+            ? { kind: c.kind, pin: { name: c.pin.name, donateId: c.pin.donateId, platform: c.pin.platform, channel: c.pin.channel, source: c.pin.source } }
+            : { kind: c.kind },
   );
   return { v: 1, layout: state.layout, sizes: state.sizes, slots };
 }
@@ -41,7 +43,10 @@ export function parseView(raw: unknown): ViewState | null {
       continue;
     }
     if (s.kind === 'donate' || s.kind === 'chat' || s.kind === 'activity' || s.kind === 'signature') {
-      slots.push(s.kind === 'donate' ? makeDonatePage() : s.kind === 'chat' ? makeChatPage() : s.kind === 'activity' ? makeActivityPage() : makeSignaturePage());
+      const page = s.kind === 'donate' ? makeDonatePage() : s.kind === 'chat' ? makeChatPage() : s.kind === 'activity' ? makeActivityPage() : makeSignaturePage();
+      // 고정한 방송 (잘못된 값이면 고정 없이)
+      const pin = s.kind !== 'activity' && s.pin && typeof s.pin === 'object' ? makeCreator(s.pin as CreatorInput, (s.pin as { source?: unknown }).source === 'toonation' ? 'toonation' : 'manual') : null;
+      slots.push(pin?.ok && page.kind !== 'activity' ? { ...page, pin: pin.value } : page);
       continue;
     }
     if (s.kind === 'web') {

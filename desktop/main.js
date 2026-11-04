@@ -7,7 +7,7 @@
 // 개발: `npm run dev` 는 vite 개발 서버(http://localhost:5230)를 띄운 상태에서 실행한다.
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell, Tray, Menu, nativeImage, Notification } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell, Tray, Menu, nativeImage, Notification, webContents } = require('electron');
 const { ToonationClient, ORIGIN } = require('./lib/toonation');
 const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
@@ -477,6 +477,12 @@ function wireIpc() {
   // 시그니처로 후원: 막 연 후원창의 시그니처 탭에서 그 시그니처를 고른다 (페이지가 그려질 때까지 되풀이, 후원 버튼은 사용자가)
   ipcMain.handle('mv:donate:signature', (e, p) => {
     if (!fromWin(e) || !p) return 'forbidden';
+    // 후원 페이지 칸(메인 창 안의 webview)에서 고르기: 메인 창의 webview이고 투네이션 후원 페이지일 때만
+    if (p.wcId) {
+      const wc = webContents.fromId(Number(p.wcId));
+      if (!wc || wc.isDestroyed() || wc.hostWebContents !== win.webContents || !isDonateUrl(wc.getURL())) return 'forbidden';
+      return selectSignature(() => ({ webContents: wc }), String(p.name), String(p.tag), Number(p.cash)).catch(() => 'error');
+    }
     return selectSignature(() => donate.view(), String(p.name), String(p.tag), Number(p.cash)).catch(() => 'error');
   });
   ipcMain.on('mv:donate:fill', (e, amount) => {

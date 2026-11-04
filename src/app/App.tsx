@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
-import { chatUrl, donatePageUrl, followDonateCreator, isPage, isStream } from '../domain/pages';
+import { chatUrl, donatePageUrl, followDonateCreator, isPage, isPinnable, isStream, pageTarget } from '../domain/pages';
+import { PinDialog } from '../ui/PinDialog';
+import { hasCreatorDrag, readCreatorDrag } from './creatorDrag';
 import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type PopularLive } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ActivityPageTab, ChatPageTab, DonatePageTab, SignaturePageTab, WebPageTab } from '../ui/PageTabs';
@@ -169,6 +171,14 @@ export function App(props: Props) {
   useEffect(() => () => clearTimeout(settleTimer.current), []);
   const tileDrag = useTileDrag(
     (from, to) => {
+      const src = stateRef.current.slots[from];
+      const dst = stateRef.current.slots[to];
+      // 방송 칸을 후원 페이지·채팅·시그니처 칸에 놓으면 자리를 바꾸지 않고 그 방송에 고정한다
+      if (isStream(src) && isPinnable(dst)) {
+        dispatch({ type: 'pinPage', slot: to, creator: src });
+        settle([from]);
+        return;
+      }
       dispatch({ type: 'swap', from, to });
       settle([from, to]);
     },
@@ -225,38 +235,116 @@ export function App(props: Props) {
   // 채팅 칸: 유튜브는 라이브 영상 ID로만 채팅을 열 수 있다. 라이브 목록에서 고른 방송은 이미 알고,
   // 채널로 넣은 방송은 플레이어가 재생을 시작한 뒤 알려 주므로 채팅 칸이 있는 동안 잠깐씩 물어본다
   const [ytLive, setYtLive] = useState<Record<string, string>>({});
-  const hasChat = state.slots.some((s) => isPage(s) && s.kind === 'chat') || detached.some((d) => isPage(d.item) && d.item.kind === 'chat');
-  const chatVideoId = donateFor?.platform === 'youtube' ? (donateFor.videoId ?? ytLive[donateFor.key] ?? null) : null;
+  // 페이지 칸(후원 페이지·채팅·시그니처)이 보여 줄 방송: 고정한 방송 > 선택한 방송
+  const targetOf = (page: PageSlot) => pageTarget(page, donateFor);
+  const videoIdOf = (c: Creator | null) => (c?.platform === 'youtube' ? (c.videoId ?? ytLive[c.key] ?? null) : null);
+  const chatTargets = [...state.slots, ...detached.map((d) => d.item)]
+    .filter((s): s is PageSlot => isPage(s) && s.kind === 'chat')
+    .map(targetOf)
+    .filter((c): c is Creator => !!c && c.platform === 'youtube' && !videoIdOf(c));
+  const chatTargetSig = chatTargets.map((c) => c.key).join(',');
   useEffect(() => {
-    if (!hasChat || !donateFor || donateFor.platform !== 'youtube' || chatVideoId) return;
+    if (!chatTargets.length) return;
     const read = () => {
-      const slot = stateRef.current.slots.findIndex((s) => isStream(s) && s.key === donateFor.key);
-      const k = slot >= 0 ? keys[slot] : null;
-      const id = k ? handles[k]?.videoId?.() : null;
-      if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) setYtLive((m) => (m[donateFor.key] === id ? m : { ...m, [donateFor.key]: id }));
+      for (const c of chatTargets) {
+        const slot = stateRef.current.slots.findIndex((s) => isStream(s) && s.key === c.key);
+        const k = slot >= 0 ? keys[slot] : null;
+        const id = k ? handles[k]?.videoId?.() : null;
+        if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) setYtLive((m) => (m[c.key] === id ? m : { ...m, [c.key]: id }));
+      }
     };
     read();
     const t = setInterval(read, 2000);
     return () => clearInterval(t);
-  }, [hasChat, donateFor, chatVideoId, keys, handles]);
-  // 분리 창에 가 있는 후원 페이지·채팅도 따라갈 방송을 알려 준다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatTargetSig, keys, handles]);
+  // 분리 창에 가 있는 후원 페이지·채팅도 보여 줄 방송을 알려 준다
+  const detachedTargetSig = detached.map((d) => (isPage(d.item) ? `${d.id}:${targetOf(d.item)?.key ?? ''}:${videoIdOf(targetOf(d.item)) ?? ''}` : '')).join('|');
   useEffect(() => {
     for (const d of detached)
-      if (isPage(d.item) && (d.item.kind === 'donate' || d.item.kind === 'chat')) detachHost.post(d.id, { type: 'donateFor', creator: donateFor, videoId: chatVideoId });
-  }, [donateFor, chatVideoId, detached, detachHost]);
+      if (isPage(d.item) && (d.item.kind === 'donate' || d.item.kind === 'chat')) {
+        const c = targetOf(d.item);
+        detachHost.post(d.id, { type: 'donateFor', creator: c, videoId: videoIdOf(c) });
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detachedTargetSig, detachHost]);
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  const pageUrl = (page: PageSlot) =>
-    page.kind === 'web' ? page.url : page.kind === 'activity' || page.kind === 'signature' || !donateFor ? null : page.kind === 'donate' ? donatePageUrl(donateFor) : chatUrl(donateFor, chatVideoId, embed, host);
+  const pageUrl = (page: PageSlot) => {
+    if (page.kind === 'web') return page.url;
+    const c = targetOf(page);
+    if (page.kind === 'activity' || page.kind === 'signature' || !c) return null;
+    return page.kind === 'donate' ? donatePageUrl(c) : chatUrl(c, videoIdOf(c), embed, host);
+  };
   const pageEmptyText = (page: PageSlot) =>
     page.kind !== 'chat'
       ? '후원할 방송 칸을 선택하세요'
-      : donateFor?.platform === 'youtube'
+      : targetOf(page)?.platform === 'youtube'
         ? '유튜브 채팅은 방송이 재생되면 표시됩니다'
         : '채팅을 볼 방송 칸을 선택하세요';
-  const pageLabel = (page: PageSlot) =>
-    page.kind === 'web' || page.kind === 'activity' || !donateFor
-      ? page.name
-      : `${donateFor.name} ${page.kind === 'donate' ? '후원 페이지' : page.kind === 'signature' ? '시그니처' : '채팅'}`;
+  const pageLabel = (page: PageSlot) => {
+    const c = targetOf(page);
+    return page.kind === 'web' || page.kind === 'activity' || !c ? page.name : `${c.name} ${page.kind === 'donate' ? '후원 페이지' : page.kind === 'signature' ? '시그니처' : '채팅'}`;
+  };
+  // 📌 페이지 칸을 방송에 고정 (고정할 방송 고르기 창)
+  const [pinSlot, setPinSlot] = useState<number | null>(null);
+  // 카드(추천 라이브·활동 위젯·퀵패널)를 칸으로 끄는 중: 플레이어·페이지가 끌기를 가로채지 않게, 추천 라이브 창은 비켜 준다
+  const [cardDrag, setCardDrag] = useState(false);
+  const [cardOverSlot, setCardOverSlot] = useState<number | null>(null); // 카드를 끌고 있는 칸 (테두리 강조)
+  useEffect(() => {
+    // 끌기를 시작한 그 순간에 화면을 바꾸면 브라우저가 끌기를 취소하므로 다음 차례에 바꾼다
+    const start = (e: DragEvent) => hasCreatorDrag(e.dataTransfer) && setTimeout(() => setCardDrag(true), 0);
+    const end = () => {
+      setCardDrag(false);
+      setCardOverSlot(null);
+    };
+    // 놓기는 창 전체에서 받아 커서 아래의 칸을 찾는다: 끌기를 막 시작한 순간에는 영상 위 층이 아직 끌기를 받고 있어서
+    const slotAt = (e: DragEvent): number | null => {
+      const direct = (e.target as Element | null)?.closest?.('.tile[data-slot]') as HTMLElement | null;
+      const tile = direct ?? ((document.elementsFromPoint?.(e.clientX, e.clientY) ?? []).map((el) => el.closest('.tile[data-slot]')).find(Boolean) as HTMLElement | undefined);
+      if (!tile || tile.dataset.card !== '1') return null;
+      const n = Number(tile.dataset.slot);
+      return Number.isInteger(n) ? n : null;
+    };
+    const over = (e: DragEvent) => {
+      if (!hasCreatorDrag(e.dataTransfer)) return;
+      const slot = slotAt(e);
+      setCardOverSlot(slot);
+      if (slot === null) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const drop = (e: DragEvent) => {
+      end();
+      if (!e.dataTransfer || !hasCreatorDrag(e.dataTransfer)) return;
+      const slot = slotAt(e);
+      const c = readCreatorDrag(e.dataTransfer);
+      if (slot === null || !c) return;
+      e.preventDefault();
+      dropCreatorRef.current(slot, c);
+    };
+    window.addEventListener('dragstart', start);
+    window.addEventListener('dragend', end);
+    window.addEventListener('dragenter', over); // 빨리 놓으면 그 자리에서는 dragenter만 오므로 이것도 받아 준다
+    window.addEventListener('dragover', over);
+    window.addEventListener('drop', drop);
+    return () => {
+      window.removeEventListener('dragstart', start);
+      window.removeEventListener('dragend', end);
+      window.removeEventListener('dragenter', over);
+      window.removeEventListener('dragover', over);
+      window.removeEventListener('drop', drop);
+    };
+  }, []);
+  /** 끌어 온 방송을 칸에 놓기: 후원 페이지·채팅·시그니처 칸이면 그 방송에 고정, 아니면 그 칸에 띄운다 */
+  const dropCreator = (slot: number, c: Creator) => {
+    setCardDrag(false);
+    if (isPinnable(stateRef.current.slots[slot])) dispatch({ type: 'pinPage', slot, creator: c });
+    else dispatch({ type: 'assign', slot, creator: c });
+    setLivePick(null);
+    setLiveOpen(false);
+  };
+  const dropCreatorRef = useRef(dropCreator);
+  dropCreatorRef.current = dropCreator;
   // 시그니처 칸: 선택한 방송 크리에이터의 시그니처 (로그인 없이도)
   const loadSignatures = useCallback((tag: string) => bridge.request<unknown[]>('signatures', tag).then(parseSignatures), [bridge]);
 
@@ -554,12 +642,25 @@ export function App(props: Props) {
     openPopup(c);
   };
   // 시그니처로 후원: 후원창을 열고 그 시그니처를 골라 둔다 (설치형). 웹 팝업은 다른 사이트라 고르는 방법을 알린다
-  const donateSignature = (s: Signature) => {
-    if (!donateFor) return;
-    const tag = donateFor.donateId;
+  const donateSignature = (s: Signature, c: Creator | null) => {
+    if (!c) return;
+    const tag = c.donateId;
     const label = `'${s.name}'(${s.cash.toLocaleString('ko-KR')}캐시)`;
     const manual = `후원창의 시그니처 탭에서 ${label}를 골라 주세요`;
-    donateTo(donateFor);
+    // 그 크리에이터의 후원 페이지 칸이 떠 있으면 새 후원창 대신 그 칸에서 고른다 (설치형)
+    const tileSlot = desktop?.selectSignature
+      ? visibleSlots(state).findIndex((p) => isPage(p) && p.kind === 'donate' && targetOf(p)?.donateId === tag)
+      : -1;
+    const tileWc = tileSlot >= 0 && keys[tileSlot] ? pageHandles.current[keys[tileSlot]!]?.webContentsId?.() : null;
+    if (desktop?.selectSignature && tileWc) {
+      setMessage(`후원 페이지 칸에서 ${label} 시그니처를 고르는 중…`);
+      desktop.selectSignature(s.name, tag, s.cash, tileWc).then(
+        (r) => setMessage(r === 'ok' ? `후원 페이지 칸에 ${label} 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요` : `후원 페이지 칸의 시그니처 탭에서 ${label}를 골라 주세요 (자동 선택 실패: ${r})`),
+        () => setMessage(manual),
+      );
+      return;
+    }
+    donateTo(c);
     if (!desktop?.selectSignature) {
       setMessage(manual);
       return;
@@ -586,8 +687,8 @@ export function App(props: Props) {
         id,
         item,
         sound: !!audible[slot],
-        donateFor: isPage(item) && item.kind !== 'web' ? donateFor : null,
-        videoId: isPage(item) && item.kind === 'chat' ? chatVideoId : null,
+        donateFor: isPage(item) && item.kind !== 'web' ? targetOf(item) : null,
+        videoId: isPage(item) && item.kind === 'chat' ? videoIdOf(targetOf(item)) : null,
       },
       isPage(item) ? pageLabel(item) : item.name,
     );
@@ -888,9 +989,11 @@ export function App(props: Props) {
                           onOpenWindow:
                             page.kind === 'web'
                               ? () => win.open(page.url, '_blank', 'noopener')
-                              : page.kind !== 'activity' && page.kind !== 'signature' && !desktop && donateFor
-                                ? () => donateTo(donateFor)
+                              : page.kind !== 'activity' && page.kind !== 'signature' && !desktop && targetOf(page)
+                                ? () => donateTo(targetOf(page)!)
                                 : undefined,
+                          // 📌 방송에 고정 (후원 페이지·채팅·시그니처)
+                          pin: isPinnable(page) ? { name: page.pin?.name ?? null, onClick: () => setPinSlot(slot) } : undefined,
                         }
                       : undefined
                   }
@@ -903,6 +1006,8 @@ export function App(props: Props) {
                     onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item }),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
+                  acceptCard={!markId}
+                  cardOver={cardOverSlot === slot}
                   onDetach={creator || (page && page.kind !== 'activity' && page.kind !== 'signature') ? () => detachSlot(slot) : undefined}
                   detached={markId && item ? { name: item.name, onReturn: () => restoreDetached(markId, 'button') } : undefined}
                   onRemove={
@@ -960,7 +1065,7 @@ export function App(props: Props) {
             onGrab={settings.videoClick === 'select' ? (slot, e) => tileDrag.start(slot, e, { canDrag: true }) : undefined}
             stageRef={stageRef}
             slotEls={slotEls}
-            dragging={dragging || tileDrag.drag !== null}
+            dragging={dragging || tileDrag.drag !== null || cardDrag}
             floating={
               tileDrag.drag && state.slots[tileDrag.drag.from]
                 ? { slot: tileDrag.drag.from, x: tileDrag.drag.x, y: tileDrag.drag.y, name: state.slots[tileDrag.drag.from]!.name }
@@ -975,7 +1080,7 @@ export function App(props: Props) {
             tileSeq={tileSeq}
             renderPage={(page, key) =>
               page.kind === 'signature' ? (
-                <SignatureView creator={donateFor} load={loadSignatures} onPick={donateSignature} />
+                <SignatureView creator={targetOf(page)} load={loadSignatures} onPick={(s) => donateSignature(s, targetOf(page))} />
               ) : page.kind === 'activity' ? (
                 <ActivityWidget
                   loggedIn={loggedIn}
@@ -995,7 +1100,7 @@ export function App(props: Props) {
                     if (h) pageHandles.current[key] = h;
                     else delete pageHandles.current[key];
                   }}
-                  onOpenWindow={donateFor ? () => donateTo(donateFor) : undefined}
+                  onOpenWindow={targetOf(page) ? () => donateTo(targetOf(page)!) : undefined}
                   emptyText={pageEmptyText(page)}
                 />
               )
@@ -1087,7 +1192,7 @@ export function App(props: Props) {
         </FavoritesPicker>
       )}
       {liveOpen && (
-        <RecommendLiveDialog onClose={() => setLiveOpen(false)}>
+        <RecommendLiveDialog onClose={() => setLiveOpen(false)} dragging={cardDrag}>
           <RecommendLive
             loadPopular={popularSource}
             load={liveSource}
@@ -1108,6 +1213,17 @@ export function App(props: Props) {
             setLivePick(null);
             setLiveOpen(false);
           }}
+        />
+      )}
+      {pinSlot !== null && isPinnable(state.slots[pinSlot]) && (
+        <PinDialog
+          streams={visibleSlots(state).flatMap((s, i) => (isStream(s) ? [{ slot: i, creator: s }] : []))}
+          current={(state.slots[pinSlot] as { pin?: Creator }).pin?.key ?? null}
+          onPick={(c) => {
+            dispatch({ type: 'pinPage', slot: pinSlot, creator: c });
+            setPinSlot(null);
+          }}
+          onClose={() => setPinSlot(null)}
         />
       )}
       {guideOpen && <Onboarding onDone={closeGuide} />}

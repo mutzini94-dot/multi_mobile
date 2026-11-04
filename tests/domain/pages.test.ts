@@ -100,3 +100,23 @@ test('활동 위젯 칸도 마지막 화면으로 저장·복원된다', () => {
   saveLastView(kv, { ...initialViewState, slots });
   expect(loadLastView(kv)?.slots[1]).toMatchObject({ kind: 'activity', name: '활동 위젯' });
 });
+
+test('pageTarget: 고정한 방송이 있으면 그 방송, 없으면 따라가는 방송 (웹·활동 칸은 없음)', async () => {
+  const { pageTarget, makeSignaturePage, makeChatPage, makeWebPage } = await import('../../src/domain/pages');
+  const follow = mkCreator(1);
+  const pinned = mkCreator(2);
+  expect(pageTarget(makeSignaturePage(), follow)).toBe(follow);
+  expect(pageTarget({ ...makeChatPage(), pin: pinned }, follow)).toBe(pinned);
+  expect(pageTarget({ ...makeDonatePage(), pin: pinned }, null)).toBe(pinned);
+  const w = makeWebPage('naver.com');
+  expect(w.ok && pageTarget(w.value, follow)).toBeNull();
+});
+
+test('고정한 방송도 마지막 화면으로 저장·복원된다', async () => {
+  const { makeSignaturePage } = await import('../../src/domain/pages');
+  const kv = safeStorage(undefined);
+  const slots = Array(9).fill(null);
+  slots[3] = { ...makeSignaturePage(), pin: mkCreator(5, { name: '다섯', donateId: 'five' }) };
+  saveLastView(kv, { ...initialViewState, slots });
+  expect(loadLastView(kv)?.slots[3]).toMatchObject({ kind: 'signature', pin: { name: '다섯', donateId: 'five', channel: 'chan_5', platform: 'twitch' } });
+});

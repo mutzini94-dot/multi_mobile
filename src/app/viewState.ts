@@ -1,5 +1,5 @@
 import type { Creator, DetachedMark, LayoutKind, PageSlot, SlotItem, ViewState } from '../domain/types';
-import { isStream } from '../domain/pages';
+import { isPinnable, isStream } from '../domain/pages';
 import { applyLayout, visibleCount, visibleSlots } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
@@ -19,6 +19,7 @@ export type ViewAction =
   | { type: 'select'; slot: number }
   | { type: 'swap'; from: number; to: number } // 칸 자리 바꾸기 (빈 칸이면 옮기기)
   | { type: 'openFirst'; creator: Creator } // 활동 위젯에서 누른 방송을 첫 번째 칸에
+  | { type: 'pinPage'; slot: number; creator: Creator | null } // 후원 페이지·채팅·시그니처 칸을 방송에 고정 (null = 선택한 방송 따라가기)
   | { type: 'toggleSound' }
   | { type: 'setSizes'; group: string; sizes: number[] }
   | { type: 'replace'; state: ViewState };
@@ -83,6 +84,17 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
         s = { ...s, slots };
       }
       return viewReducer(s, { type: 'assign', slot: 0, creator: action.creator });
+    }
+    case 'pinPage': {
+      const page = state.slots[action.slot];
+      if (!isPinnable(page)) return state;
+      const slots = state.slots.slice();
+      const { pin: _old, ...rest } = page;
+      if (action.creator) {
+        const { live: _live, videoId: _videoId, ...pin } = action.creator; // 라이브 정보는 저장하지 않는다
+        slots[action.slot] = { ...rest, pin };
+      } else slots[action.slot] = rest;
+      return { ...state, slots };
     }
     case 'toggleSound':
       return { ...state, soundOn: !state.soundOn };

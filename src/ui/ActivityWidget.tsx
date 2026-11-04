@@ -2,6 +2,7 @@ import type { Creator } from '../domain/types';
 import type { LiveTarget } from '../activity/liveTargets';
 import { timeLabel, type TimelineItem } from '../activity/timeline';
 import { formatElapsed } from '../toonation/tileLive';
+import { startCreatorDrag } from '../app/creatorDrag';
 
 interface Props {
   loggedIn: boolean;
@@ -40,7 +41,7 @@ export function ActivityWidget({ loggedIn, live, timeline, isLive, now, onOpen, 
               <ul className="activity__live" aria-label="지금 라이브">
                 {live.map(({ creator: c, reason }) => (
                   <li key={c.key}>
-                    <button type="button" className="activity__live-item" onClick={() => onOpen(c)}>
+                    <button type="button" className="activity__live-item" onClick={() => onOpen(c)} draggable onDragStart={(e) => startCreatorDrag(e.dataTransfer, c)}>
                       <Avatar c={c} />
                       <span className="activity__live-main">
                         <span className="activity__name">
@@ -82,7 +83,7 @@ export function ActivityWidget({ loggedIn, live, timeline, isLive, now, onOpen, 
               const on = isLive(i.creator.key);
               return (
                 <li key={`watch:${i.at}:${i.creator.key}`} className="activity__row">
-                  <button type="button" className="activity__row-btn" onClick={() => onOpen(i.creator)}>
+                  <button type="button" className="activity__row-btn" onClick={() => onOpen(i.creator)} draggable onDragStart={(e) => startCreatorDrag(e.dataTransfer, i.creator)}>
                     {time}
                     <span className="activity__icon" aria-hidden="true">
                       ▶

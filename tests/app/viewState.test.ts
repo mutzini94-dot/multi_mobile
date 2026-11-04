@@ -169,3 +169,16 @@ describe('openFirst: 숨긴 칸·분리 표시', () => {
     expect(s.slots.slice(0, 4)).toEqual([mkCreator(2), mkCreator(1), mark, null]);
   });
 });
+
+test('pinPage: 페이지 칸을 방송에 고정·해제 (방송 칸·웹 칸은 그대로)', async () => {
+  const { makeDonatePage, makeWebPage } = await import('../../src/domain/pages');
+  const s0: ViewState = { layout: 'quad', slots: [mkCreator(1), makeDonatePage(), null, null, null, null, null, null, null], sizes: {}, selected: 0, soundOn: true };
+  const s1 = viewReducer(s0, { type: 'pinPage', slot: 1, creator: mkCreator(1) });
+  expect(s1.slots[1]).toMatchObject({ kind: 'donate', pin: { key: 'twitch:chan_1' } });
+  const s2 = viewReducer(s1, { type: 'pinPage', slot: 1, creator: null });
+  expect(s2.slots[1]).not.toHaveProperty('pin');
+  expect(viewReducer(s0, { type: 'pinPage', slot: 0, creator: mkCreator(2) })).toBe(s0);
+  const w = makeWebPage('naver.com');
+  const s3: ViewState = { ...s0, slots: [w.ok ? w.value : null, ...s0.slots.slice(1)] };
+  expect(viewReducer(s3, { type: 'pinPage', slot: 0, creator: mkCreator(2) })).toBe(s3);
+});

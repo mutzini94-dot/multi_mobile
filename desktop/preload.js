@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   search: (q) => ipcRenderer.invoke('mv:search', String(q)),
   bookmark: (tag, on) => ipcRenderer.invoke('mv:bookmark', { tag: String(tag), on: !!on }),
   signatures: (tag) => ipcRenderer.invoke('mv:signatures', String(tag)),
-  selectSignature: (name, tag, cash) => ipcRenderer.invoke('mv:donate:signature', { name: String(name), tag: String(tag), cash: Number(cash) }),
+  selectSignature: (name, tag, cash, webContentsId) => ipcRenderer.invoke('mv:donate:signature', { name: String(name), tag: String(tag), cash: Number(cash), wcId: Number(webContentsId) || 0 }),
   openDonate: (t) =>
     ipcRenderer.send('mv:donate:open', {
       tag: String(t && t.tag),

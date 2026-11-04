@@ -554,3 +554,20 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .quick-panel__alert-text strong { font-size: 13px; }
 .quick-panel__alert-text span { color: var(--ink-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quick-panel__alert-close { flex: none; width: 24px; height: 24px; font-size: 12px; }
+
+/* 📌 페이지 칸을 방송에 고정 */
+.tile__pin { opacity: 0.55; filter: grayscale(1); }
+.tile__pin:hover { opacity: 1; filter: none; }
+.tile__pin--on { opacity: 1; filter: none; box-shadow: inset 0 0 0 2px var(--primary); }
+.pin-dialog__list { list-style: none; margin: 8px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pin-dialog__item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: var(--r-md); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }
+.pin-dialog__item:hover { box-shadow: inset 0 0 0 2px var(--primary); }
+.pin-dialog__item--on { background: var(--primary-soft); box-shadow: inset 0 0 0 2px var(--primary); }
+.pin-dialog__num { flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--canvas); font-weight: 700; font-size: 12px; }
+.pin-dialog__mark { margin-left: auto; color: var(--primary); font-size: 12px; font-weight: 600; }
+.pin-dialog__follow { width: 100%; }
+.pin-dialog__follow--on { box-shadow: inset 0 0 0 2px var(--primary); color: var(--primary); }
+
+/* 카드를 칸으로 끄는 동안: 추천 라이브 창이 흐려진다 (뒤의 칸이 보이게, 놓기는 App이 커서 아래 칸을 찾는다) */
+.modal-backdrop--dragging { background: transparent; }
+.modal-backdrop--dragging .modal { opacity: 0.2; transition: opacity 0.15s; }

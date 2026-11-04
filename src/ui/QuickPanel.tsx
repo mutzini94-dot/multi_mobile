@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Creator } from '../domain/types';
 import type { QuickItem } from '../quick/quickPanel';
+import { startCreatorDrag } from '../app/creatorDrag';
 
 interface Props {
   side: 'left' | 'right';
@@ -58,8 +59,10 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
                 title={live && c.live?.title ? `${c.name} · ${c.live.title}` : c.name}
                 className={`quick-panel__item${live ? ' quick-panel__item--live' : ''}${isNew ? ' quick-panel__item--new' : ''}`}
                 onClick={() => onPick(c)}
+                draggable
+                onDragStart={(e) => startCreatorDrag(e.dataTransfer, c)}
               >
-                {c.profile ? <img src={c.profile} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="quick-panel__initial">{c.name.slice(0, 1)}</span>}
+                {c.profile ? <img src={c.profile} alt="" loading="lazy" referrerPolicy="no-referrer" draggable={false} /> : <span className="quick-panel__initial">{c.name.slice(0, 1)}</span>}
                 {live && <span className="quick-panel__live-dot" aria-hidden="true" />}
               </button>
             </li>
