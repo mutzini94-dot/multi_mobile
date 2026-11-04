@@ -40,6 +40,7 @@ const LABELS: Record<keyof Settings, [string, (v: unknown) => string]> = {
   liveNotify: ['즐겨찾기 방송 시작 알림', onOff],
   monthlyGoal: ['월 후원 목표', won],
   monthlyLimit: ['월 후원 한도', won],
+  quickPanel: ['퀵패널', pick({ left: '왼쪽', right: '오른쪽', off: '숨기기' })],
 };
 
 export function readSettingsLog(kv: KV): SettingsChange[] {

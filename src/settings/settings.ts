@@ -24,6 +24,7 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark';
   shortcuts: boolean; // 1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원
   alwaysOnTop: boolean; // 창 항상 위 (설치형)
+  quickPanel: 'left' | 'right' | 'off'; // 퀵패널 (즐겨찾기·최근 본 크리에이터) 위치
 }
 
 export const SETTINGS_KEY = 'mv.settings.v1';
@@ -48,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   shortcuts: true,
   alwaysOnTop: false,
+  quickPanel: 'left',
 };
 
 const oneOf = <T>(v: unknown, allowed: readonly T[], fallback: T): T => (allowed.includes(v as T) ? (v as T) : fallback);
@@ -95,6 +97,7 @@ export function normalizeSettings(raw: unknown): Settings {
     theme: oneOf(r.theme, ['system', 'light', 'dark'] as const, d.theme),
     shortcuts: bool(r.shortcuts, d.shortcuts),
     alwaysOnTop: bool(r.alwaysOnTop, d.alwaysOnTop),
+    quickPanel: oneOf(r.quickPanel, ['left', 'right', 'off'] as const, d.quickPanel),
   };
 }
 

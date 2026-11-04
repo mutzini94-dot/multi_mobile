@@ -100,7 +100,7 @@ test('분리한 칸에 다른 방송을 넣으면 분리 창은 따로 남고, �
   expect(within(tiles()[0]).getByText('C')).toBeInTheDocument();
   closeSolo(opened[0].p.id);
   expect(within(tiles()[0]).getByText('C')).toBeInTheDocument();
-  expect(screen.queryByText('A')).toBeNull();
+  expect(within(document.querySelector<HTMLElement>('.stage')!).queryByText('A')).toBeNull(); // 칸에서 (퀵패널의 프로필 글자는 빼고)
 });
 
 test('원래 칸이 다른 방송으로 바뀐 뒤 분리 창에서 되돌리기: 빈 칸으로, 빈 칸이 없으면 알려준다', () => {

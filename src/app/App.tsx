@@ -10,6 +10,8 @@ import { parseSignatures, type Signature } from '../toonation/signatures';
 import { ActivityWidget } from '../ui/ActivityWidget';
 import { RecommendLiveDialog } from '../ui/RecommendLiveDialog';
 import { RecommendLive } from '../ui/RecommendLive';
+import { QuickPanel } from '../ui/QuickPanel';
+import { quickFavorites, quickRecent, startedLive, withLive } from '../quick/quickPanel';
 import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
@@ -62,6 +64,7 @@ interface Props {
   desktop?: DesktopApi | null; // 설치형 앱의 window.multiviewDesktop (없으면 웹 방식)
   lives?: (q: LiveQuery) => Promise<LivePage>; // 투네이션 라이브 목록 (테스트에서 바꿔 끼움)
   popular?: () => Promise<PopularLive>; // 인기라이브 (테스트에서 바꿔 끼움)
+  quickPollMs?: number; // 퀵패널 라이브 확인 간격 (테스트에서 바꿔 끼움)
   detachHost?: DetachHost; // 칸 분리 창 통로 (테스트에서 바꿔 끼움)
 }
 
@@ -646,6 +649,83 @@ export function App(props: Props) {
   };
   const liveSource = useMemo(() => props.lives ?? ((q: LiveQuery) => fetchLiveList(q)), [props.lives]);
   const popularSource = useMemo(() => props.popular ?? (() => fetchPopularLive()), [props.popular]);
+  // 퀵패널: 즐겨찾기(투네이션·직접 추가)·최근 본 크리에이터, 방송 시작 알림
+  const quickOn = settings.quickPanel !== 'off';
+  const quickFavs = quickFavorites(toonation.state.creators, favorites.list());
+  const quickRecents = quickRecent(watchLog);
+  // 투네이션 즐겨찾기가 아닌 크리에이터의 라이브 (공개 라이브 목록에서 후원 아이디로 찾는다)
+  const [quickLive, setQuickLive] = useState<Record<string, Creator | false>>({});
+  const quickLookup = useRef<() => void>(() => {});
+  quickLookup.current = () => {
+    const known = new Set(toonation.state.creators.map((c) => c.key));
+    const seen = new Set<string>();
+    const targets = [...quickFavs, ...quickRecents].filter((c) => !known.has(c.key) && c.donateId && !seen.has(c.key) && seen.add(c.key)).slice(0, 30);
+    if (!targets.length) return;
+    findDonatedLive(
+      targets.map((c) => ({ tag: c.donateId, name: c.name, count: 0 })),
+      liveSource,
+    ).then((found) => {
+      const next: Record<string, Creator | false> = Object.fromEntries(targets.map((c) => [c.key, false]));
+      for (const t of found) {
+        const own = targets.find((c) => c.donateId === t.creator.donateId);
+        if (own) next[own.key] = { ...own, live: t.creator.live, profile: own.profile ?? t.creator.profile };
+      }
+      setQuickLive(next);
+    });
+  };
+  useEffect(() => {
+    if (!quickOn) return;
+    quickLookup.current();
+    // 투네이션 즐겨찾기는 '라이브 자동 갱신'이 켜져 있으면 그쪽이 새로 불러온다
+    const ms = props.quickPollMs ?? (settings.liveRefreshMinutes > 0 ? settings.liveRefreshMinutes : 3) * 60_000;
+    const id = setInterval(() => {
+      if (settings.liveRefreshMinutes <= 0 && toonation.state.account) refreshToonation();
+      quickLookup.current();
+    }, ms);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickOn, settings.liveRefreshMinutes, props.quickPollMs]);
+  const quickIsLive = (key: string): boolean | null => {
+    const fav = toonation.state.creators.find((c) => c.key === key);
+    if (fav) return !!fav.live;
+    return key in quickLive ? !!quickLive[key] : null;
+  };
+  const quickLiveCreator = (c: Creator): Creator => {
+    const fav = toonation.state.creators.find((f) => f.key === c.key);
+    const q = quickLive[c.key];
+    return fav ?? (q || c);
+  };
+  // 방송 시작: 꺼져 있던 것이 켜지면 알림 (처음 확인한 것은 알리지 않는다)
+  const [quickStarted, setQuickStarted] = useState<Creator[]>([]);
+  const quickPrev = useRef<Record<string, boolean>>({});
+  const quickAll = [...quickFavs, ...quickRecents];
+  const quickLiveMap: Record<string, boolean> = {};
+  for (const c of quickAll) {
+    const l = quickIsLive(c.key);
+    if (l !== null) quickLiveMap[c.key] = l;
+  }
+  const quickLiveSig = JSON.stringify(quickLiveMap);
+  useEffect(() => {
+    const started = startedLive(quickPrev.current, quickLiveMap);
+    quickPrev.current = { ...quickPrev.current, ...quickLiveMap };
+    if (started.length)
+      setQuickStarted((prev) => [...prev.filter((c) => !started.includes(c.key)), ...started.map((k) => quickLiveCreator(quickAll.find((c) => c.key === k)!))]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickLiveSig]);
+  const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
+  const quickPanel = quickOn ? (
+    <QuickPanel
+      side={settings.quickPanel === 'right' ? 'right' : 'left'}
+      favorites={withLive(quickFavs.map(quickLiveCreator), quickIsLive)}
+      recent={withLive(quickRecents.map(quickLiveCreator), quickIsLive)}
+      started={quickStarted}
+      onPick={(c) => {
+        dismissQuick(c.key);
+        setLivePick(c);
+      }}
+      onDismiss={dismissQuick}
+    />
+  ) : null;
   // 활동 위젯: 후원한 크리에이터 중 라이브 (즐겨찾기 라이브는 투네이션 즐겨찾기 목록이 이미 안다)
   const hasActivity = state.slots.some((s) => isPage(s) && s.kind === 'activity');
   const [donatedLive, setDonatedLive] = useState<LiveTarget[] | null>(null);
@@ -755,6 +835,7 @@ export function App(props: Props) {
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
       <div className="app__body">
+        {settings.quickPanel === 'left' && quickPanel}
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
           <TileGrid
             state={state}
@@ -921,6 +1002,7 @@ export function App(props: Props) {
             }
           />
         </div>
+        {settings.quickPanel === 'right' && quickPanel}
       </div>
       <DonationBar popupCreator={popupClosed || desktopDonate ? null : popupCreator} warning={warning} message={message}>
         {desktopDonate && donateMode === 'pip' && (

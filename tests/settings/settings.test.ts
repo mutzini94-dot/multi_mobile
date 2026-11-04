@@ -25,7 +25,16 @@ test('기본값', () => {
     theme: 'system',
     shortcuts: true,
     alwaysOnTop: false,
+    quickPanel: 'left',
   });
+});
+
+test('퀵패널 위치: 왼쪽·오른쪽·숨기기, 잘못된 값은 왼쪽', () => {
+  const k = kv();
+  k.set(SETTINGS_KEY, JSON.stringify({ quickPanel: 'right' }));
+  expect(loadSettings(k).quickPanel).toBe('right');
+  k.set(SETTINGS_KEY, JSON.stringify({ quickPanel: 'top' }));
+  expect(loadSettings(k).quickPanel).toBe('left');
 });
 
 test('저장하면 다시 읽힌다', () => {
