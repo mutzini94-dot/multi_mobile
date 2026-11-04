@@ -75,3 +75,19 @@ test('퀵패널의 크리에이터가 방송을 시작하면 표시·알림, 알
   fireEvent.click(within(alert).getByRole('button', { name: '둘 방송 칸에 넣기' }));
   expect(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).toBeInTheDocument();
 });
+
+test('퀵패널 맨 위 추천 라이브: 옆으로 펼쳐 한 개씩 넘겨 보고, 칸에 넣기는 칸 고르기로', async () => {
+  const live7 = { ...mkCreator(7, { name: '라이브칠', donateId: 'live7', source: 'toonation' }), live: { title: '저녁 방송', viewers: 10 } };
+  const lives = vi.fn(async (_q: LiveQuery): Promise<LivePage> => ({ items: [{ creator: live7, thumbnail: '', category: '' }], page: 1, totalPages: 1, total: 1 }));
+  setup({ lives });
+  const btn = within(panel()).getByRole('button', { name: '추천 라이브 탐색' });
+  expect(within(panel()).getAllByRole('button')[0]).toBe(btn); // 맨 위
+  fireEvent.click(btn);
+  const feed = await screen.findByRole('region', { name: '추천 라이브 탐색' });
+  expect(btn).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(await within(feed).findByRole('button', { name: '라이브칠 칸에 넣기' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '2번 칸 · 빈 칸' }));
+  expect(within(tiles()[1]).getByText('라이브칠')).toBeInTheDocument();
+  fireEvent.click(btn); // 다시 누르면 접힌다
+  expect(screen.queryByRole('region', { name: '추천 라이브 탐색' })).toBeNull();
+});

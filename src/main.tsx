@@ -4,6 +4,7 @@ import { desktopSoloLink, webSoloLink } from './detach/channel';
 import { decodeSolo } from './detach/soloLink';
 import { SoloView } from './detach/SoloView';
 import { ErrorBoundary } from './ui/ErrorBoundary';
+import { Splash } from './ui/Splash';
 import { getDesktopApi } from './desktop/desktopApi';
 import { restoreIfNewer, startMirror } from './storage/webStoreSync';
 import './ui/app.css';
@@ -36,6 +37,7 @@ async function start() {
   root.render(
     <ErrorBoundary>
       <App />
+      <Splash />
     </ErrorBoundary>,
   );
 }

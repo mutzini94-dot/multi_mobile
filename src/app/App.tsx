@@ -13,6 +13,7 @@ import { ActivityWidget } from '../ui/ActivityWidget';
 import { RecommendLiveDialog } from '../ui/RecommendLiveDialog';
 import { RecommendLive } from '../ui/RecommendLive';
 import { QuickPanel } from '../ui/QuickPanel';
+import { ShortsFeed } from '../ui/ShortsFeed';
 import { quickFavorites, quickRecent, startedLive, withLive } from '../quick/quickPanel';
 import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
@@ -814,6 +815,8 @@ export function App(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickLiveSig]);
   const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
+  // 퀵패널 맨 위 '추천 라이브 탐색' (쇼츠처럼 한 개씩)
+  const [shortsOpen, setShortsOpen] = useState(false);
   const quickPanel = quickOn ? (
     <QuickPanel
       side={settings.quickPanel === 'right' ? 'right' : 'left'}
@@ -825,6 +828,11 @@ export function App(props: Props) {
         setLivePick(c);
       }}
       onDismiss={dismissQuick}
+      shorts={{
+        open: shortsOpen,
+        onToggle: () => setShortsOpen((o) => !o),
+        content: <ShortsFeed load={liveSource} onAdd={(c) => setLivePick(c)} onDonate={(c) => donateTo(c)} onClose={() => setShortsOpen(false)} />,
+      }}
     />
   ) : null;
   // 활동 위젯: 후원한 크리에이터 중 라이브 (즐겨찾기 라이브는 투네이션 즐겨찾기 목록이 이미 안다)
