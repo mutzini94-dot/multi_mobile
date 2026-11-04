@@ -95,11 +95,11 @@ test('설치형: 시그니처를 고르지 못하면 직접 고르라고 알린�
     login: vi.fn(), logout: vi.fn(),
     favorites: vi.fn().mockResolvedValue({ ok: true, data: [] }),
     signatures: vi.fn().mockResolvedValue({ ok: true, data: [{ Hash: 'h1', Name: 'A의시그', Cash: 5000, DonationCount: 1, Enabled: 1, IsRandom: 0, Thumbnail: 0 }] }),
-    selectSignature: vi.fn().mockResolvedValue('timeout'),
+    selectSignature: vi.fn().mockResolvedValue('timeout:popup'),
     openDonate: vi.fn(), closeDonate: vi.fn(), setDonateBounds: vi.fn(), setDonateMode: vi.fn(), fillDonate: vi.fn(), setAlwaysOnTop: vi.fn(),
     onDonateClosed: vi.fn(() => () => {}), onDonateMode: vi.fn(() => () => {}),
   } as unknown as DesktopApi;
   setup(desktop);
   fireEvent.click(await addSignatureTile());
-  expect(await screen.findByText("후원창의 시그니처 탭에서 'A의시그'(5,000캐시)를 골라 주세요")).toBeInTheDocument();
+  expect(await screen.findByText("후원창의 시그니처 탭에서 'A의시그'(5,000캐시)를 골라 주세요 (자동 선택 실패: timeout:popup)")).toBeInTheDocument();
 });

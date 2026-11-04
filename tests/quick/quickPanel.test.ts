@@ -33,3 +33,11 @@ test('방송 시작: 꺼져 있던 것이 켜졌을 때만 (처음 보는 것·�
   expect(startedLive({ a: false, b: true, c: false }, { a: true, b: true, c: false, d: true })).toEqual(['a']);
   expect(startedLive({}, { a: true })).toEqual([]);
 });
+
+test('같은 크리에이터(같은 후원 아이디)의 여러 채널은 한 번만, 방송 중인 채널을 남긴다', () => {
+  const yt = mkCreator(1, { donateId: 'same', platform: 'youtube', key: 'youtube:UCa', channel: 'UCa' });
+  const tw = mkCreator(2, { donateId: 'same', key: 'twitch:a', channel: 'a' });
+  const other = mkCreator(3);
+  const items = withLive([yt, tw, other], (k) => k === 'twitch:a');
+  expect(items.map((i) => i.creator.key)).toEqual(['twitch:a', 'twitch:chan_3']);
+});

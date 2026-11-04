@@ -566,7 +566,7 @@ export function App(props: Props) {
     }
     setMessage(`후원창에서 ${label} 시그니처를 고르는 중…`);
     desktop.selectSignature(s.name, tag, s.cash).then(
-      (r) => setMessage(r === 'ok' ? `후원창에 ${label} 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요` : manual),
+      (r) => setMessage(r === 'ok' ? `후원창에 ${label} 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요` : `${manual} (자동 선택 실패: ${r})`),
       () => setMessage(manual),
     );
   };

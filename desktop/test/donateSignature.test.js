@@ -30,7 +30,7 @@ test('selectSignature: 탭 열기·전체보기·검색처럼 단계가 남으�
 
 test('selectSignature: 시그니처 탭이 없으면 바로 실패, 끝내 못 고르면 timeout, 후원창이 없으면 no-view', async () => {
   assert.strictEqual(await selectSignature(() => view(['no-signature-tab']), '딱밤', 'tjd', 20002, { tries: 10, interval: 1 }), 'no-signature-tab');
-  assert.strictEqual(await selectSignature(() => view(Array(5).fill('waiting')), '딱밤', 'tjd', 20002, { tries: 3, interval: 1 }), 'timeout');
+  assert.strictEqual(await selectSignature(() => view(Array(5).fill('waiting')), '딱밤', 'tjd', 20002, { tries: 3, interval: 1 }), 'timeout:waiting'); // 끝내 못 고르면 마지막 단계도 알려 준다
   assert.strictEqual(await selectSignature(() => null, '딱밤', 'tjd', 20002, { tries: 2, interval: 1 }), 'no-view');
 });
 

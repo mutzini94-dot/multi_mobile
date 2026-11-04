@@ -141,7 +141,7 @@ async function selectSignature(view, name, tag, cash, { tries = 30, interval = 4
     else {
       const r = await v.webContents.executeJavaScript(code).catch(() => 'waiting');
       if (DONE.has(r)) return r;
-      last = 'timeout';
+      last = `timeout:${r}`; // 끝내 못 고르면 어느 단계에서 멈췄는지도 알린다
     }
     await new Promise((res) => setTimeout(res, interval));
   }

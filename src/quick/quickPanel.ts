@@ -26,10 +26,20 @@ export function quickRecent(log: WatchEntry[], limit = 20): Creator[] {
   return out;
 }
 
-/** 방송 중인 크리에이터를 위로 (그 밖의 순서는 그대로) */
+/**
+ * 방송 중인 크리에이터를 위로 (그 밖의 순서는 그대로).
+ * 같은 크리에이터(같은 후원 아이디)의 여러 채널(유튜브·트위치)은 한 번만: 방송 중인 채널을 남긴다
+ */
 export function withLive(list: Creator[], isLive: (key: string) => boolean | null): QuickItem[] {
   const items = list.map((creator) => ({ creator, live: isLive(creator.key) }));
-  return [...items.filter((i) => i.live), ...items.filter((i) => !i.live)];
+  const sorted = [...items.filter((i) => i.live), ...items.filter((i) => !i.live)];
+  const seen = new Set<string>();
+  return sorted.filter((i) => {
+    const id = i.creator.donateId || i.creator.key;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 /** 꺼져 있던 방송이 켜진 것 (처음 보는 것·모름은 알리지 않는다) */
