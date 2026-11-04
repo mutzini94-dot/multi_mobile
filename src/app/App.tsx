@@ -4,6 +4,7 @@ import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/cha
 import { chatUrl, donatePageUrl, followDonateCreator, isPage, isPinnable, isStream, pageTarget } from '../domain/pages';
 import { PinDialog } from '../ui/PinDialog';
 import { hasCreatorDrag, readCreatorDrag } from './creatorDrag';
+import { CREATOR_REMOTE_URL, MODE_KEY, readMode, type RemoteMode } from './remoteMode';
 import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type PopularLive } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ActivityPageTab, ChatPageTab, DonatePageTab, SignaturePageTab, WebPageTab } from '../ui/PageTabs';
@@ -115,6 +116,15 @@ export function App(props: Props) {
   const groupSelect = editGroups ? (c: Creator) => <GroupSelect creator={c} groups={groups} /> : undefined;
   const [guideOpen, setGuideOpen] = useState(() => kv.get(ONBOARDED_KEY) !== '1'); // 처음 사용 안내
   const [historyOpen, setHistoryOpen] = useState(false);
+  // 상단 스위치: 후원 리모컨(멀티뷰) ↔ 크리에이터 리모컨. 크리에이터 리모컨은 처음 바꿀 때 띄우고, 상태를 지키려고 그 뒤로는 숨겨 둔다
+  const [mode, setModeState] = useState<RemoteMode>(() => readMode(kv));
+  const [remoteLoaded, setRemoteLoaded] = useState(() => readMode(kv) === 'creator');
+  const setMode = (m: RemoteMode) => {
+    setModeState(m);
+    kv.set(MODE_KEY, m);
+    if (m === 'creator') setRemoteLoaded(true);
+  };
+  const creatorMode = mode === 'creator';
   // 상단 '추천 라이브': 고른 방송을 넣을 칸을 묻는다
   const [liveOpen, setLiveOpen] = useState(false);
   const [livePick, setLivePick] = useState<Creator | null>(null);
@@ -924,7 +934,7 @@ export function App(props: Props) {
     setGuideOpen(false);
   };
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${creatorMode ? ' app--creator' : ''}`}>
 
       <Gnb
         layout={state.layout}
@@ -942,8 +952,15 @@ export function App(props: Props) {
         sound={{ on: state.soundOn, onToggle: () => dispatch({ type: 'toggleSound' }) }}
         onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
+        mode={{ value: mode, onChange: setMode }}
       />
-      <div className="app__body">
+      {remoteLoaded && (
+        <div className="creator-remote" hidden={!creatorMode}>
+          <iframe className="creator-remote__frame" title="크리에이터 리모컨" src={CREATOR_REMOTE_URL} allow="autoplay; clipboard-write; fullscreen" />
+        </div>
+      )}
+      {/* 크리에이터 리모컨일 때도 칸은 그대로 두고 숨긴다 (돌아오면 바로 이어서) */}
+      <div className="app__body" hidden={creatorMode}>
         {settings.quickPanel === 'left' && quickPanel}
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
           <TileGrid
@@ -1117,6 +1134,7 @@ export function App(props: Props) {
         </div>
         {settings.quickPanel === 'right' && quickPanel}
       </div>
+      {!creatorMode && (
       <DonationBar popupCreator={popupClosed || desktopDonate ? null : popupCreator} warning={warning} message={message}>
         {desktopDonate && donateMode === 'pip' && (
           <span className="pip-status" role="status" aria-label="PIP 후원창">
@@ -1130,6 +1148,7 @@ export function App(props: Props) {
           </span>
         )}
       </DonationBar>
+      )}
       {desktopDonate && donateMode === 'modal' && (
         <DonateModal
           creator={desktopDonate}
