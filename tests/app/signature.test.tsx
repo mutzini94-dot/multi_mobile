@@ -85,7 +85,7 @@ test('설치형: 후원창을 열고 그 시그니처를 골라 둔다', async (
   setup(desktop);
   fireEvent.click(await addSignatureTile());
   expect(desktop.openDonate).toHaveBeenCalledWith(expect.objectContaining({ tag: 'tagA', name: 'A' }));
-  expect(selectSignature).toHaveBeenCalledWith('A의시그', 'tagA');
+  expect(selectSignature).toHaveBeenCalledWith('A의시그', 'tagA', 5000);
   expect(await screen.findByText("후원창에 'A의시그'(5,000캐시) 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요")).toBeInTheDocument();
 });
 
