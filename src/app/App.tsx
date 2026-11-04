@@ -4,7 +4,7 @@ import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/cha
 import { chatUrl, donatePageUrl, followDonateCreator, isPage, isPinnable, isStream, pageTarget } from '../domain/pages';
 import { PinDialog } from '../ui/PinDialog';
 import { hasCreatorDrag, readCreatorDrag } from './creatorDrag';
-import { CREATOR_REMOTE_URL, MODE_KEY, readMode, type RemoteMode } from './remoteMode';
+import { CREATOR_REMOTE_URL, MODE_KEY, REMOTE_PARTITION, readMode, type RemoteMode } from './remoteMode';
 import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type PopularLive } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ActivityPageTab, ChatPageTab, DonatePageTab, SignaturePageTab, WebPageTab } from '../ui/PageTabs';
@@ -956,7 +956,12 @@ export function App(props: Props) {
       />
       {remoteLoaded && (
         <div className="creator-remote" hidden={!creatorMode}>
-          <iframe className="creator-remote__frame" title="크리에이터 리모컨" src={CREATOR_REMOTE_URL} allow="autoplay; clipboard-write; fullscreen" />
+          {/* 설치형은 webview: 앱이 실시간 후원·위젯 분리·압정·자석·단축키(window.toona)를 넣어 준다 */}
+          {desktop ? (
+            <webview className="creator-remote__frame" title="크리에이터 리모컨" src={CREATOR_REMOTE_URL} partition={REMOTE_PARTITION} />
+          ) : (
+            <iframe className="creator-remote__frame" title="크리에이터 리모컨" src={CREATOR_REMOTE_URL} allow="autoplay; clipboard-write; fullscreen" />
+          )}
         </div>
       )}
       {/* 크리에이터 리모컨일 때도 칸은 그대로 두고 숨긴다 (돌아오면 바로 이어서) */}

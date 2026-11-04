@@ -1,18 +1,19 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from '../../src/app/App';
-import { CREATOR_REMOTE_URL, MODE_KEY } from '../../src/app/remoteMode';
+import { CREATOR_REMOTE_URL, MODE_KEY, REMOTE_PARTITION } from '../../src/app/remoteMode';
+import type { DesktopApi } from '../../src/desktop/desktopApi';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage, type KV } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
-function setup(kv: KV = safeStorage(undefined)) {
+function setup(kv: KV = safeStorage(undefined), desktop: DesktopApi | null = null) {
   const request = vi.fn(async () => {
     throw new Error('NOT_LOGGED_IN');
   });
   const win = { open: vi.fn(() => ({ closed: false }) as Window), screen: {} as Screen, location: { hash: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
-  const r = render(<App favorites={localFavorites(kv)} kv={kv} win={win} bridge={{ request } as unknown as ToonationBridge} desktop={null} quickPollMs={600000} />);
+  const r = render(<App favorites={localFavorites(kv)} kv={kv} win={win} bridge={{ request } as unknown as ToonationBridge} desktop={desktop} quickPollMs={600000} />);
   return { kv, ...r };
 }
 const switcher = () => screen.getByRole('radiogroup', { name: '리모컨 전환' });
@@ -48,4 +49,14 @@ test('고른 리모컨은 다음 실행에도 그대로', () => {
   setup(kv);
   expect(within(switcher()).getByRole('radio', { name: '크리에이터 리모컨' })).toHaveAttribute('aria-checked', 'true');
   expect(screen.getByTitle('크리에이터 리모컨')).toBeInTheDocument();
+});
+
+test('설치형: 크리에이터 리모컨은 자기 세션의 webview로 띄운다 (실시간 후원·위젯 분리 등 설치형 기능을 앱이 넣어 준다)', () => {
+  const desktop = { onDonateClosed: () => () => {}, onDonateMode: () => () => {} } as unknown as DesktopApi;
+  setup(safeStorage(undefined), desktop);
+  fireEvent.click(within(switcher()).getByRole('radio', { name: '크리에이터 리모컨' }));
+  const view = document.querySelector('.creator-remote webview')!;
+  expect(view.getAttribute('src')).toBe(CREATOR_REMOTE_URL);
+  expect(view.getAttribute('partition')).toBe(REMOTE_PARTITION);
+  expect(document.querySelector('.creator-remote iframe')).toBeNull();
 });

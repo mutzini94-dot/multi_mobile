@@ -7,7 +7,7 @@
 // 개발: `npm run dev` 는 vite 개발 서버(http://localhost:5230)를 띄운 상태에서 실행한다.
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell, Tray, Menu, nativeImage, Notification, webContents } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell, Tray, Menu, nativeImage, Notification, webContents, globalShortcut } = require('electron');
 const { ToonationClient, ORIGIN } = require('./lib/toonation');
 const { youtubeChannelId, checkLive } = require('./lib/platforms');
 const { startStaticServer } = require('./lib/staticServer');
@@ -22,6 +22,8 @@ const { fillAmountScript, fillMessageScript, selectSignature } = require('./lib/
 const { useMobileDonatePage } = require('./lib/mobileDonate');
 const { createHandlers } = require('./lib/handlers');
 const { APP_NAME, appUserModelId, userDataDir } = require('./lib/appIdentity');
+const { createRemoteHost } = require('./lib/remoteHost');
+const { allowRemoteWebview, REMOTE_PARTITION } = require('./lib/remotePolicy');
 
 const PARTITION = 'persist:toonation';
 const DEV = process.argv.includes('--dev');
@@ -59,6 +61,8 @@ let miniBefore = null; // 미니 모드 전 창 상태 (미니 모드 동안은 
 let quitting = false; // 트레이 '종료'·업데이트 설치 등 진짜 종료 (창 닫기는 트레이로 숨김)
 const START_HIDDEN = process.argv.includes('--hidden'); // Windows 시작 시 실행: 트레이로만 시작
 const soloWins = new Map(); // 분리 창 id → BrowserWindow
+let remoteHost = null; // 크리에이터 리모컨의 설치형 기능 (lib/remoteHost.js)
+const REMOTE_PRELOAD = path.join(__dirname, 'remote-preload.js');
 
 const send = (channel, payload) => win && !win.isDestroyed() && win.webContents.send(channel, payload);
 
@@ -236,9 +240,20 @@ function createPipWindow({ title, onClosed, onResize }) {
 function guardAppContents(wc) {
   wc.on('will-attach-webview', (e, webPreferences, params) => {
     hardenWebPreferences(webPreferences);
+    // 크리에이터 리모컨(메인 창만): 설치형 전용 API(window.toona)를 넣는다
+    if (win && wc === win.webContents && allowRemoteWebview(params)) {
+      webPreferences.preload = REMOTE_PRELOAD;
+      return;
+    }
     if (!allowWebview(params)) e.preventDefault();
   });
-  wc.on('did-attach-webview', (_e, child) => setupTileWebview(child));
+  wc.on('did-attach-webview', (_e, child) => {
+    if (child.session === session.fromPartition(REMOTE_PARTITION)) {
+      if (remoteHost && win && wc === win.webContents) remoteHost.attachLeader(child);
+      return;
+    }
+    setupTileWebview(child);
+  });
   wc.setWindowOpenHandler(({ url: u }) => {
     if (/^https?:/.test(u)) shell.openExternal(u);
     return { action: 'deny' };
@@ -378,6 +393,7 @@ function createWindow(url) {
   });
   appOrigin = new URL(url).origin;
   guardAppContents(win.webContents);
+  remoteHost.trackMain(win);
   win.webContents.on('did-start-navigation', (_e, _u, inPage, isMain) => {
     if (!isMain || inPage) return;
     // 화면을 새로 읽으면 후원창·분리 창도 처음부터 (메인 화면이 분리 상태를 잊는다)
@@ -612,6 +628,21 @@ function runSmoke(outDir) {
         .catch(() => null);
       result.solos = [...soloWins].map(([id, w]) => ({ id, title: w.getTitle(), url: w.webContents.getURL().slice(0, 60), bounds: w.getBounds(), alwaysOnTop: w.isAlwaysOnTop() }));
       for (const [id, w] of soloWins) await shot(w.webContents, `solo-${id}.png`);
+      // 크리에이터 리모컨 위젯 창 (lib/remoteHost.js)
+      result.remoteWidgets = remoteHost ? remoteHost.windows().map(({ id, win: w }) => ({ id, title: w.getTitle(), url: w.webContents.getURL(), bounds: w.getBounds(), alwaysOnTop: w.isAlwaysOnTop() })) : [];
+      if (remoteHost) for (const { id, win: w } of remoteHost.windows()) await shot(w.webContents, `remote-${id}.png`);
+      // MV_SMOKE_REMOTE_DRAG=1: 첫 위젯 창 헤더를 메인 창 가운데로 끌어 놓는다 (리모컨이 받은 dragOver·drop을 window.__rmDrag에서 읽는다)
+      const rw = remoteHost && remoteHost.windows()[0];
+      if (process.env.MV_SMOKE_REMOTE_DRAG && rw) {
+        const b = rw.win.getBounds();
+        const c = win.getContentBounds();
+        const cx = c.x + Math.round(c.width / 2);
+        const cy = c.y + Math.round(c.height / 2);
+        await rw.win.webContents.executeJavaScript(`(async () => { const t = window.toona.widgets; const z = (ms) => new Promise((r) => setTimeout(r, ms)); t.dragStart(${b.x + 20}, ${b.y + 10}); await z(400); t.dragMove(${c.x + c.width + 30}, ${b.y + 10}); await z(150); t.dragMove(${cx}, ${cy}); await z(150); t.dragEnd(${cx}, ${cy}); })()`).catch((e) => console.error('[smoke]', e));
+        await new Promise((r) => setTimeout(r, 1500));
+        result.remoteDrag = await win.webContents.executeJavaScript(`document.querySelector('.creator-remote webview').executeJavaScript('window.__rmDrag || null')`).catch((e) => String(e));
+        result.remoteAfterDrag = remoteHost.windows().map(({ id, win: w }) => ({ id, bounds: w.getBounds() }));
+      }
       result.theme = await win.webContents.executeJavaScript('document.documentElement.dataset.theme || null').catch(() => null);
       await shot(win.webContents, 'smoke.png');
       result.donate = donate.state();
@@ -668,6 +699,15 @@ app.whenReady().then(async () => {
   webSes.setUserAgent(ua);
   webSes.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'fullscreen' || permission === 'clipboard-sanitized-write'));
   wireIpc();
+  remoteHost = createRemoteHost({
+    electron: { BrowserWindow, ipcMain, globalShortcut, shell },
+    getMain: () => win,
+    preload: REMOTE_PRELOAD,
+    statePath: path.join(app.getPath('userData'), 'remote-windows.json'),
+    icon: ICON,
+    fetchImpl: (u, init) => fetch(u, init),
+    WebSocketImpl: require('ws'),
+  });
 
   let url = DEV_URL;
   if (!DEV) {
@@ -692,6 +732,7 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   quitting = true; // 업데이트 설치·OS 종료 등: 트레이로 숨기지 않고 닫는다
+  if (remoteHost) remoteHost.closeAllDetached(); // 리모컨 위젯 창은 다음 실행에 되살린다
 });
 
 app.on('second-instance', showMain);
@@ -700,4 +741,5 @@ app.on('window-all-closed', () => app.quit());
 app.on('will-quit', () => {
   if (prefs) prefs.flush();
   if (server) server.close();
+  if (remoteHost) remoteHost.dispose();
 });

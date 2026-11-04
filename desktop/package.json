@@ -1,7 +1,7 @@
 {
   "name": "multiview-desktop",
   "productName": "투네이션 후원 브라우저",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "description": "유튜브·트위치 방송을 여러 개 동시에 보며 투네이션으로 후원하는 설치형 멀티뷰",
   "main": "main.js",
   "author": "Toonation",
@@ -11,7 +11,7 @@
     "build:web": "npm run build --prefix .. -- --outDir desktop/web --emptyOutDir",
     "start": "npm run build:web && electron .",
     "dev": "electron . --dev",
-    "test": "node --test test/staticServer.test.js test/handlers.test.js test/donateController.test.js test/prefs.test.js test/donateFill.test.js test/windowBounds.test.js test/webviewPolicy.test.js test/appOptions.test.js test/webStore.test.js test/mobileDonate.test.js test/appIdentity.test.js test/signatures.test.js test/donateSignature.test.js",
+    "test": "node --test test/staticServer.test.js test/handlers.test.js test/donateController.test.js test/prefs.test.js test/donateFill.test.js test/windowBounds.test.js test/webviewPolicy.test.js test/appOptions.test.js test/webStore.test.js test/mobileDonate.test.js test/appIdentity.test.js test/signatures.test.js test/donateSignature.test.js test/remoteFeed.test.js test/remoteWindows.test.js",
     "dist": "npm run build:web && node scripts/dist.js"
   },
   "build": {
@@ -25,6 +25,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "remote-preload.js",
       "pip.html",
       "pip-preload.js",
       "lib/**/*",
@@ -53,6 +54,7 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "electron-updater": "^6.8.9"
+    "electron-updater": "^6.8.9",
+    "ws": "^8.22.1"
   }
 }

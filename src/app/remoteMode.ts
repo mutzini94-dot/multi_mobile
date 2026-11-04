@@ -8,6 +8,9 @@ import type { KV } from '../storage/safeStorage';
  */
 export const CREATOR_REMOTE_URL = 'https://caprisontoon.github.io/remote01/?autologin=1';
 
+/** 설치형: 리모컨 전용 세션. 이 주소·세션의 webview에만 앱이 설치형 기능(window.toona)을 넣는다 (desktop/lib/remotePolicy.js) */
+export const REMOTE_PARTITION = 'persist:remote';
+
 export const MODE_KEY = 'mv.mode.v1';
 export type RemoteMode = 'donor' | 'creator';
 
