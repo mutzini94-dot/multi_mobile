@@ -92,3 +92,21 @@ test('퀵패널 맨 위 추천 라이브: 옆으로 펼쳐 한 개씩 넘겨 보
   fireEvent.click(btn); // 다시 누르면 접힌다
   expect(screen.queryByRole('region', { name: '추천 라이브 탐색' })).toBeNull();
 });
+
+test('퀵패널 맨 아래 창 추가: 놓을 자리를 고르면 그 자리에 빈 칸이 생긴다', () => {
+  setup();
+  fireEvent.click(within(panel()).getByRole('button', { name: '하나' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '1번 칸 · 빈 칸' }));
+  fireEvent.click(within(panel()).getByRole('button', { name: '창 추가' }));
+  const dlg = screen.getByRole('dialog', { name: '창 추가' });
+  fireEvent.click(within(dlg).getByRole('button', { name: '6분할 · 1번 자리에 추가' }));
+  expect(screen.queryByRole('dialog', { name: '창 추가' })).toBeNull();
+  expect(tiles()).toHaveLength(6);
+  expect(within(tiles()[0]).queryByText('하나')).toBeNull();
+  expect(within(tiles()[1]).getByText('하나')).toBeInTheDocument();
+});
+
+test('9분할이면 창 추가를 누를 수 없다', () => {
+  setup({ settings: { defaultLayout: 'nine' } });
+  expect(within(panel()).getByRole('button', { name: '창 추가' })).toBeDisabled();
+});

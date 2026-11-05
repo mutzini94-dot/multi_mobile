@@ -1,6 +1,6 @@
 import type { Creator, DetachedMark, LayoutKind, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { isPinnable, isStream, withSidePage } from '../domain/pages';
-import { applyLayout, visibleCount, visibleSlots } from '../layout/layouts';
+import { addWindow, applyLayout, visibleCount, visibleSlots } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
   layout: 'quad',
@@ -12,6 +12,7 @@ export const initialViewState: ViewState = {
 
 export type ViewAction =
   | { type: 'setLayout'; layout: LayoutKind }
+  | { type: 'addWindow'; layout: LayoutKind; at: number } // 창 추가: 레이아웃을 넓히고 고른 자리를 빈 칸으로
   | { type: 'assign'; slot: number; creator: Creator }
   | { type: 'assignPage'; slot: number; page: PageSlot | DetachedMark } // 후원 페이지·웹페이지 칸·분리 표시 (선택은 그대로)
   | { type: 'restore'; slot: number; item: SlotItem } // 분리 창에서 되돌린 내용 (숨긴 칸이어도, 선택은 그대로)
@@ -29,6 +30,8 @@ const inRange = (state: ViewState, slot: number) => Number.isInteger(slot) && sl
 
 export function viewReducer(state: ViewState, action: ViewAction): ViewState {
   switch (action.type) {
+    case 'addWindow':
+      return addWindow(state, action.layout, action.at);
     case 'setLayout':
       return withSidePage(applyLayout(state, action.layout));
     case 'assign': {

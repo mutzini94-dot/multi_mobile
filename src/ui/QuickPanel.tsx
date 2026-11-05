@@ -11,6 +11,7 @@ interface Props {
   onPick(c: Creator): void; // 넣을 칸 고르기
   onDismiss(key: string): void; // 알림 닫기
   shorts?: { open: boolean; onToggle(): void; content: ReactNode }; // 맨 위 '추천 라이브 탐색': 옆으로 펼치는 쇼츠처럼 넘겨 보기
+  onAddWindow?: (() => void) | null; // 맨 아래 '창 추가' (null = 더 늘릴 수 없음)
 }
 
 const TABS = [
@@ -19,7 +20,7 @@ const TABS = [
 ] as const;
 
 /** 화면 옆 퀵패널 (Edge 사이드바처럼): 즐겨찾기·최근 본 크리에이터를 프로필로, 방송 시작 알림 */
-export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts }: Props) {
+export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts, onAddWindow }: Props) {
   const [tab, setTab] = useState<'fav' | 'recent'>('fav');
   const newKeys = new Set(started.map((c) => c.key));
   const items = tab === 'fav' ? favorites : recent;
@@ -85,6 +86,21 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
           );
         })}
       </ul>
+      {onAddWindow !== undefined && (
+        <>
+          <div className="quick-panel__line" />
+          <button
+            type="button"
+            className="quick-panel__add"
+            aria-label="창 추가"
+            title={onAddWindow ? '창 추가' : '더 이상 창을 추가할 수 없어요 (9분할)'}
+            disabled={!onAddWindow}
+            onClick={() => onAddWindow?.()}
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        </>
+      )}
       {shorts?.open && <div className="quick-panel__drawer">{shorts.content}</div>}
       {started.length > 0 && (
         <div className="quick-panel__alerts" role="status" aria-label="방송 시작 알림">

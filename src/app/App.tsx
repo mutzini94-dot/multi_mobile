@@ -17,6 +17,7 @@ import { QuickPanel } from '../ui/QuickPanel';
 import { ShortsFeed } from '../ui/ShortsFeed';
 import { quickFavorites, quickRecent, startedLive, withLive } from '../quick/quickPanel';
 import { SlotPickerDialog } from '../ui/SlotPickerDialog';
+import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
@@ -48,7 +49,7 @@ import { TileGrid } from '../ui/TileGrid';
 import { playerKeys, visibleCount, visibleSlots } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
 import { loadLastView, saveLastView } from './lastView';
-import { applyLayout } from '../layout/layouts';
+import { applyLayout, growLayouts } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { PresetsDialog } from '../ui/PresetsDialog';
@@ -827,6 +828,8 @@ export function App(props: Props) {
   const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
   // 퀵패널 맨 위 '추천 라이브 탐색' (쇼츠처럼 한 개씩)
   const [shortsOpen, setShortsOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
+  const growTo = growLayouts(state.layout);
   const quickPanel = quickOn ? (
     <QuickPanel
       side={settings.quickPanel === 'right' ? 'right' : 'left'}
@@ -838,6 +841,7 @@ export function App(props: Props) {
         setLivePick(c);
       }}
       onDismiss={dismissQuick}
+      onAddWindow={growTo.length ? () => setAddOpen(true) : null}
       shorts={{
         open: shortsOpen,
         onToggle: () => setShortsOpen((o) => !o),
@@ -1233,6 +1237,16 @@ export function App(props: Props) {
             onPick={setLivePick}
           />
         </RecommendLiveDialog>
+      )}
+      {addOpen && growTo.length > 0 && (
+        <AddWindowDialog
+          layouts={growTo}
+          onClose={() => setAddOpen(false)}
+          onPick={(layout, at) => {
+            dispatch({ type: 'addWindow', layout, at });
+            setAddOpen(false);
+          }}
+        />
       )}
       {livePick && (
         <SlotPickerDialog

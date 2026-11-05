@@ -1,4 +1,4 @@
-import { quickFavorites, quickRecent, startedLive, withLive } from '../../src/quick/quickPanel';
+import { quickFavorites, quickRecent, startedLive, withLive, QUICK_LIMIT } from '../../src/quick/quickPanel';
 import { mkCreator } from '../helpers/fixtures';
 
 test('즐겨찾기: 투네이션 즐겨찾기 먼저, 직접 추가한 즐겨찾기 중 같은 방송은 한 번만', () => {
@@ -40,4 +40,12 @@ test('같은 크리에이터(같은 후원 아이디)의 여러 채널은 한 �
   const other = mkCreator(3);
   const items = withLive([yt, tw, other], (k) => k === 'twitch:a');
   expect(items.map((i) => i.creator.key)).toEqual(['twitch:a', 'twitch:chan_3']);
+});
+
+test('퀵패널 목록은 최대 10개 (방송 중인 크리에이터가 먼저 남는다)', () => {
+  expect(QUICK_LIMIT).toBe(10);
+  const list = Array.from({ length: 15 }, (_, i) => mkCreator(i + 1, { donateId: `d${i}` }));
+  const items = withLive(list, (k) => k === list[14].key);
+  expect(items).toHaveLength(10);
+  expect(items[0].creator.key).toBe(list[14].key);
 });

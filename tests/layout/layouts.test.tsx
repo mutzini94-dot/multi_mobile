@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { applyLayout, LAYOUT_LABEL, LAYOUTS, MAX_SLOTS, SLOT_COUNT } from '../../src/layout/layouts';
+import { addWindow, applyLayout, growLayouts, LAYOUT_LABEL, LAYOUTS, MAX_SLOTS, SLOT_COUNT } from '../../src/layout/layouts';
 import { initialViewState } from '../../src/app/viewState';
 import { TileGrid } from '../../src/ui/TileGrid';
 import { mkCreator } from '../helpers/fixtures';
@@ -44,4 +44,28 @@ test('큰 화면+1: 왼쪽 큰 칸이 처음부터 넓다 (오른쪽은 좁은 �
   const panels = [...container.querySelectorAll('[data-panel]')] as HTMLElement[];
   const grow = panels.map((p) => Number(p.style.flexGrow));
   expect(grow[0]).toBeGreaterThan(grow[1] * 2);
+});
+
+test('창 추가: 지금보다 칸이 가장 적게 늘어나는 레이아웃들', () => {
+  expect(growLayouts('single')).toEqual(['wideSide', 'split2']);
+  expect(growLayouts('wideSide')).toEqual(['oneTwo']);
+  expect(growLayouts('oneTwo')).toEqual(['quad', 'oneThree']);
+  expect(growLayouts('quad')).toEqual(['oneFive', 'six']);
+  expect(growLayouts('nine')).toEqual([]);
+});
+
+test('창 추가: 고른 자리는 빈 칸, 원래 칸은 순서대로 나머지 자리에 (숨겨 둔 방송은 뒤에 보관, 선택은 따라감)', () => {
+  const a = mkCreator(1);
+  const b = mkCreator(2);
+  const hidden = mkCreator(9);
+  const state = { ...applyLayout(initialViewState, 'wideSide'), slots: [a, b, hidden, null, null, null, null, null, null], selected: 1 };
+  const s = addWindow(state, 'oneTwo', 0);
+  expect(s.layout).toBe('oneTwo');
+  expect(s.slots.slice(0, 3)).toEqual([null, a, b]);
+  expect(s.slots).toHaveLength(MAX_SLOTS);
+  expect(s.slots).toContain(hidden);
+  expect(s.selected).toBe(2);
+  const six = addWindow({ ...applyLayout(initialViewState, 'quad'), slots: [a, b, null, null, hidden, null, null, null, null] }, 'six', 5);
+  expect(six.slots.slice(0, 6)).toEqual([a, b, null, null, null, null]);
+  expect(six.slots.slice(6)).toContain(hidden);
 });

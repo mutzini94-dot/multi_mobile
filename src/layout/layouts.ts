@@ -53,3 +53,37 @@ export function applyLayout(state: ViewState, layout: LayoutKind): ViewState {
   const selected = state.selected !== null && state.selected < count ? state.selected : null;
   return { ...state, layout, slots, selected };
 }
+
+/** 창 추가: 지금보다 칸이 많은 레이아웃 중 가장 적게 늘어나는 것들 (버튼 순서대로) */
+export function growLayouts(layout: LayoutKind): LayoutKind[] {
+  const now = SLOT_COUNT[layout];
+  const bigger = LAYOUTS.filter((l) => SLOT_COUNT[l] > now);
+  if (!bigger.length) return [];
+  const next = Math.min(...bigger.map((l) => SLOT_COUNT[l]));
+  return bigger.filter((l) => SLOT_COUNT[l] === next);
+}
+
+/**
+ * 창 추가: 레이아웃을 넓히고 고른 자리(at)를 빈 칸으로 둔다.
+ * 지금 보이는 칸은 순서대로 나머지 자리에, 늘어난 다른 자리는 빈 칸. 숨겨 두었던 방송은 그 뒤에 보관한다.
+ */
+export function addWindow(state: ViewState, layout: LayoutKind, at: number): ViewState {
+  const count = SLOT_COUNT[layout];
+  const old = visibleCount(state);
+  if (count <= old || !Number.isInteger(at) || at < 0 || at >= count) return state;
+  const visible = state.slots.slice(0, old);
+  const hidden = state.slots.slice(old).filter((s) => s !== null);
+  const slots: ViewState['slots'] = [];
+  let next = 0;
+  let selected: number | null = null;
+  for (let i = 0; i < count; i++) {
+    if (i === at || next >= old) {
+      slots.push(null);
+      continue;
+    }
+    if (state.selected === next) selected = i;
+    slots.push(visible[next++] ?? null);
+  }
+  const rest = [...hidden, ...Array(MAX_SLOTS).fill(null)].slice(0, MAX_SLOTS - count);
+  return { ...state, layout, slots: [...slots, ...rest], selected };
+}
