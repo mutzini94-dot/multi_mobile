@@ -11,6 +11,7 @@ interface Props {
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onFullscreen?(): void;
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
+  onDeleteWindow?(): void; // 빈 창 삭제 (칸을 빼고 한 단계 작은 레이아웃으로)
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
   onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
   volume?: { value: number; onChange(v: number): void }; // 여러 칸 동시 듣기: 칸별 볼륨
@@ -63,6 +64,22 @@ export function Tile(props: Props) {
       data-card={props.acceptCard ? '1' : undefined}
     >
       {filled && <div className="tile__player" ref={playerSlotRef} />}
+      {!filled && !props.detached && props.onDeleteWindow && (
+        <button
+          type="button"
+          className="tile__delete"
+          aria-label="빈 창 삭제"
+          title="이 빈 창 삭제 (레이아웃이 한 단계 작아져요)"
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onDeleteWindow!();
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      )}
       {/* 플레이어 iframe은 클릭을 삼키므로 상단 바를 눌러 선택한다 */}
       <div
         className={`tile__bar${filled && dnd?.canDrag ? ' tile__bar--grab' : ''}`}

@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { addWindow, applyLayout, growLayouts, LAYOUT_LABEL, LAYOUTS, MAX_SLOTS, SLOT_COUNT } from '../../src/layout/layouts';
+import { addWindow, applyLayout, growLayouts, removeWindow, shrinkLayout, LAYOUT_LABEL, LAYOUTS, MAX_SLOTS, SLOT_COUNT } from '../../src/layout/layouts';
 import { initialViewState } from '../../src/app/viewState';
 import { TileGrid } from '../../src/ui/TileGrid';
 import { mkCreator } from '../helpers/fixtures';
@@ -68,4 +68,31 @@ test('창 추가: 고른 자리는 빈 칸, 원래 칸은 순서대로 나머지
   const six = addWindow({ ...applyLayout(initialViewState, 'quad'), slots: [a, b, null, null, hidden, null, null, null, null] }, 'six', 5);
   expect(six.slots.slice(0, 6)).toEqual([a, b, null, null, null, null]);
   expect(six.slots.slice(6)).toContain(hidden);
+});
+
+test('빈 창 삭제: 한 단계 작은 레이아웃으로, 남은 창은 순서대로 (숨겨 둔 방송은 보관, 선택은 따라감)', () => {
+  const a = mkCreator(1);
+  const b = mkCreator(2);
+  const hidden = mkCreator(9);
+  const quad = { ...applyLayout(initialViewState, 'quad'), slots: [a, null, b, null, hidden, null, null, null, null], selected: 2 };
+  expect(shrinkLayout(quad, 1)).toBe('oneTwo');
+  const s = removeWindow(quad, 1);
+  expect(s.layout).toBe('oneTwo');
+  expect(s.slots.slice(0, 3)).toEqual([a, b, null]);
+  expect(s.slots).toHaveLength(MAX_SLOTS);
+  expect(s.slots).toContain(hidden);
+  expect(s.selected).toBe(1);
+  // 6분할에서 남은 4칸이 다 차 있어도 4분할로
+  const six = { ...applyLayout(initialViewState, 'six'), slots: [a, b, mkCreator(3), mkCreator(4), null, null, null, null, null] };
+  expect(removeWindow(six, 5).layout).toBe('quad');
+  expect(removeWindow(six, 5).slots.slice(0, 4)).toEqual(six.slots.slice(0, 4));
+});
+
+test('빈 창 삭제를 할 수 없는 경우: 방송이 있는 칸, 1화면, 줄이면 방송이 가려질 때', () => {
+  const full6 = { ...applyLayout(initialViewState, 'six'), slots: [1, 2, 3, 4, 5].map((n) => mkCreator(n)).concat([null, null, null, null] as never[]) };
+  expect(shrinkLayout(full6, 5)).toBeNull();
+  expect(shrinkLayout(full6, 0)).toBeNull();
+  expect(shrinkLayout(applyLayout(initialViewState, 'single'), 0)).toBeNull();
+  expect(removeWindow(full6, 5)).toBe(full6);
+  expect(shrinkLayout(applyLayout(initialViewState, 'wideSide'), 0)).toBe('single');
 });

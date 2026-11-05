@@ -49,7 +49,7 @@ import { TileGrid } from '../ui/TileGrid';
 import { playerKeys, visibleCount, visibleSlots } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
 import { loadLastView, saveLastView } from './lastView';
-import { applyLayout, growLayouts } from '../layout/layouts';
+import { applyLayout, growLayouts, shrinkLayout } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { PresetsDialog } from '../ui/PresetsDialog';
@@ -990,6 +990,7 @@ export function App(props: Props) {
                   soundOn={state.soundOn}
                   onSelect={() => dispatch({ type: 'select', slot })}
                   onLoad={() => setPickerSlot(slot)}
+                  onDeleteWindow={shrinkLayout(state, slot) ? () => dispatch({ type: 'removeWindow', slot }) : undefined}
                   onToggleSound={() => dispatch({ type: 'toggleSound' })}
                   playerSlotRef={(el) => {
                     slotEls.current[slot] = el;

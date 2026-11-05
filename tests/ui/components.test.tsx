@@ -29,6 +29,22 @@ describe('Gnb', () => {
     await userEvent.click(screen.getByRole('button', { name: '1+2' }));
     expect(onLayout).toHaveBeenCalledWith('oneTwo');
   });
+  test('도구 버튼은 같은 모양의 아이콘 버튼 (이름은 툴팁·aria-label로)', () => {
+    const noop2 = () => {};
+    render(<Gnb {...gnbProps} onLive={noop2} onReloadAll={noop2} sound={{ on: true, onToggle: noop2 }} onMini={noop2} onPresets={noop2} onSettings={noop2} account={{ cash: 51200, onHistory: noop2 }} />);
+    const tools = screen.getByRole('toolbar', { name: '도구' });
+    const names = ['추천 라이브', '전체 새로고침', '전체 음소거', '미니 모드', '화면 구성', '설정'];
+    for (const n of names) {
+      const b = within(tools).getByRole('button', { name: n });
+      expect(b.querySelector('svg')).not.toBeNull();
+      expect(b).toHaveAttribute('data-tip');
+      expect(b.textContent).toBe('');
+    }
+    const cash = screen.getByRole('button', { name: '내 후원 내역 · 캐시 51,200' });
+    expect(cash.querySelector('svg')).not.toBeNull();
+    expect(cash.textContent).toBe('51,200');
+    expect(screen.getByRole('button', { name: '후원하기' }).querySelector('svg')).not.toBeNull();
+  });
   test('canDonate=false면 후원하기 비활성', () => {
     render(<Gnb {...gnbProps} canDonate={false} />);
     expect(screen.getByRole('button', { name: '후원하기' })).toBeDisabled();

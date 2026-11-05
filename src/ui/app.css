@@ -83,6 +83,20 @@ button:disabled { cursor: not-allowed; }
 .gnb__logo { margin-right: auto; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
 .gnb__logo-img { display: block; height: 26px; width: auto; }
 .gnb__layouts { display: flex; gap: 2px; padding: 3px; background: var(--surface); border-radius: var(--r-pill); }
+.gnb__tools { display: flex; align-items: center; gap: 2px; padding: 3px; background: var(--surface); border-radius: var(--r-pill); }
+.gnb__tool { position: relative; width: 36px; height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink-sub); cursor: pointer; transition: background 0.12s, color 0.12s, box-shadow 0.12s; }
+.gnb__tool:hover, .gnb__tool:focus-visible { background: var(--canvas); color: var(--ink); box-shadow: var(--elev-2); }
+.gnb__tool--live::after { content: ''; position: absolute; top: 5px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 2px var(--surface); }
+.gnb__tool--live:hover::after { box-shadow: 0 0 0 2px var(--canvas); }
+.gnb__mute--on, .gnb__mute--on:hover { background: var(--live); color: #fff; box-shadow: none; }
+.gnb__cash { height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px 0 12px; border: 0; border-radius: var(--r-pill); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; transition: background 0.12s; }
+.gnb__cash svg { color: #f5a524; }
+.gnb__cash:hover { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.gnb__donate { display: inline-flex; align-items: center; gap: 6px; padding: 0 18px 0 14px; }
+/* 툴팁: 아이콘 버튼 이름 (아래쪽에) */
+[data-tip] { position: relative; }
+[data-tip]:hover::before, [data-tip]:focus-visible::before { content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 50; padding: 5px 9px; border-radius: 8px; background: var(--ink); color: var(--canvas); font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; pointer-events: none; box-shadow: var(--elev-2); animation: mv-tip-in 0.12s ease-out 0.25s both; }
+@keyframes mv-tip-in { from { opacity: 0; transform: translate(-50%, -2px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .layout-icon { width: 36px; height: 28px; padding: 6px 8px; display: grid; gap: 2px; background: transparent; border: 0; border-radius: var(--r-pill); }
 .layout-icon i { display: block; background: var(--ink-mute); border-radius: 1.5px; }
 .layout-icon:hover i { background: var(--ink-sub); }
@@ -141,6 +155,8 @@ button:disabled { cursor: not-allowed; }
 /* 불러오기: 영상 위에서는 반투명 알약, 빈 칸에서는 Outlined 버튼 */
 .chip { height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 13px; font-weight: 600; backdrop-filter: blur(6px); }
 .chip:hover { background: rgba(255, 255, 255, 0.3); }
+.tile__delete { position: absolute; top: 10px; right: 10px; z-index: 2; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink-mute); cursor: pointer; transition: background 0.12s, color 0.12s; }
+.tile__delete:hover, .tile__delete:focus-visible { background: var(--surface-2); color: var(--live); }
 .tile--empty .chip { height: 36px; padding: 0 18px; background: var(--canvas); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); backdrop-filter: none; }
 .tile--empty .chip:hover { background: var(--surface-2); }
 .chip--small { height: 24px; padding: 0 10px; font-size: 12px; }
@@ -279,7 +295,6 @@ button:disabled { cursor: not-allowed; }
 .tile--drag-source::after { content: '옮기는 중'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--primary-press); font-size: 14px; font-weight: 700; }
 
 /* ---------- 설정 창 ---------- */
-.gnb__settings { font-size: 18px; }
 .settings { width: min(620px, 100%); }
 .settings__section { padding: 14px 0; border-top: 1px solid var(--line); }
 .settings__section:first-of-type { border-top: 0; padding-top: 0; }
@@ -362,7 +377,6 @@ button:disabled { cursor: not-allowed; }
 .ended-notice .btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- 내 후원 내역 ---------- */
-.gnb__cash { font-variant-numeric: tabular-nums; }
 .history { width: min(680px, calc(100vw - 32px)); }
 .history__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .history__card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); }
@@ -432,8 +446,6 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .app--mini .focus-view__bar .btn--donate { height: 30px; padding: 0 12px; font-size: 13px; }
 
 /* ---------- 전체 음소거 ---------- */
-.gnb__mute--on { background: var(--live); color: #fff; box-shadow: none; }
-.gnb__mute--on:hover { background: #e23c3c; }
 
 /* 화면 오류 안내 (까만 창 대신) */
 .crash { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: var(--canvas); color: var(--ink); text-align: center; }
@@ -467,8 +479,6 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .activity__text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 상단 추천 라이브 · 넣을 칸 고르기 */
-.gnb__live { display: inline-flex; align-items: center; gap: 6px; }
-.gnb__live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
 .modal-backdrop--top { z-index: 11; }
 .slot-picker { width: min(560px, 100%); }
 .slot-picker__grid { display: grid; gap: 6px; aspect-ratio: 16 / 9; margin-top: 12px; }

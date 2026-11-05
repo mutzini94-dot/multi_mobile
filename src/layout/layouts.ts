@@ -87,3 +87,45 @@ export function addWindow(state: ViewState, layout: LayoutKind, at: number): Vie
   const rest = [...hidden, ...Array(MAX_SLOTS).fill(null)].slice(0, MAX_SLOTS - count);
   return { ...state, layout, slots: [...slots, ...rest], selected };
 }
+
+/** 빈 창 삭제: 한 단계 작은 레이아웃 (같은 모양 계열로) */
+const SHRINK: Record<LayoutKind, LayoutKind | null> = {
+  nine: 'six',
+  six: 'quad',
+  oneFive: 'oneThree',
+  oneThree: 'oneTwo',
+  quad: 'oneTwo',
+  oneTwo: 'split2',
+  split2: 'single',
+  wideSide: 'single',
+  single: null,
+};
+
+/** 빈 칸 at을 빼고 남는 칸들: 늘어놓을 칸 수보다 많으면 뒤쪽 빈 칸부터 뺀다 (방송이 가려지면 null) */
+function remainAfterRemove(state: ViewState, at: number, count: number): ViewState['slots'] | null {
+  const rest = state.slots.slice(0, visibleCount(state)).filter((_, i) => i !== at);
+  for (let i = rest.length - 1; rest.length > count && i >= 0; i--) if (rest[i] === null) rest.splice(i, 1);
+  return rest.length <= count ? rest : null;
+}
+
+/** 빈 창 at을 지웠을 때의 레이아웃 (지울 수 없으면 null: 방송이 있는 칸, 1화면, 줄이면 방송이 가려질 때) */
+export function shrinkLayout(state: ViewState, at: number): LayoutKind | null {
+  const to = SHRINK[state.layout];
+  if (!to || !Number.isInteger(at) || at < 0 || at >= visibleCount(state) || state.slots[at] !== null) return null;
+  return remainAfterRemove(state, at, SLOT_COUNT[to]) ? to : null;
+}
+
+/** 빈 창 삭제: 그 칸을 빼고 한 단계 작은 레이아웃으로. 남은 칸은 순서대로, 숨겨 둔 방송은 뒤에 보관한다 */
+export function removeWindow(state: ViewState, at: number): ViewState {
+  const layout = shrinkLayout(state, at);
+  if (!layout) return state;
+  const count = SLOT_COUNT[layout];
+  const old = visibleCount(state);
+  const rest = remainAfterRemove(state, at, count)!;
+  const visible = [...rest, ...Array(count).fill(null)].slice(0, count);
+  const hidden = state.slots.slice(old).filter((s) => s !== null);
+  const slots = [...visible, ...hidden, ...Array(MAX_SLOTS).fill(null)].slice(0, MAX_SLOTS);
+  const sel = state.selected !== null ? state.slots[state.selected] : null;
+  const selected = sel ? visible.indexOf(sel) : -1;
+  return { ...state, layout, slots, selected: selected >= 0 ? selected : null };
+}

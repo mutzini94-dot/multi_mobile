@@ -110,3 +110,11 @@ test('9분할이면 창 추가를 누를 수 없다', () => {
   setup({ settings: { defaultLayout: 'nine' } });
   expect(within(panel()).getByRole('button', { name: '창 추가' })).toBeDisabled();
 });
+
+test('빈 창의 삭제 버튼: 누르면 그 칸이 빠지고 한 단계 작은 레이아웃이 된다', () => {
+  setup();
+  expect(tiles()).toHaveLength(4);
+  fireEvent.click(within(tiles()[3]).getByRole('button', { name: '빈 창 삭제' }));
+  expect(tiles()).toHaveLength(3);
+  expect(screen.getByRole('button', { name: '1+2' })).toHaveAttribute('aria-pressed', 'true');
+});
