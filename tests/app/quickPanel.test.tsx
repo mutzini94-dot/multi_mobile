@@ -12,8 +12,7 @@ vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data
 
 const empty: LivePage = { items: [], page: 1, totalPages: 1, total: 0 };
 
-function setup({ settings, lives = vi.fn(async (_q: LiveQuery) => empty) }: { settings?: object; lives?: (q: LiveQuery) => Promise<LivePage> } = {}) {
-  const kv = quadKv();
+function setup({ settings, lives = vi.fn(async (_q: LiveQuery) => empty), kv = quadKv() }: { settings?: object; lives?: (q: LiveQuery) => Promise<LivePage>; kv?: ReturnType<typeof quadKv> } = {}) {
   if (settings) kv.set(SETTINGS_KEY, JSON.stringify({ defaultLayout: 'quad', ...settings }));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: '하나', donateId: 'one' }));
@@ -22,8 +21,8 @@ function setup({ settings, lives = vi.fn(async (_q: LiveQuery) => empty) }: { se
     throw new Error('NOT_LOGGED_IN');
   });
   const win = { open: vi.fn(() => ({ closed: false }) as Window), screen: {} as Screen, location: { hash: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
-  render(<App favorites={favorites} kv={kv} win={win} bridge={{ request } as unknown as ToonationBridge} desktop={null} lives={lives} quickPollMs={60} />);
-  return { lives };
+  const r = render(<App favorites={favorites} kv={kv} win={win} bridge={{ request } as unknown as ToonationBridge} desktop={null} lives={lives} quickPollMs={60} />);
+  return { lives, kv, unmount: r.unmount };
 }
 const panel = () => screen.getByRole('complementary', { name: '퀵패널' });
 const tiles = () => [...document.querySelectorAll<HTMLElement>('.tile')];
@@ -117,4 +116,24 @@ test('빈 창의 삭제 버튼: 누르면 그 칸이 빠지고 한 단계 작은
   fireEvent.click(within(tiles()[3]).getByRole('button', { name: '빈 창 삭제' }));
   expect(tiles()).toHaveLength(3);
   expect(screen.getByRole('button', { name: '1+2' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('추천 라이브 창 너비: 가장자리를 끌어(또는 화살표 키로) 조절하고, 다음에 열어도 그 너비', async () => {
+  const first = setup();
+  fireEvent.click(within(panel()).getByRole('button', { name: '추천 라이브 탐색' }));
+  const handle = await screen.findByRole('separator', { name: '추천 라이브 창 크기 조절' });
+  const drawer = () => document.querySelector<HTMLElement>('.quick-panel__drawer')!;
+  fireEvent.keyDown(handle, { key: 'ArrowRight' });
+  fireEvent.keyDown(handle, { key: 'ArrowRight' });
+  expect(drawer().style.width).toBe('420px'); // 기본 380 + 20 + 20
+  expect(handle).toHaveAttribute('aria-valuenow', '420');
+  // 끌기: 왼쪽 패널이면 오른쪽 가장자리를 끈다
+  fireEvent.pointerDown(handle, { clientX: 500, pointerId: 1 });
+  fireEvent.pointerMove(window, { clientX: 560, pointerId: 1 });
+  fireEvent.pointerUp(window, { clientX: 560, pointerId: 1 });
+  expect(drawer().style.width).toBe('480px');
+  first.unmount();
+  setup({ kv: first.kv });
+  fireEvent.click(within(panel()).getByRole('button', { name: '추천 라이브 탐색' }));
+  expect(document.querySelector<HTMLElement>('.quick-panel__drawer')!.style.width).toBe('480px');
 });

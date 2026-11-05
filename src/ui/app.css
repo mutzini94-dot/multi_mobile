@@ -613,6 +613,16 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .quick-panel__shorts--on { background: var(--canvas); box-shadow: var(--elev-2); }
 .quick-panel__shorts-badge { padding: 2px 5px; border-radius: 5px; background: var(--live); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: 0.3px; }
 .quick-panel__drawer { position: absolute; top: 0; bottom: 0; width: min(380px, 40vw); z-index: 6; animation: mv-drawer-in 0.2s ease-out; }
+.quick-panel__drawer { max-width: calc(100vw - 160px); }
+.quick-panel__drawer--resizing { animation: none; }
+.quick-panel__drawer--resizing iframe { pointer-events: none; } /* 끄는 동안 영상이 포인터를 가로채지 않게 */
+.quick-panel__drawer-resize { position: absolute; top: 0; bottom: 0; width: 12px; z-index: 2; cursor: ew-resize; touch-action: none; outline: none; }
+.quick-panel--left .quick-panel__drawer-resize { right: -6px; }
+.quick-panel--right .quick-panel__drawer-resize { left: -6px; }
+.quick-panel__drawer-resize::after { content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 44px; transform: translate(-50%, -50%); border-radius: 2px; background: rgba(255, 255, 255, 0.35); opacity: 0; transition: opacity 0.15s, background 0.15s; }
+.quick-panel__drawer:hover .quick-panel__drawer-resize::after, .quick-panel__drawer-resize:focus-visible::after, .quick-panel__drawer--resizing .quick-panel__drawer-resize::after { opacity: 1; }
+.quick-panel__drawer-resize:hover::after, .quick-panel__drawer--resizing .quick-panel__drawer-resize::after { background: var(--primary); }
+body.is-resizing-x { cursor: ew-resize; user-select: none; }
 .quick-panel--left .quick-panel__drawer { left: calc(100% + 8px); }
 .quick-panel--right .quick-panel__drawer { right: calc(100% + 8px); }
 /* 투명도는 쓰지 않는다: 애니메이션이 멈춘 창(뒤에 가려진 창 등)에서도 패널이 보이게 */
