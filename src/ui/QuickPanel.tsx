@@ -28,41 +28,47 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
 
   return (
     <aside className={`quick-panel quick-panel--${side}`} aria-label="퀵패널">
-      {shorts && (
-        <>
-          <button
-            type="button"
-            className={`quick-panel__shorts${shorts.open ? ' quick-panel__shorts--on' : ''}`}
-            aria-label="추천 라이브 탐색"
-            aria-pressed={shorts.open}
-            title="추천 라이브를 한 개씩 넘겨 보기"
-            onClick={shorts.onToggle}
-          >
-            <span className="quick-panel__shorts-badge">LIVE</span>
-          </button>
-          <div className="quick-panel__line" />
-        </>
-      )}
-      <div className="quick-panel__tabs" role="tablist">
-        {TABS.map((t) => {
-          const dot = t.key !== tab && hasNew(t.key === 'fav' ? favorites : recent);
-          return (
+      {/* 머리: 추천 라이브 탐색 · 즐겨찾기/최근 본 탭 */}
+      <div className="quick-panel__head">
+        {shorts && (
+          <>
             <button
-              key={t.key}
               type="button"
-              role="tab"
-              aria-selected={tab === t.key}
-              aria-label={dot ? `${t.label} · 새 방송` : t.label}
-              title={t.label}
-              className={`quick-panel__tab${dot ? ' quick-panel__tab--new' : ''}`}
-              onClick={() => setTab(t.key)}
+              className={`quick-panel__shorts${shorts.open ? ' quick-panel__shorts--on' : ''}`}
+              aria-label="추천 라이브 탐색"
+              aria-pressed={shorts.open}
+              title="추천 라이브를 한 개씩 넘겨 보기"
+              onClick={shorts.onToggle}
             >
-              <span aria-hidden="true">{t.icon}</span>
+              <span className="quick-panel__shorts-badge">LIVE</span>
             </button>
-          );
-        })}
+            <div className="quick-panel__divider" />
+          </>
+        )}
+        <div className="quick-panel__tabs" role="tablist">
+          {TABS.map((t) => {
+            const dot = t.key !== tab && hasNew(t.key === 'fav' ? favorites : recent);
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                aria-label={dot ? `${t.label} · 새 방송` : t.label}
+                title={t.label}
+                className={`quick-panel__tab${dot ? ' quick-panel__tab--new' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                <span aria-hidden="true">{t.icon}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="quick-panel__line" />
+      {/* 목록: 지금 탭의 크리에이터 */}
+      <div className="quick-panel__caption" aria-hidden="true">
+        {tab === 'fav' ? '즐겨찾기' : '최근 본'}
+      </div>
       <ul className="quick-panel__list">
         {items.length === 0 && <li className="quick-panel__empty">{tab === 'fav' ? '즐겨찾기 없음' : '최근 본 방송 없음'}</li>}
         {items.map(({ creator: c, live }) => {
@@ -86,9 +92,9 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
           );
         })}
       </ul>
+      {/* 하단: 창 추가 */}
       {onAddWindow !== undefined && (
-        <>
-          <div className="quick-panel__line" />
+        <div className="quick-panel__foot">
           <button
             type="button"
             className="quick-panel__add"
@@ -99,7 +105,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
           >
             <span aria-hidden="true">+</span>
           </button>
-        </>
+        </div>
       )}
       {shorts?.open && <div className="quick-panel__drawer">{shorts.content}</div>}
       {started.length > 0 && (
