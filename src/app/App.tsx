@@ -844,6 +844,9 @@ export function App(props: Props) {
   const [quickStarted, setQuickStarted] = useState<Creator[]>([]);
   const quickPrev = useRef<Record<string, boolean>>({});
   const quickAll = [...quickFavs, ...quickRecents];
+  // 빈 칸의 '최근' 바로 넣기: 최근 본 크리에이터 중 지금 칸에 없는 3명 (방송 중이 먼저)
+  const shownKeys = new Set(visibleSlots(state).filter(isStream).map((c) => c.key));
+  const emptyPicks = withLive(quickRecents.filter((c) => !shownKeys.has(c.key)).map(quickLiveCreator), quickIsLive, 3);
   const quickLiveMap: Record<string, boolean> = {};
   for (const c of quickAll) {
     const l = quickIsLive(c.key);
@@ -1047,6 +1050,8 @@ export function App(props: Props) {
                   soundOn={state.soundOn}
                   onSelect={() => dispatch({ type: 'select', slot })}
                   onLoad={() => setPickerSlot(slot)}
+                  quickPicks={emptyPicks}
+                  onQuickPick={(c) => dispatch({ type: 'assign', slot, creator: c })}
                   onDeleteWindow={shrinkLayout(state, slot) ? () => dispatch({ type: 'removeWindow', slot }) : undefined}
                   onToggleSound={() => dispatch({ type: 'toggleSound' })}
                   playerSlotRef={(el) => {

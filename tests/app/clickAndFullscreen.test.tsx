@@ -132,7 +132,7 @@ describe('방송 삭제', () => {
     setup();
     expect(within(tiles()[2] as HTMLElement).queryByRole('button', { name: '방송 삭제' })).toBeNull();
     fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '방송 삭제' }));
-    expect(within(tiles()[1] as HTMLElement).queryByText('B')).toBeNull();
+    expect(within(tiles()[1] as HTMLElement).queryByText('B', { selector: '.tile__name' })).toBeNull();
     expect(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' })).toBeInTheDocument();
     expect(screen.queryByTitle('player-twitch:chan_2')).toBeNull();
     expect(iframe('twitch:chan_1')).toBeInTheDocument();

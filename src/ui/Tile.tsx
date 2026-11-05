@@ -11,6 +11,8 @@ interface Props {
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onFullscreen?(): void;
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
+  quickPicks?: { creator: Creator; live: boolean | null }[]; // 빈 칸: 최근 본 크리에이터 바로 넣기 (최대 3)
+  onQuickPick?(c: Creator): void;
   starting?: boolean; // 트위치가 자동 재생을 시작하는 중: 영상 위 바를 잠깐 숨긴다 (겹치면 트위치가 재생을 막는다)
   onDeleteWindow?(): void; // 빈 창 삭제 (칸을 빼고 한 단계 작은 레이아웃으로)
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
@@ -65,6 +67,41 @@ export function Tile(props: Props) {
       data-card={props.acceptCard ? '1' : undefined}
     >
       {filled && <div className="tile__player" ref={playerSlotRef} />}
+      {/* 빈 칸: 점선 영역 안에 불러오기 · 최근 본 크리에이터 바로 넣기 · 끌어 놓기 안내 */}
+      {!filled && !props.detached && (
+        <div className="tile__empty">
+          <button type="button" className="tile__load" onClick={onLoad}>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            불러오기
+          </button>
+          {!!props.quickPicks?.length && (
+            <div className="tile__picks">
+              <span className="tile__picks-label">최근</span>
+              {props.quickPicks.slice(0, 3).map(({ creator: c, live }) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`tile__pick${live ? ' tile__pick--live' : ''}`}
+                  aria-label={`${c.name}${live ? ' · 방송 중' : ''} · 이 칸에 넣기`}
+                  title={`${c.name}${live ? ' (방송 중)' : ''} — 이 칸에 넣기`}
+                  onClick={() => props.onQuickPick?.(c)}
+                >
+                  {c.profile ? <img src={c.profile} alt="" referrerPolicy="no-referrer" draggable={false} /> : <span>{c.name.slice(0, 1)}</span>}
+                </button>
+              ))}
+              <button type="button" className="tile__more" onClick={onLoad}>
+                더보기
+              </button>
+            </div>
+          )}
+          <span className="tile__hint">카드를 끌어 놓아도 돼요</span>
+          <span className="tile__drop-text" aria-hidden="true">
+            여기에 놓기
+          </span>
+        </div>
+      )}
       {!filled && !props.detached && props.onDeleteWindow && (
         <button
           type="button"
@@ -107,7 +144,7 @@ export function Tile(props: Props) {
             되돌리기
           </button>
         )}
-        {(
+        {(filled || props.detached) && (
           <button
             type="button"
             className="chip"

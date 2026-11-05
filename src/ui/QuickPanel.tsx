@@ -48,6 +48,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
               onClick={shorts.onToggle}
             >
               <span className="quick-panel__shorts-badge">LIVE</span>
+              <span className="quick-panel__label">추천 라이브</span>
             </button>
             <div className="quick-panel__divider" />
           </>
@@ -67,6 +68,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
                 onClick={() => setTab(t.key)}
               >
                 <span aria-hidden="true">{t.icon}</span>
+                <span className="quick-panel__label">{t.label}</span>
               </button>
             );
           })}
@@ -94,6 +96,10 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
               >
                 {c.profile ? <img src={c.profile} alt="" loading="lazy" referrerPolicy="no-referrer" draggable={false} /> : <span className="quick-panel__initial">{c.name.slice(0, 1)}</span>}
                 {live && <span className="quick-panel__live-dot" aria-hidden="true" />}
+                <span className="quick-panel__label">
+                  {c.name}
+                  {live && <em>방송 중</em>}
+                </span>
               </button>
             </li>
           );
@@ -111,6 +117,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
             onClick={() => onAddWindow?.()}
           >
             <span aria-hidden="true">+</span>
+            <span className="quick-panel__label">창 추가</span>
           </button>
         </div>
       )}

@@ -142,10 +142,34 @@ button:disabled { cursor: not-allowed; }
 .tile--selected { box-shadow: 0 0 0 3px var(--primary); }
 .tile--empty { background: var(--canvas); box-shadow: inset 0 0 0 1.5px var(--line); display: flex; align-items: center; justify-content: center; }
 .tile--empty::before { content: '+'; position: absolute; top: calc(50% - 44px); left: 50%; transform: translateX(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--surface); color: var(--ink-mute); font-size: 22px; line-height: 36px; text-align: center; }
+.tile--empty:not(.tile--detached)::before { display: none; }
+/* 빈 칸: 점선 영역 · 불러오기 · 최근 본 크리에이터 · 끌어 놓기 안내 (작은 칸은 container query로 줄인다) */
+.tile--empty:not(.tile--detached) { container-type: size; }
+.tile__empty { position: absolute; inset: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 10px; border: 1.5px dashed rgba(81, 156, 255, 0.35); transition: border-color 0.15s, background 0.15s; }
+.tile--empty:hover .tile__empty { border-color: var(--primary); background: rgba(81, 156, 255, 0.05); }
+.tile__load { height: 38px; padding: 0 18px 0 14px; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: var(--r-pill); background: var(--primary); color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.12s, transform 0.12s; }
+.tile__load:hover { background: var(--primary-press); }
+.tile__load:active { transform: scale(0.97); }
+.tile__picks { display: flex; align-items: center; gap: 6px; }
+.tile__picks-label { font-size: 11px; color: var(--ink-mute); margin-right: 2px; }
+.tile__pick { position: relative; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; overflow: visible; background: var(--primary-soft); color: var(--primary); font-weight: 700; font-size: 12px; cursor: pointer; box-shadow: 0 0 0 1.5px var(--canvas), 0 0 0 2.5px var(--line); transition: transform 0.12s; }
+.tile__pick img, .tile__pick span { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; }
+.tile__pick:hover { transform: translateY(-2px); }
+.tile__pick--live { box-shadow: 0 0 0 1.5px var(--canvas), 0 0 0 3px var(--live); }
+.tile__more { height: 30px; padding: 0 10px; border: 0; border-radius: var(--r-pill); background: var(--surface); color: var(--ink-sub); font: inherit; font-size: 12px; cursor: pointer; }
+.tile__more:hover { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.tile__hint { font-size: 11px; color: var(--ink-mute); }
+.tile__drop-text { display: none; font-size: 14px; font-weight: 700; color: var(--primary); }
+.tile--drop .tile__empty { border: 2px solid var(--primary); background: rgba(81, 156, 255, 0.12); }
+.tile--drop .tile__empty > :not(.tile__drop-text) { display: none; }
+.tile--drop .tile__drop-text { display: block; }
+@container (max-height: 230px) { .tile__hint, .tile__picks-label { display: none; } .tile__empty { gap: 6px; } .tile__load { height: 32px; font-size: 13px; padding: 0 14px 0 10px; } .tile__pick, .tile__more { width: 26px; height: 26px; } .tile__more { width: auto; } }
+@container (max-height: 150px) { .tile__picks { display: none; } }
 .tile__player { position: absolute; inset: 0; }
 .tile__player iframe { display: block; }
 .tile__bar { position: absolute; top: 0; left: 0; right: 0; z-index: 2; display: flex; align-items: center; flex-wrap: nowrap; gap: 6px; padding: 10px 10px 18px; background: linear-gradient(rgba(13, 15, 16, 0.72), rgba(13, 15, 16, 0)); color: #fff; cursor: pointer; }
 .tile--empty .tile__bar { position: static; background: none; justify-content: center; padding: 0; margin-top: 24px; cursor: default; color: var(--ink); }
+.tile--empty:not(.tile--detached) .tile__bar { position: absolute; margin: 0; padding: 0; background: none; }
 .tile__name { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
 .tile__bar > * { flex: none; }
 .tile__name, .tile__platform { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -711,3 +735,31 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 .creator-remote { flex: 1; min-height: 0; display: flex; padding: 0 12px 12px; }
 .creator-remote__frame { flex: 1; width: 100%; height: 100%; border: 0; border-radius: var(--r-md); background: #0f1012; }
 .app__body[hidden], .creator-remote[hidden] { display: none !important; }
+
+/* 퀵패널: 마우스를 올리면 두 배쯤 넓어지며 버튼 이름·크리에이터 이름을 보여 준다 (칸 배치는 그대로, 패널이 칸 위로 겹친다).
+   펼친 창(추천 라이브)·알림 위에 있을 때는 넓히지 않는다 */
+.quick-panel { transition: width 0.18s ease, margin 0.18s ease, box-shadow 0.18s ease; }
+.quick-panel:has(> .quick-panel__head:hover, > .quick-panel__caption:hover, > .quick-panel__list:hover, > .quick-panel__foot:hover) { width: 136px; z-index: 20; box-shadow: inset 0 0 0 1px var(--border-soft), 0 12px 32px rgba(13, 15, 16, 0.18); }
+.quick-panel--left:has(> .quick-panel__head:hover, > .quick-panel__caption:hover, > .quick-panel__list:hover, > .quick-panel__foot:hover) { margin-right: -84px; }
+.quick-panel--right:has(> .quick-panel__head:hover, > .quick-panel__caption:hover, > .quick-panel__list:hover, > .quick-panel__foot:hover) { margin-left: -84px; }
+.quick-panel--left .quick-panel__drawer, .quick-panel--left .quick-panel__alerts { left: 60px; }
+.quick-panel--right .quick-panel__drawer, .quick-panel--right .quick-panel__alerts { right: 60px; }
+.quick-panel__head { align-items: flex-start; padding-left: 2px; }
+.quick-panel__shorts { position: relative; margin-left: -2px; }
+.quick-panel__divider { margin-left: 9px; }
+.quick-panel__caption { width: 52px; }
+.quick-panel .quick-panel__list { align-items: flex-start; padding-left: 8px; }
+.quick-panel__empty { margin-left: -4px; }
+.quick-panel__foot { justify-content: flex-start; padding-left: 8px; }
+.quick-panel__add { position: relative; }
+.quick-panel__label { position: absolute; left: calc(100% + 10px); top: 50%; transform: translate(-4px, -50%); display: flex; flex-direction: column; max-width: 74px; color: var(--ink); font-size: 12px; font-weight: 600; line-height: 1.25; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; pointer-events: none; transition: opacity 0.12s ease, transform 0.12s ease; }
+.quick-panel__label em { font-style: normal; font-size: 10px; font-weight: 600; color: var(--live); }
+.quick-panel:has(> .quick-panel__head:hover, > .quick-panel__caption:hover, > .quick-panel__list:hover, > .quick-panel__foot:hover) .quick-panel__label { opacity: 1; transform: translate(0, -50%); transition-delay: 0.06s; }
+/* 오른쪽 퀵패널은 왼쪽으로 넓어지므로 아이콘을 오른쪽에 붙이고 이름은 왼쪽에 */
+.quick-panel--right .quick-panel__head { align-items: flex-end; padding: 6px 2px 6px 0; }
+.quick-panel--right .quick-panel__shorts { margin: 0 -2px 0 0; }
+.quick-panel--right .quick-panel__divider { margin: 0 9px 0 0; }
+.quick-panel--right .quick-panel__caption { align-self: flex-end; }
+.quick-panel--right .quick-panel__list { align-items: flex-end; padding: 8px 8px 12px 0; }
+.quick-panel--right .quick-panel__foot { justify-content: flex-end; padding: 10px 8px 10px 0; }
+.quick-panel--right .quick-panel__label { left: auto; right: calc(100% + 10px); text-align: right; align-items: flex-end; transform: translate(4px, -50%); }

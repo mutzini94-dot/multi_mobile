@@ -163,3 +163,19 @@ test('추천 라이브 창 높이: 아래 가장자리·모서리를 끌어 조�
   expect(drawer().style.width).toBe('430px');
   expect(drawer().style.height).toBe('608px');
 });
+
+test('빈 칸의 최근 본 크리에이터를 누르면 그 칸에 바로 넣는다 (지금 보이는 방송은 빼고)', () => {
+  setup();
+  fireEvent.click(within(panel()).getByRole('button', { name: '하나' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '1번 칸 · 빈 칸' }));
+  expect(within(tiles()[1]).queryByRole('button', { name: /^하나 · .*이 칸에 넣기$/ })).toBeNull(); // 이미 보이는 방송
+  fireEvent.click(within(tiles()[0]).getByRole('button', { name: '방송 삭제' }));
+  fireEvent.click(within(tiles()[2]).getByRole('button', { name: /^하나 · .*이 칸에 넣기$/ }));
+  expect(within(tiles()[2]).getByText('하나')).toBeInTheDocument();
+});
+
+test('퀵패널 항목은 이름표를 함께 갖고 있다 (마우스를 올려 넓어지면 보인다)', () => {
+  setup();
+  expect(panel().querySelector('.quick-panel__label')).not.toBeNull();
+  for (const n of ['추천 라이브', '즐겨찾기', '하나', '창 추가']) expect(within(panel()).getAllByText(n, { selector: '.quick-panel__label' }).length).toBeGreaterThan(0);
+});

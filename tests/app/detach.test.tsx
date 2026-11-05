@@ -88,7 +88,7 @@ test('분리 창에서 되돌리기를 누르거나 창을 닫으면 원래 칸�
   detach(0);
   detach(1);
   fromSolo(opened[0].p.id, { type: 'return' });
-  expect(within(tiles()[0]).getByText('A')).toBeInTheDocument();
+  expect(within(tiles()[0]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument();
   closeSolo(opened[1].p.id);
   expect(within(tiles()[1]).getByText('B')).toBeInTheDocument();
 });
@@ -98,10 +98,10 @@ test('분리한 칸에 다른 방송을 넣으면 분리 창은 따로 남고, �
   pick(0, 'A');
   detach(0);
   pick(0, 'C');
-  expect(within(tiles()[0]).getByText('C')).toBeInTheDocument();
+  expect(within(tiles()[0]).getByText('C', { selector: '.tile__name' })).toBeInTheDocument();
   closeSolo(opened[0].p.id);
-  expect(within(tiles()[0]).getByText('C')).toBeInTheDocument();
-  expect(within(document.querySelector<HTMLElement>('.stage')!).queryByText('A')).toBeNull(); // 칸에서 (퀵패널의 프로필 글자는 빼고)
+  expect(within(tiles()[0]).getByText('C', { selector: '.tile__name' })).toBeInTheDocument();
+  expect(within(document.querySelector<HTMLElement>('.stage')!).queryByText('A', { selector: '.tile__name, .tile__detached-text' })).toBeNull(); // 칸 이름에서 (퀵패널·빈 칸 '최근'의 프로필 글자는 빼고)
 });
 
 test('원래 칸이 다른 방송으로 바뀐 뒤 분리 창에서 되돌리기: 빈 칸으로, 빈 칸이 없으면 알려준다', () => {
@@ -110,7 +110,7 @@ test('원래 칸이 다른 방송으로 바뀐 뒤 분리 창에서 되돌리기
   detach(0);
   pick(0, 'C');
   fromSolo(opened[0].p.id, { type: 'return' });
-  expect(within(tiles()[1]).getByText('A')).toBeInTheDocument(); // 첫 빈 칸
+  expect(within(tiles()[1]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument(); // 첫 빈 칸
   // 꽉 찬 상태
   pick(2, 'B');
   pick(3, 'C');
@@ -148,7 +148,7 @@ test('팝업이 막히면 분리하지 않고 알려준다', () => {
   pick(0, 'A');
   detach(0);
   expect(opened).toHaveLength(1);
-  expect(within(tiles()[0]).getByText('A')).toBeInTheDocument();
+  expect(within(tiles()[0]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument();
   expect(screen.getByText('새 창을 열지 못했습니다. 팝업을 허용해 주세요')).toBeInTheDocument();
 });
 

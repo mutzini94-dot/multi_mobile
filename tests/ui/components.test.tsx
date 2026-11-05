@@ -62,6 +62,24 @@ describe('Tile', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} starting />);
     expect(container.querySelector('.tile')!.className).toMatch(/tile--starting/);
   });
+  test('빈 칸: 점선 영역에 불러오기 버튼과 최근 본 크리에이터 바로 넣기 (방송 중이면 표시), 더보기는 불러오기', async () => {
+    const onLoad = vi.fn();
+    const onQuickPick = vi.fn();
+    const a = mkCreator(1, { name: '하나' });
+    render(<Tile {...tileProps} onLoad={onLoad} quickPicks={[{ creator: a, live: true }, { creator: mkCreator(2, { name: '둘' }), live: false }]} onQuickPick={onQuickPick} />);
+    expect(document.querySelector('.tile__empty')).not.toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '하나 · 방송 중 · 이 칸에 넣기' }));
+    expect(onQuickPick).toHaveBeenCalledWith(a);
+    await userEvent.click(screen.getByRole('button', { name: '더보기' }));
+    await userEvent.click(screen.getByRole('button', { name: '불러오기' }));
+    expect(onLoad).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('카드를 끌어 놓아도 돼요')).toBeInTheDocument();
+  });
+  test('빈 칸: 최근 본 크리에이터가 없으면 불러오기와 안내만', () => {
+    render(<Tile {...tileProps} />);
+    expect(screen.queryByRole('button', { name: '더보기' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: '불러오기' })).toHaveLength(1);
+  });
   test('선택되면 tile--selected', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} selected />);
     expect(container.firstChild).toHaveClass('tile--selected');
