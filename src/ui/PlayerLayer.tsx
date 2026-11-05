@@ -29,6 +29,8 @@ interface Props {
   settling?: number[]; // 놓은 직후 제자리로 부드럽게 들어가는 칸들
   renderPage?(page: PageSlot, playerKey: string): ReactNode; // 후원 페이지·웹페이지 칸 (App의 PageView)
   onStatus?(playerKey: string, s: StreamStatus): void; // 방송 종료 감지
+  onStarting?(playerKey: string, waiting: boolean): void; // 트위치 자동 재생 시작 중 (그동안 영상 위 층을 숨긴다)
+  starting?: ReadonlySet<string>; // 시작 중인 플레이어 키
   renderOverlay?(slot: number, playerKey: string): ReactNode; // 플레이어 위 안내 (방송 종료 등)
   renderControls?(slot: number, playerKey: string): ReactNode; // 잡는 층 위의 버튼 (트위치 일시정지)
   reloadSeq?: number; // 전체 새로고침: 바뀌면 모든 플레이어·페이지를 다시 띄운다
@@ -51,7 +53,7 @@ const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
  * 플레이어를 칸 번호 key로 한 번만 마운트하고, 레이아웃이 정한 칸 자리에 절대 위치로 덮는다.
  * 레이아웃을 바꿔도 iframe이 DOM에서 옮겨지지 않으므로 방송이 다시 로딩되지 않는다.
  */
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, renderOverlay, renderControls, reloadSeq = 0, tileSeq }: Props) {
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, renderOverlay, renderControls, reloadSeq = 0, tileSeq }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
   const onSelectRef = useRef(onSelectSlot);
   onSelectRef.current = onSelectSlot;
@@ -122,13 +124,13 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         return (
           <div
             key={`${key}#${reloadSeq}.${tileSeq?.[key] ?? 0}`}
-            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}`}
+            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}${starting?.has(key) ? ' player-layer__item--starting' : ''}`}
             data-slot={slot}
             data-kind={isStream(creator) ? 'stream' : 'page'}
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
-            {isStream(creator) ? <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} onStatus={(s) => onStatus?.(key, s)} /> : isPage(creator) ? renderPage?.(creator, key) : null}
+            {isStream(creator) ? <StreamPlayer creator={creator} onReady={(h) => onReady(key, h)} onStatus={(s) => onStatus?.(key, s)} onStarting={(w) => onStarting?.(key, w)} /> : isPage(creator) ? renderPage?.(creator, key) : null}
             {!offscreen && renderOverlay?.(slot, key)}
             {/* 페이지 칸은 클릭·입력을 페이지가 받아야 하므로 잡는 층이 없다 (위쪽 바로 끈다).
                 선택된 칸도 없다: 첫 클릭은 칸 선택, 그다음부터는 플레이어가 직접 받는다 (재생 버튼·트위치 시청 시작 등) */}

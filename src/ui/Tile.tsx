@@ -11,6 +11,7 @@ interface Props {
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onFullscreen?(): void;
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
+  starting?: boolean; // 트위치가 자동 재생을 시작하는 중: 영상 위 바를 잠깐 숨긴다 (겹치면 트위치가 재생을 막는다)
   onDeleteWindow?(): void; // 빈 창 삭제 (칸을 빼고 한 단계 작은 레이아웃으로)
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
   onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
@@ -58,7 +59,7 @@ export function Tile(props: Props) {
     );
   return (
     <div
-      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${dnd?.over || props.cardOver ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}`}
+      className={`tile${selected ? ' tile--selected' : ''}${filled ? '' : ' tile--empty'}${props.detached ? ' tile--detached' : ''}${page ? ' tile--page' : ''}${dnd?.over || props.cardOver ? ' tile--drop' : ''}${dnd?.source ? ' tile--drag-source' : ''}${props.starting ? ' tile--starting' : ''}`}
       data-slot={dnd?.slot}
       data-drop={dnd?.canDrop ? '1' : undefined}
       data-card={props.acceptCard ? '1' : undefined}

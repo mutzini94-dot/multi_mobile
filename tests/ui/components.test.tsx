@@ -58,6 +58,10 @@ describe('Tile', () => {
     expect(screen.queryByTestId('player')).toBeNull();
     expect(screen.queryByRole('button', { name: /소리/ })).toBeNull();
   });
+  test('트위치가 자동 재생을 시작하는 동안(starting)은 영상 위 바를 숨긴다 (겹치면 트위치가 재생을 막는다)', () => {
+    const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} starting />);
+    expect(container.querySelector('.tile')!.className).toMatch(/tile--starting/);
+  });
   test('선택되면 tile--selected', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} selected />);
     expect(container.firstChild).toHaveClass('tile--selected');

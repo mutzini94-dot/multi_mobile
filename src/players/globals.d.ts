@@ -29,6 +29,7 @@ interface Window {
       ONLINE?: string;
       OFFLINE?: string;
       ENDED?: string;
+      PLAYING?: string;
     };
   };
 }

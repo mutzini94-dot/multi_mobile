@@ -517,6 +517,17 @@ export function App(props: Props) {
       return live.length === Object.keys(m).length ? m : Object.fromEntries(live.map((k) => [k, m[k]]));
     });
   }, [keys]);
+  // 트위치 자동 재생 시작 중인 플레이어: 그동안 영상 위 바·잡는 층을 숨긴다 (겹쳐 있으면 트위치가 재생을 막는다)
+  const [startingKeys, setStartingKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const onStreamStarting = useCallback((key: string, waiting: boolean) => {
+    setStartingKeys((prev) => {
+      if (prev.has(key) === waiting) return prev;
+      const next = new Set(prev);
+      if (waiting) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
   const onStreamStatus = (key: string, s: StreamStatus) => {
     setStreamStatus((m) => (m[key] === s ? m : { ...m, [key]: s }));
     // 바꿔 넣을 라이브 방송을 찾을 수 있게 투네이션 즐겨찾기 라이브 상태를 새로 가져온다
@@ -997,6 +1008,7 @@ export function App(props: Props) {
                   liveInfo={creator && tileLive[creator.key] ? liveLine(tileLive[creator.key]) : undefined}
                   creator={creator}
                   selected={state.selected === slot}
+                  starting={!!keys[slot] && startingKeys.has(keys[slot]!)}
                   soundOn={state.soundOn}
                   onSelect={() => dispatch({ type: 'select', slot })}
                   onLoad={() => setPickerSlot(slot)}
@@ -1119,6 +1131,8 @@ export function App(props: Props) {
             settling={settling}
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
             onStatus={onStreamStatus}
+            onStarting={onStreamStarting}
+            starting={startingKeys}
             renderOverlay={endedOverlay}
             renderControls={pauseControl}
             reloadSeq={reloadSeq}
