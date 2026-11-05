@@ -88,6 +88,7 @@ button:disabled { cursor: not-allowed; }
 .layout-icon:hover i { background: var(--ink-sub); }
 .layout-icon[aria-pressed='true'] { background: var(--canvas); box-shadow: var(--elev-2); }
 .layout-icon[aria-pressed='true'] i { background: var(--primary); }
+.layout-icon--wideSide { grid-template-columns: 2fr 1fr; }
 .layout-icon--single { grid-template-columns: 1fr; }
 .layout-icon--split2 { grid-template-columns: 1fr 1fr; }
 .layout-icon--oneTwo { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; grid-auto-flow: column; }

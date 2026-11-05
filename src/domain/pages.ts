@@ -56,6 +56,14 @@ export function makeSignaturePage(): SignaturePage {
   return { kind: 'signature', key: newKey('signature'), name: '시그니처' };
 }
 
+/** 큰 화면+1: 오른쪽 좁은 칸이 비어 있으면 후원 페이지(왼쪽 방송을 따라감)를 넣는다 */
+export function withSidePage(state: ViewState): ViewState {
+  if (state.layout !== 'wideSide' || state.slots[1]) return state;
+  const slots = state.slots.slice();
+  slots[1] = makeDonatePage();
+  return { ...state, slots };
+}
+
 /** 방송에 고정할 수 있는 칸 (선택한 방송을 따라가는 칸) */
 export function isPinnable(item: SlotItem | null | undefined): item is DonatePage | ChatPage | SignaturePage {
   return isPage(item) && (item.kind === 'donate' || item.kind === 'chat' || item.kind === 'signature');

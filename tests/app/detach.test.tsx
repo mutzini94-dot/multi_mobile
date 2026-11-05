@@ -7,6 +7,7 @@ import type { DetachHost, HostToSolo, SoloToHost } from '../../src/detach/channe
 import type { SoloPayload } from '../../src/detach/soloLink';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -35,7 +36,7 @@ function fakeHost(openOk = true) {
 }
 
 function setup(openOk = true) {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));

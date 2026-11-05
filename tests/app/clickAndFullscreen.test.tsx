@@ -4,6 +4,7 @@ import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 // 실제 플레이어처럼 iframe을 그린다 (클릭하면 포커스가 iframe으로 들어간다)
 vi.mock('../../src/players/StreamPlayer', () => ({
@@ -13,7 +14,7 @@ vi.mock('../../src/players/StreamPlayer', () => ({
 const noBridge: ToonationBridge = { request: () => Promise.reject(new Error('NO_EXTENSION')) };
 
 function setup() {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));

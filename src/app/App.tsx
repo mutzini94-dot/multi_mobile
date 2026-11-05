@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
-import { chatUrl, donatePageUrl, followDonateCreator, isPage, isPinnable, isStream, pageTarget } from '../domain/pages';
+import { chatUrl, donatePageUrl, followDonateCreator, isPage, isPinnable, isStream, pageTarget, withSidePage } from '../domain/pages';
 import { PinDialog } from '../ui/PinDialog';
 import { hasCreatorDrag, readCreatorDrag } from './creatorDrag';
 import { CREATOR_REMOTE_URL, MODE_KEY, REMOTE_PARTITION, readMode, type RemoteMode } from './remoteMode';
@@ -145,7 +145,7 @@ export function App(props: Props) {
   const [state, dispatch] = useReducer(
     viewReducer,
     null,
-    () => (settings.restoreLastView ? loadLastView(kv) : null) ?? applyLayout(initialViewState, settings.defaultLayout),
+    () => (settings.restoreLastView ? loadLastView(kv) : null) ?? withSidePage(applyLayout(initialViewState, settings.defaultLayout)),
   );
   // 새 창으로 분리한 칸들 (칸에는 분리 표시만 남는다)
   const [detached, setDetached] = useState<Detached[]>([]);

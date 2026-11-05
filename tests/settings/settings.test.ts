@@ -7,7 +7,7 @@ test('기본값', () => {
   expect(loadSettings(kv())).toEqual(DEFAULT_SETTINGS);
   expect(DEFAULT_SETTINGS).toEqual({
     restoreLastView: true,
-    defaultLayout: 'quad',
+    defaultLayout: 'wideSide',
     hiddenSlotPlayback: 'keep',
     lowQualityOthers: false,
     autoReplaceEnded: false,
@@ -49,7 +49,7 @@ test('잘못된 값은 항목별로 기본값으로 (나머지는 유지)', () =
   const s = loadSettings(k);
   expect(s.theme).toBe('system');
   expect(s.masterVolume).toBe(100);
-  expect(s.defaultLayout).toBe('quad');
+  expect(s.defaultLayout).toBe('wideSide');
   expect(s.quickAmounts).toEqual([3000]); // 1~10,000,000 사이 정수만
   expect(s.liveRefreshMinutes).toBe(0); // 0·1·3·5·10만
   expect(s.shortcuts).toBe(false);

@@ -4,11 +4,12 @@ import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
 function setup() {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A', donateId: 'tagA' }));
   favorites.add(mkCreator(2, { name: 'B', donateId: 'tagB' }));

@@ -6,6 +6,7 @@ import type { DesktopApi } from '../../src/desktop/desktopApi';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import type { LiveQuery, LivePage } from '../../src/toonation/liveList';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -36,7 +37,7 @@ const livePage: LivePage = {
 };
 
 function setup({ desktop = null as DesktopApi | null, lives = vi.fn(async (_q: LiveQuery) => livePage) } = {}) {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));

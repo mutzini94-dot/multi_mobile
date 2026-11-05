@@ -6,14 +6,15 @@ import { SETTINGS_KEY } from '../../src/settings/settings';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import type { LivePage, LiveQuery } from '../../src/toonation/liveList';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
 const empty: LivePage = { items: [], page: 1, totalPages: 1, total: 0 };
 
 function setup({ settings, lives = vi.fn(async (_q: LiveQuery) => empty) }: { settings?: object; lives?: (q: LiveQuery) => Promise<LivePage> } = {}) {
-  const kv = safeStorage(undefined);
-  if (settings) kv.set(SETTINGS_KEY, JSON.stringify(settings));
+  const kv = quadKv();
+  if (settings) kv.set(SETTINGS_KEY, JSON.stringify({ defaultLayout: 'quad', ...settings }));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: '하나', donateId: 'one' }));
   favorites.add(mkCreator(2, { name: '둘', donateId: 'two' }));

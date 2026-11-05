@@ -1,5 +1,5 @@
 import type { Creator, DetachedMark, LayoutKind, PageSlot, SlotItem, ViewState } from '../domain/types';
-import { isPinnable, isStream } from '../domain/pages';
+import { isPinnable, isStream, withSidePage } from '../domain/pages';
 import { applyLayout, visibleCount, visibleSlots } from '../layout/layouts';
 
 export const initialViewState: ViewState = {
@@ -30,7 +30,7 @@ const inRange = (state: ViewState, slot: number) => Number.isInteger(slot) && sl
 export function viewReducer(state: ViewState, action: ViewAction): ViewState {
   switch (action.type) {
     case 'setLayout':
-      return applyLayout(state, action.layout);
+      return withSidePage(applyLayout(state, action.layout));
     case 'assign': {
       if (!inRange(state, action.slot)) return state;
       const slots = state.slots.slice();

@@ -6,13 +6,14 @@ import { DEFAULT_SETTINGS, SETTINGS_KEY, type Settings } from '../../src/setting
 import { safeStorage, type KV } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: ({ creator }: { creator: { key: string } }) => <iframe title={`player-${creator.key}`} /> }));
 
 const noBridge: ToonationBridge = { request: () => Promise.reject(new Error('NO_EXTENSION')) };
 
-function setup({ kv = safeStorage(undefined), settings = {} as Partial<Settings>, hash = '' } = {}) {
-  kv.set(SETTINGS_KEY, JSON.stringify({ ...DEFAULT_SETTINGS, ...settings }));
+function setup({ kv = quadKv(), settings = {} as Partial<Settings>, hash = '' } = {}) {
+  kv.set(SETTINGS_KEY, JSON.stringify({ ...DEFAULT_SETTINGS, defaultLayout: 'quad', ...settings }));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));
@@ -28,8 +29,17 @@ const pick = (slot: number, name: string) => {
 };
 
 describe('마지막 화면 복원 · 기본 레이아웃', () => {
+  test('처음 실행: 큰 화면+1 — 왼쪽은 방송, 오른쪽은 (왼쪽 방송을 따라가는) 후원 페이지', () => {
+    setup({ settings: { defaultLayout: DEFAULT_SETTINGS.defaultLayout } });
+    expect(screen.getByRole('button', { name: '큰 화면+1' })).toHaveAttribute('aria-pressed', 'true');
+    expect(tiles()).toHaveLength(2);
+    expect(within(tile(1)).getByText('후원 페이지')).toBeInTheDocument();
+    pick(0, 'A');
+    expect(within(tile(0)).getByText('A')).toBeInTheDocument();
+  });
+
   test('켜져 있으면 다음 실행에서 레이아웃·칸이 그대로 돌아온다', () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     const first = setup({ kv });
     fireEvent.click(screen.getByRole('button', { name: '1+2' }));
     pick(2, 'B');
@@ -40,7 +50,7 @@ describe('마지막 화면 복원 · 기본 레이아웃', () => {
   });
 
   test('꺼져 있으면 기본 레이아웃의 빈 화면으로 시작한다', () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     const first = setup({ kv });
     pick(0, 'A');
     first.unmount();
@@ -50,7 +60,7 @@ describe('마지막 화면 복원 · 기본 레이아웃', () => {
   });
 
   test('저장값이 깨졌으면 기본 레이아웃', () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     kv.set(LAST_VIEW_KEY, '{bad');
     setup({ kv, settings: { defaultLayout: 'single' } });
     expect(tiles()).toHaveLength(1);

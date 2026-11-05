@@ -13,7 +13,7 @@ const full: ViewState = {
 };
 
 test('SLOT_COUNT', () => {
-  expect(SLOT_COUNT).toEqual({ single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9 });
+  expect(SLOT_COUNT).toEqual({ wideSide: 2, single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9 });
 });
 
 test('quad→split2: 보이는 칸은 앞 2칸, 나머지 방송은 지우지 않고 보관', () => {
@@ -181,4 +181,14 @@ test('pinPage: 페이지 칸을 방송에 고정·해제 (방송 칸·웹 칸은
   const w = makeWebPage('naver.com');
   const s3: ViewState = { ...s0, slots: [w.ok ? w.value : null, ...s0.slots.slice(1)] };
   expect(viewReducer(s3, { type: 'pinPage', slot: 0, creator: mkCreator(2) })).toBe(s3);
+});
+
+test('큰 화면+1로 바꾸면 비어 있는 오른쪽 칸에 후원 페이지를 넣는다 (차 있으면 그대로)', () => {
+  const s = viewReducer(initialViewState, { type: 'setLayout', layout: 'wideSide' });
+  expect(s.layout).toBe('wideSide');
+  expect(s.slots[0]).toBeNull();
+  expect(s.slots[1]).toMatchObject({ kind: 'donate' });
+  const busy = { ...initialViewState, slots: [null, mkCreator(2), ...Array(7).fill(null)] };
+  expect(viewReducer(busy, { type: 'setLayout', layout: 'wideSide' }).slots[1]).toBe(busy.slots[1]);
+  expect(viewReducer(initialViewState, { type: 'setLayout', layout: 'split2' }).slots[1]).toBeNull();
 });

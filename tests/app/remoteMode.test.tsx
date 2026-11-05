@@ -5,10 +5,11 @@ import type { DesktopApi } from '../../src/desktop/desktopApi';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage, type KV } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
-function setup(kv: KV = safeStorage(undefined), desktop: DesktopApi | null = null) {
+function setup(kv: KV = quadKv(), desktop: DesktopApi | null = null) {
   const request = vi.fn(async () => {
     throw new Error('NOT_LOGGED_IN');
   });
@@ -53,7 +54,7 @@ test('고른 리모컨은 다음 실행에도 그대로', () => {
 
 test('설치형: 크리에이터 리모컨은 자기 세션의 webview로 띄운다 (실시간 후원·위젯 분리 등 설치형 기능을 앱이 넣어 준다)', () => {
   const desktop = { onDonateClosed: () => () => {}, onDonateMode: () => () => {} } as unknown as DesktopApi;
-  setup(safeStorage(undefined), desktop);
+  setup(quadKv(), desktop);
   fireEvent.click(within(switcher()).getByRole('radio', { name: '크리에이터 리모컨' }));
   const view = document.querySelector('.creator-remote webview')!;
   expect(view.getAttribute('src')).toBe(CREATOR_REMOTE_URL);

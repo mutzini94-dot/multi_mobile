@@ -4,11 +4,12 @@ import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
 function setup(opts: { hash?: string; popup?: { closed: boolean } | null; clipboardFails?: boolean } = {}) {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A', donateId: 'donA' }));
   favorites.add(mkCreator(2, { name: 'B', donateId: 'donB' }));
@@ -91,7 +92,7 @@ describe('투네이션 즐겨찾기 연동', () => {
   });
 
   test('불러오기 창에서 투네이션 즐겨찾기를 골라 칸에 넣고, 확인 없이 후원한다', async () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     const win = {
       open: vi.fn(() => ({ closed: false }) as unknown as Window),
       screen: { availWidth: 1920, availHeight: 1040 } as Screen,
@@ -108,14 +109,14 @@ describe('투네이션 즐겨찾기 연동', () => {
   });
 
   test('로그인 전이면 투네이션 로그인 버튼이 보인다', async () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     render(<App favorites={localFavorites(kv)} kv={kv} bridge={bridge(null)} win={{ open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator }} />);
     fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));
     expect(await screen.findByRole('button', { name: '투네이션 로그인' })).toBeInTheDocument();
   });
 
   test('불러오기 창을 열 때마다 목록(라이브 상태)을 새로 가져온다', async () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     const b = bridge({ name: '나' });
     render(<App favorites={localFavorites(kv)} kv={kv} bridge={b} win={{ open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator }} />);
     fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '불러오기' }));

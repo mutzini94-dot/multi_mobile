@@ -31,7 +31,7 @@ export const SETTINGS_KEY = 'mv.settings.v1';
 
 export const DEFAULT_SETTINGS: Settings = {
   restoreLastView: true,
-  defaultLayout: 'quad',
+  defaultLayout: 'wideSide', // 큰 화면(방송) + 오른쪽 후원 페이지
   hiddenSlotPlayback: 'keep',
   lowQualityOthers: false,
   autoReplaceEnded: false,

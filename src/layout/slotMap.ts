@@ -5,6 +5,7 @@ export type SlotArea = [number, number, number, number];
 
 /** 레이아웃별 칸 배치 (TileGrid와 같은 번호 순서): 칸 고르기 창에서 화면 모양 그대로 그린다 */
 export const SLOT_MAP: Record<LayoutKind, { cols: string[]; rows: string[]; areas: SlotArea[] }> = {
+  wideSide: { cols: ['3fr', '1fr'], rows: ['1fr'], areas: [[1, 1, 1, 1], [1, 2, 1, 1]] },
   single: { cols: ['1fr'], rows: ['1fr'], areas: [[1, 1, 1, 1]] },
   split2: { cols: ['1fr', '1fr'], rows: ['1fr'], areas: [[1, 1, 1, 1], [1, 2, 1, 1]] },
   oneTwo: { cols: ['1fr', '1fr'], rows: ['1fr', '1fr'], areas: [[1, 1, 1, 1], [2, 1, 1, 1], [1, 2, 2, 1]] },

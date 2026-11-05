@@ -5,6 +5,7 @@ import { safeStorage } from '../../src/storage/safeStorage';
 import type { DesktopApi } from '../../src/desktop/desktopApi';
 import type { PlayerHandle } from '../../src/players/types';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 // 유튜브 플레이어는 재생이 시작된 뒤에야 지금 라이브 영상 ID를 알려 준다
 const ytVideo: { id: string | null } = { id: null };
@@ -37,7 +38,7 @@ function desktopApi(): DesktopApi {
 
 function setup() {
   ytVideo.id = null;
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'TW', channel: 'tw_one' }));
   favorites.add(mkCreator(2, { name: 'YT', platform: 'youtube', channel: UC, key: `youtube:${UC}` }));

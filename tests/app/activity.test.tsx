@@ -6,6 +6,7 @@ import type { ToonationBridge } from '../../src/toonation/bridge';
 import type { DonationRecord } from '../../src/toonation/history';
 import type { LivePage, LiveQuery } from '../../src/toonation/liveList';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -17,7 +18,7 @@ const livePage: LivePage = {
 };
 
 function setup({ loggedIn = false, history = [] as DonationRecord[] } = {}) {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));
@@ -114,7 +115,7 @@ test('후원한 크리에이터가 라이브면 지금 라이브에 후원 횟�
 });
 
 test('로그인 확인은 되는데 즐겨찾기가 막히는 상태에서도 요청을 끝없이 반복하지 않는다', async () => {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const request = vi.fn(async (type: string) => {
     if (type === 'status') return { account: { name: '나', cash: 0 } };
     if (type === 'favorites') throw new Error('NOT_LOGGED_IN');

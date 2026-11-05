@@ -5,6 +5,7 @@ import { safeStorage } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import type { LivePage, LiveQuery, PopularLive } from '../../src/toonation/liveList';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -18,7 +19,7 @@ const livePage: LivePage = {
 const popular: PopularLive = { groups: [], top: livePage.items };
 
 function setup() {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const lives = vi.fn(async (_q: LiveQuery) => livePage);
   const loadPopular = vi.fn(async () => popular);
   const request = vi.fn(async () => {

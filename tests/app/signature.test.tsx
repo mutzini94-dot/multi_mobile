@@ -8,11 +8,12 @@ import { isPage, makeSignaturePage } from '../../src/domain/pages';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import type { DesktopApi } from '../../src/desktop/desktopApi';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
 function setup(desktop: DesktopApi | null = null) {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A', donateId: 'tagA' }));
   favorites.add(mkCreator(2, { name: 'B', donateId: 'tagB' }));
@@ -48,7 +49,7 @@ test('불러오기 시그니처 탭 → 선택한 방송 크리에이터의 시�
 });
 
 test('시그니처 칸도 마지막 화면으로 저장·복원된다', () => {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const slots = Array(9).fill(null);
   slots[2] = makeSignaturePage();
   expect(isPage(slots[2])).toBe(true);

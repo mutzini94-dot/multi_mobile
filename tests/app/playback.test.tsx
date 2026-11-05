@@ -7,6 +7,7 @@ import { safeStorage } from '../../src/storage/safeStorage';
 import type { PlayerHandle } from '../../src/players/types';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 type Fake = PlayerHandle & { muted: boolean; volume: number | null; paused: boolean; low: boolean };
 const fakes: Record<string, Fake> = {};
@@ -33,8 +34,8 @@ const B = 'twitch:chan_2';
 
 function setup(settings: Partial<Settings> = {}) {
   for (const k of Object.keys(fakes)) delete fakes[k];
-  const kv = safeStorage(undefined);
-  kv.set(SETTINGS_KEY, JSON.stringify({ ...DEFAULT_SETTINGS, ...settings }));
+  const kv = quadKv();
+  kv.set(SETTINGS_KEY, JSON.stringify({ ...DEFAULT_SETTINGS, defaultLayout: 'quad', ...settings }));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));

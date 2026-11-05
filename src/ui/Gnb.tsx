@@ -6,6 +6,7 @@ import logoUrl from '../assets/logo.png';
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
 const ICON_CELLS: Record<LayoutKind, string[]> = {
+  wideSide: ['a', 'b'],
   single: ['a'],
   split2: ['a', 'b'],
   oneTwo: ['a', 'b', 'c'],

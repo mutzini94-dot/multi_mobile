@@ -35,6 +35,9 @@ export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
   const key = state.layout;
   let content: ReactNode;
   switch (state.layout) {
+    case 'wideSide': // [큰 칸 | 오른쪽 좁은 칸] (채팅·후원 페이지를 옆에 두기 좋게)
+      content = group('root', 'horizontal', [column('col-left', 'left', [0]), column('col-right', 'right', [1])], [72, 28]);
+      break;
     case 'single':
       content = group('root', 'horizontal', [{ node: renderTile(0), col: 'left' }]);
       break;

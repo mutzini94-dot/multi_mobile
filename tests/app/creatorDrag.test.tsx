@@ -6,6 +6,7 @@ import { CREATOR_MIME, readCreatorDrag } from '../../src/app/creatorDrag';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import type { LivePage, LiveQuery, PopularLive } from '../../src/toonation/liveList';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -31,7 +32,7 @@ function dataTransfer() {
 }
 
 function setup() {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A', donateId: 'tagA' }));
   const request = vi.fn(async (type: string) => {

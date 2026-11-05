@@ -7,6 +7,7 @@ import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
 import type { ToonationBridge } from '../../src/toonation/bridge';
 import { mkCreator } from '../helpers/fixtures';
+import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
@@ -17,7 +18,7 @@ const view = (names: string[], layout: 'quad' | 'six' = 'quad') => {
 
 describe('presets 저장소', () => {
   test('이름 붙여 저장·불러오기, 같은 이름은 덮어쓴다', () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     expect(savePreset(kv, '  저녁 합방 세트 ', view(['A', 'B'])).ok).toBe(true);
     savePreset(kv, '아침', view(['C'], 'six'));
     savePreset(kv, '저녁 합방 세트', view(['D']));
@@ -28,7 +29,7 @@ describe('presets 저장소', () => {
   });
 
   test('이름은 1~30자, 최대 개수', () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     expect(savePreset(kv, '   ', view(['A'])).ok).toBe(false);
     expect(savePreset(kv, 'x'.repeat(31), view(['A'])).ok).toBe(false);
     for (let i = 0; i < MAX_PRESETS; i++) savePreset(kv, `구성${i}`, view(['A']));
@@ -37,7 +38,7 @@ describe('presets 저장소', () => {
   });
 
   test('삭제, 깨진 저장값은 건너뛴다', () => {
-    const kv = safeStorage(undefined);
+    const kv = quadKv();
     savePreset(kv, 'A', view(['A']));
     const id = listPresets(kv)[0].id;
     deletePreset(kv, id);
@@ -48,7 +49,7 @@ describe('presets 저장소', () => {
 });
 
 function setup() {
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));

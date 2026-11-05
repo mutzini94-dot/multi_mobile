@@ -1,8 +1,9 @@
 import type { LayoutKind, ViewState } from '../domain/types';
 
-export const SLOT_COUNT: Record<LayoutKind, number> = { single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9 };
+export const SLOT_COUNT: Record<LayoutKind, number> = { wideSide: 2, single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9 };
 
 export const LAYOUT_LABEL: Record<LayoutKind, string> = {
+  wideSide: '큰 화면+1',
   single: '1화면',
   split2: '2분할',
   oneTwo: '1+2',
@@ -14,7 +15,7 @@ export const LAYOUT_LABEL: Record<LayoutKind, string> = {
 };
 
 /** 상단 레이아웃 버튼 순서 */
-export const LAYOUTS: LayoutKind[] = ['single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine'];
+export const LAYOUTS: LayoutKind[] = ['wideSide', 'single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine'];
 
 /** 칸은 항상 MAX_SLOTS개를 보관하고, 레이아웃은 그중 앞의 몇 칸을 보여줄지만 정한다. */
 export const MAX_SLOTS = 9;

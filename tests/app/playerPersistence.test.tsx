@@ -5,6 +5,7 @@ import { localFavorites } from '../../src/favorites/favorites';
 import { safeStorage } from '../../src/storage/safeStorage';
 import { mkCreator } from '../helpers/fixtures';
 import type { ToonationBridge } from '../../src/toonation/bridge';
+import { quadKv } from '../helpers/quadKv';
 
 const mounts: string[] = [];
 vi.mock('../../src/players/StreamPlayer', () => ({
@@ -20,7 +21,7 @@ const noBridge: ToonationBridge = { request: () => Promise.reject(new Error('NO_
 
 test('레이아웃을 바꿔도 남아 있는 칸의 플레이어는 다시 마운트되지 않는다', () => {
   mounts.length = 0;
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   const win = { open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator };
@@ -38,7 +39,7 @@ test('레이아웃을 바꿔도 남아 있는 칸의 플레이어는 다시 마�
 
 test('레이아웃을 줄이면 빠진 칸의 방송은 숨겨 두고, 다시 늘리면 다시 불러오지 않고 돌아온다', () => {
   mounts.length = 0;
-  const kv = safeStorage(undefined);
+  const kv = quadKv();
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(4, { name: 'D' }));
   const win = { open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://x/' } as Location, navigator: {} as Navigator };

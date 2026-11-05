@@ -5,9 +5,10 @@ import { TileGrid } from '../../src/ui/TileGrid';
 import { mkCreator } from '../helpers/fixtures';
 import type { LayoutKind } from '../../src/domain/types';
 
-test('레이아웃: 1·2·1+2·4분할에 큰 화면+3·큰 화면+5·6분할·9분할', () => {
-  expect(LAYOUTS).toEqual(['single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine']);
-  expect(LAYOUTS.map((l) => SLOT_COUNT[l])).toEqual([1, 2, 3, 4, 4, 6, 6, 9]);
+test('레이아웃: 맨 앞 큰 화면+1, 1·2·1+2·4분할에 큰 화면+3·큰 화면+5·6분할·9분할', () => {
+  expect(LAYOUTS).toEqual(['wideSide', 'single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine']);
+  expect(LAYOUTS.map((l) => SLOT_COUNT[l])).toEqual([2, 1, 2, 3, 4, 4, 6, 6, 9]);
+  expect(LAYOUT_LABEL.wideSide).toBe('큰 화면+1');
   expect(LAYOUT_LABEL.nine).toBe('9분할');
   expect(MAX_SLOTS).toBe(9);
 });
@@ -26,6 +27,7 @@ test('예전 4칸 상태도 9칸으로 늘려 보관한다', () => {
 });
 
 test.each<[LayoutKind, number]>([
+  ['wideSide', 2],
   ['oneThree', 4],
   ['oneFive', 6],
   ['six', 6],
@@ -34,4 +36,12 @@ test.each<[LayoutKind, number]>([
   const state = applyLayout(initialViewState, layout);
   const { container } = render(<TileGrid state={state} onSizes={() => {}} renderTile={(slot) => <div className="t" data-slot={slot} />} />);
   expect([...container.querySelectorAll('.t')].map((e) => Number((e as HTMLElement).dataset.slot)).sort((a, b) => a - b)).toEqual(Array.from({ length: n }, (_, i) => i));
+});
+
+test('큰 화면+1: 왼쪽 큰 칸이 처음부터 넓다 (오른쪽은 좁은 칸)', () => {
+  const state = applyLayout(initialViewState, 'wideSide');
+  const { container } = render(<TileGrid state={state} onSizes={() => {}} renderTile={(slot) => <div className="t" data-slot={slot} />} />);
+  const panels = [...container.querySelectorAll('[data-panel]')] as HTMLElement[];
+  const grow = panels.map((p) => Number(p.style.flexGrow));
+  expect(grow[0]).toBeGreaterThan(grow[1] * 2);
 });
