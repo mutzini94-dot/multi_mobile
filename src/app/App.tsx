@@ -13,11 +13,11 @@ import { parseSignatures, type Signature } from '../toonation/signatures';
 import { ActivityWidget } from '../ui/ActivityWidget';
 import { RecommendLiveDialog } from '../ui/RecommendLiveDialog';
 import { RecommendLive } from '../ui/RecommendLive';
-import { QuickPanel } from '../ui/QuickPanel';
+import { QuickPanel, type ShortsSize } from '../ui/QuickPanel';
 import { ShortsFeed } from '../ui/ShortsFeed';
 import { quickFavorites, quickRecent, startedLive, withLive } from '../quick/quickPanel';
 import { SlotPickerDialog } from '../ui/SlotPickerDialog';
-import { readShortsWidth, SHORTS_WIDTH_KEY } from '../quick/shortsSize';
+import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY } from '../quick/shortsSize';
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
@@ -829,7 +829,7 @@ export function App(props: Props) {
   const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
   // 퀵패널 맨 위 '추천 라이브 탐색' (쇼츠처럼 한 개씩)
   const [shortsOpen, setShortsOpen] = useState(false);
-  const [shortsWidth, setShortsWidth] = useState(() => readShortsWidth(kv)); // 추천 라이브 탐색 창 너비 (조절하면 기억)
+  const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
   const growTo = growLayouts(state.layout);
   const quickPanel = quickOn ? (
@@ -847,10 +847,13 @@ export function App(props: Props) {
       shorts={{
         open: shortsOpen,
         onToggle: () => setShortsOpen((o) => !o),
-        width: shortsWidth,
-        onResize: (w) => {
-          setShortsWidth(w);
-          kv.set(SHORTS_WIDTH_KEY, String(w));
+        size: shortsSize,
+        onResize: (s) => {
+          setShortsSize(s);
+          if (s.width === null) kv.set(SHORTS_WIDTH_KEY, ''); // 비우면 기본
+          else kv.set(SHORTS_WIDTH_KEY, String(s.width));
+          if (s.height === null) kv.set(SHORTS_HEIGHT_KEY, ''); // 비우면 기본
+          else kv.set(SHORTS_HEIGHT_KEY, String(s.height));
         },
         content: <ShortsFeed load={liveSource} onAdd={(c) => setLivePick(c)} onDonate={(c) => donateTo(c)} onClose={() => setShortsOpen(false)} />,
       }}

@@ -1,5 +1,5 @@
-import { useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { clampShortsWidth, SHORTS_DEFAULT_WIDTH } from '../quick/shortsSize';
+import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { clampShortsHeight, clampShortsWidth, SHORTS_DEFAULT_WIDTH } from '../quick/shortsSize';
 import type { Creator } from '../domain/types';
 import type { QuickItem } from '../quick/quickPanel';
 import { startCreatorDrag } from '../app/creatorDrag';
@@ -11,9 +11,14 @@ interface Props {
   started: Creator[]; // 방금 방송을 시작한 크리에이터 (알림)
   onPick(c: Creator): void; // 넣을 칸 고르기
   onDismiss(key: string): void; // 알림 닫기
-  // 맨 위 '추천 라이브 탐색': 옆으로 펼치는 쇼츠처럼 넘겨 보기. width = 조절한 너비 (null = 기본), onResize = 조절을 마쳤을 때 (저장)
-  shorts?: { open: boolean; onToggle(): void; content: ReactNode; width?: number | null; onResize?(w: number): void };
+  // 맨 위 '추천 라이브 탐색': 옆으로 펼치는 쇼츠처럼 넘겨 보기. size = 조절한 크기 (null = 기본), onResize = 조절을 마쳤을 때 (저장)
+  shorts?: { open: boolean; onToggle(): void; content: ReactNode; size?: ShortsSize; onResize?(s: ShortsSize): void };
   onAddWindow?: (() => void) | null; // 맨 아래 '창 추가' (null = 더 늘릴 수 없음)
+}
+
+export interface ShortsSize {
+  width: number | null; // null = 기본 너비
+  height: number | null; // null = 퀵패널 높이 그대로
 }
 
 const TABS = [
@@ -109,7 +114,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
           </button>
         </div>
       )}
-      {shorts?.open && <ShortsDrawer side={side} width={shorts.width ?? null} onResize={shorts.onResize} content={shorts.content} />}
+      {shorts?.open && <ShortsDrawer side={side} size={shorts.size ?? { width: null, height: null }} onResize={shorts.onResize} content={shorts.content} />}
       {started.length > 0 && (
         <div className="quick-panel__alerts" role="status" aria-label="방송 시작 알림">
           {started.map((c) => (
@@ -132,58 +137,104 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
   );
 }
 
-/** 추천 라이브 탐색 창: 바깥쪽 가장자리를 끌거나(화살표 키 20px씩) 너비를 바꾼다. 두 번 누르면 기본 너비 */
-function ShortsDrawer({ side, width, onResize, content }: { side: 'left' | 'right'; width: number | null; onResize?(w: number): void; content: ReactNode }) {
-  const [live, setLive] = useState<number | null>(null); // 끄는 중인 너비
-  const current = live ?? width ?? SHORTS_DEFAULT_WIDTH;
+/**
+ * 추천 라이브 탐색 창: 바깥쪽 가장자리(너비)·아래 가장자리(높이)·바깥 아래 모서리(둘 다)를 끌어 크기를 바꾼다.
+ * 화살표 키로 20px씩, 가장자리를 두 번 누르면 기본 크기
+ */
+function ShortsDrawer({ side, size, onResize, content }: { side: 'left' | 'right'; size: ShortsSize; onResize?(s: ShortsSize): void; content: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState<ShortsSize | null>(null); // 끄는 중인 크기
+  const now = live ?? size;
+  const available = () => ref.current?.parentElement?.clientHeight || window.innerHeight; // 퀵패널 높이
+  const width = now.width ?? SHORTS_DEFAULT_WIDTH;
+  const height = now.height ?? available();
   const sign = side === 'left' ? 1 : -1; // 왼쪽 패널이면 창의 오른쪽 가장자리를 끈다
-  const clamp = (w: number) => clampShortsWidth(w, window.innerWidth);
+  const fitW = (w: number) => clampShortsWidth(w, window.innerWidth);
+  const fitH = (h: number) => clampShortsHeight(h, available());
 
-  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const drag = (axes: { x?: boolean; y?: boolean }) => (e: ReactPointerEvent<HTMLElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault();
-    const startX = e.clientX;
-    const start = current;
-    let last = start;
+    const sx = e.clientX;
+    const sy = e.clientY;
+    const w0 = width;
+    const h0 = height;
+    let last: ShortsSize = { width: now.width, height: now.height };
     const move = (ev: PointerEvent) => {
-      last = clamp(start + (ev.clientX - startX) * sign);
+      last = {
+        width: axes.x ? fitW(w0 + (ev.clientX - sx) * sign) : now.width,
+        height: axes.y ? fitH(h0 + (ev.clientY - sy)) : now.height,
+      };
       setLive(last);
     };
     const up = (ev: PointerEvent) => {
       move(ev);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      document.body.classList.remove('is-resizing-x');
+      document.body.classList.remove('is-resizing-x', 'is-resizing-y', 'is-resizing-xy');
       setLive(null);
       onResize?.(last);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-    document.body.classList.add('is-resizing-x');
+    document.body.classList.add(axes.x && axes.y ? 'is-resizing-xy' : axes.x ? 'is-resizing-x' : 'is-resizing-y');
   };
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+  const keyWidth = (e: KeyboardEvent<HTMLElement>) => {
     const step = e.key === 'ArrowRight' ? 20 : e.key === 'ArrowLeft' ? -20 : 0;
     if (!step) return;
     e.preventDefault();
-    onResize?.(clamp(current + step * sign));
+    onResize?.({ width: fitW(width + step * sign), height: now.height });
+  };
+  const keyHeight = (e: KeyboardEvent<HTMLElement>) => {
+    const step = e.key === 'ArrowDown' ? 20 : e.key === 'ArrowUp' ? -20 : 0;
+    if (!step) return;
+    e.preventDefault();
+    onResize?.({ width: now.width, height: fitH(height + step) });
   };
 
   return (
-    <div className={`quick-panel__drawer${live !== null ? ' quick-panel__drawer--resizing' : ''}`} style={{ width: `${current}px` }}>
+    <div
+      ref={ref}
+      className={`quick-panel__drawer${live ? ' quick-panel__drawer--resizing' : ''}${now.height !== null ? ' quick-panel__drawer--sized' : ''}`}
+      style={{ width: `${width}px`, height: now.height !== null ? `${now.height}px` : undefined }}
+    >
       {content}
       {onResize && (
-        <div
-          className="quick-panel__drawer-resize"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="추천 라이브 창 크기 조절"
-          aria-valuenow={current}
-          tabIndex={0}
-          title="끌어서 창 크기 조절 (두 번 누르면 기본 크기)"
-          onPointerDown={onPointerDown}
-          onKeyDown={onKeyDown}
-          onDoubleClick={() => onResize(SHORTS_DEFAULT_WIDTH)}
-        />
+        <>
+          <div
+            className="quick-panel__drawer-resize"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="추천 라이브 창 크기 조절"
+            aria-valuenow={width}
+            tabIndex={0}
+            title="끌어서 너비 조절 (두 번 누르면 기본 너비)"
+            onPointerDown={drag({ x: true })}
+            onKeyDown={keyWidth}
+            onDoubleClick={() => onResize({ width: null, height: now.height })}
+          />
+          <div
+            className="quick-panel__drawer-resize-y"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="추천 라이브 창 높이 조절"
+            aria-valuenow={height}
+            tabIndex={0}
+            title="끌어서 높이 조절 (두 번 누르면 패널 높이)"
+            onPointerDown={drag({ y: true })}
+            onKeyDown={keyHeight}
+            onDoubleClick={() => onResize({ width: now.width, height: null })}
+          />
+          <button
+            type="button"
+            className="quick-panel__drawer-corner"
+            aria-label="추천 라이브 창 크기 조절 (모서리)"
+            title="끌어서 너비·높이 조절 (두 번 누르면 기본 크기)"
+            tabIndex={-1}
+            onPointerDown={drag({ x: true, y: true })}
+            onDoubleClick={() => onResize({ width: null, height: null })}
+          />
+        </>
       )}
     </div>
   );

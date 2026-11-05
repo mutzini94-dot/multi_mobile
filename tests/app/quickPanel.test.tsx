@@ -137,3 +137,29 @@ test('추천 라이브 창 너비: 가장자리를 끌어(또는 화살표 키�
   fireEvent.click(within(panel()).getByRole('button', { name: '추천 라이브 탐색' }));
   expect(document.querySelector<HTMLElement>('.quick-panel__drawer')!.style.width).toBe('480px');
 });
+
+test('추천 라이브 창 높이: 아래 가장자리·모서리를 끌어 조절하고, 다음에 열어도 그 크기', async () => {
+  const first = setup();
+  fireEvent.click(within(panel()).getByRole('button', { name: '추천 라이브 탐색' }));
+  const drawer = () => document.querySelector<HTMLElement>('.quick-panel__drawer')!;
+  const bottom = await screen.findByRole('separator', { name: '추천 라이브 창 높이 조절' });
+  expect(drawer().style.height).toBe(''); // 처음엔 패널 높이 그대로
+  fireEvent.keyDown(bottom, { key: 'ArrowUp' });
+  expect(drawer().style.height).toBe('748px'); // jsdom 창 높이 768 - 20
+  fireEvent.pointerDown(bottom, { clientY: 700, pointerId: 1 });
+  fireEvent.pointerMove(window, { clientY: 600, pointerId: 1 });
+  fireEvent.pointerUp(window, { clientY: 600, pointerId: 1 });
+  expect(drawer().style.height).toBe('648px');
+  // 모서리: 너비와 높이를 함께
+  const corner = screen.getByRole('button', { name: '추천 라이브 창 크기 조절 (모서리)' });
+  fireEvent.pointerDown(corner, { clientX: 400, clientY: 600, pointerId: 1 });
+  fireEvent.pointerMove(window, { clientX: 450, clientY: 560, pointerId: 1 });
+  fireEvent.pointerUp(window, { clientX: 450, clientY: 560, pointerId: 1 });
+  expect(drawer().style.width).toBe('430px');
+  expect(drawer().style.height).toBe('608px');
+  first.unmount();
+  setup({ kv: first.kv });
+  fireEvent.click(within(panel()).getByRole('button', { name: '추천 라이브 탐색' }));
+  expect(drawer().style.width).toBe('430px');
+  expect(drawer().style.height).toBe('608px');
+});
