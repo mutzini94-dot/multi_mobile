@@ -72,6 +72,7 @@ export function ShortsFeed({ load, onAdd, onDonate, onClose }: Props) {
   return (
     <section className="shorts" aria-label="추천 라이브 탐색">
       <div className="shorts__head">
+        <span className="shorts__badge" aria-hidden="true">LIVE</span>
         <strong>추천 라이브</strong>
         <span className="muted">위아래로 넘겨 보기</span>
         <button type="button" className="btn btn--icon" aria-label="닫기" onClick={onClose}>

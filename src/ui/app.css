@@ -647,8 +647,10 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 @keyframes mv-drawer-in { from { transform: scaleX(0.92); } to { transform: none; } }
 .quick-panel--left .quick-panel__drawer { transform-origin: left center; }
 .quick-panel--right .quick-panel__drawer { transform-origin: right center; }
-.shorts { height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-lg); background: #000; color: #fff; box-shadow: var(--elev-1); }
-.shorts__head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: #0d0e10; }
+/* 추천 라이브 창: 본 화면과 구별되게 파란 테두리·빛번짐·깊은 그림자 */
+.shorts { height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-lg); background: #000; color: #fff; box-shadow: 0 0 0 3px var(--primary), 0 0 0 8px rgba(81, 156, 255, 0.22), 0 20px 50px rgba(0, 0, 0, 0.5); }
+.shorts__head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; background: linear-gradient(90deg, rgba(81, 156, 255, 0.28), rgba(81, 156, 255, 0.06) 60%, #0d0e10); border-bottom: 1px solid rgba(81, 156, 255, 0.35); }
+.shorts__badge { flex: none; padding: 2px 6px; border-radius: 5px; background: var(--live); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: 0.3px; }
 .shorts__head .muted { flex: 1; color: rgba(255, 255, 255, 0.55); font-size: 12px; }
 .shorts__head .btn--icon { color: #fff; }
 .shorts__scroller { flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; outline: none; scrollbar-width: none; }
