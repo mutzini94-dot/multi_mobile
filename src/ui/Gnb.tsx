@@ -2,7 +2,7 @@ import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import logoUrl from '../assets/logo.png';
-import { IconCoin, IconHeart, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
+import { IconCoin, IconHeart, IconHelp, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -24,6 +24,7 @@ interface Props {
   canDonate: boolean;
   onDonate(): void;
   onSettings?(): void;
+  onHelp?(): void; // 도움말 (자주 묻는 질문·단축키·둘러보기)
   onPresets?(): void; // 화면 구성 저장·불러오기
   account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
@@ -33,7 +34,7 @@ interface Props {
   mode?: { value: RemoteMode; onChange(m: RemoteMode): void }; // 상단 스위치: 크리에이터 리모컨 ↔ 후원 리모컨
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
@@ -105,6 +106,11 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onPrese
             {onPresets && (
               <button type="button" className="gnb__tool" aria-label="화면 구성" data-tip="화면 구성 저장·불러오기" onClick={onPresets}>
                 <IconPresets />
+              </button>
+            )}
+            {onHelp && (
+              <button type="button" className="gnb__tool" aria-label="도움말" data-tip="도움말 · 단축키 (?)" onClick={onHelp}>
+                <IconHelp />
               </button>
             )}
             {onSettings && (

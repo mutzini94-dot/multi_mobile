@@ -65,6 +65,15 @@ export const IconSettings = () => (
   </Svg>
 );
 
+/** 도움말: 물음표 */
+export const IconHelp = () => (
+  <Svg>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M9.6 9.4a2.5 2.5 0 0 1 4.86.83c0 1.67-2.46 2.27-2.46 3.77" />
+    <path d="M12 16.9v.1" />
+  </Svg>
+);
+
 /** 캐시: 동전 */
 export const IconCoin = () => (
   <Svg size={16}>

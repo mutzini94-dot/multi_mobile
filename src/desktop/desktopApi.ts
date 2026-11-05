@@ -46,6 +46,9 @@ export interface DesktopApi {
   onSoloMessage?(cb: (msg: unknown) => void): () => void;
   soloSetAlwaysOnTop?(on: boolean): void;
   // 앱 옵션 · 업데이트
+  // 백업: 창 크기·위치 (desktop/lib/windowLayout.js)
+  windowLayout?(): Promise<Record<string, unknown> | null>;
+  setWindowLayout?(layout: Record<string, unknown>): Promise<boolean>;
   appInfo?(): Promise<AppInfo | null>;
   setAppOption?(key: AppOption, value: boolean): Promise<boolean>;
   checkUpdate?(): void;

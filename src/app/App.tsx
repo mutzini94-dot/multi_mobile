@@ -54,8 +54,10 @@ import { applyLayout, growLayouts, shrinkLayout } from '../layout/layouts';
 import { useSettings } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { PresetsDialog } from '../ui/PresetsDialog';
-import { exportBackup, importBackup } from './backup';
+import { describeBackup, exportBackup, importBackup, type BackupSummary } from './backup';
+import { BackupConfirmDialog } from '../ui/BackupConfirmDialog';
 import { Onboarding, ONBOARDED_KEY } from '../ui/Onboarding';
+import { HelpDialog, ShortcutsDialog, SUPPORT_URL } from '../ui/HelpDialog';
 import { HistoryDialog } from '../ui/HistoryDialog';
 import { goalLevel, GOAL_NOTICE_KEY, monthKey, monthTotal, type DonationRecord } from '../toonation/history';
 import { useTileDrag } from './useTileDrag';
@@ -117,6 +119,8 @@ export function App(props: Props) {
   const inGroup = (c: Creator) => !activeGroup || groups.groupOf(c) === activeGroup;
   const groupSelect = editGroups ? (c: Creator) => <GroupSelect creator={c} groups={groups} /> : undefined;
   const [guideOpen, setGuideOpen] = useState(() => kv.get(ONBOARDED_KEY) !== '1'); // 처음 사용 안내
+  const [helpOpen, setHelpOpen] = useState(false); // 도움말
+  const [keysOpen, setKeysOpen] = useState(false); // 단축키 안내 (? 키)
   const [historyOpen, setHistoryOpen] = useState(false);
   // 상단 스위치: 후원 리모컨(멀티뷰) ↔ 크리에이터 리모컨. 크리에이터 리모컨은 처음 바꿀 때 띄우고, 상태를 지키려고 그 뒤로는 숨겨 둔다
   const [mode, setModeState] = useState<RemoteMode>(() => readMode(kv));
@@ -617,6 +621,22 @@ export function App(props: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [settings.shortcuts]);
 
+  // ? 키: 단축키 안내 (단축키를 꺼 둬도 열린다. 입력 중이거나 다른 창이 열려 있으면 무시)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.ctrlKey || e.altKey || e.metaKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      setKeysOpen(true);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const closeKeys = useCallback(() => setKeysOpen(false), []);
+  const closeHelp = useCallback(() => setHelpOpen(false), []);
+
   const warning = donationWarning(popupCreator, popupClosed, donateTarget);
 
   const openPopup = useCallback(
@@ -947,12 +967,26 @@ export function App(props: Props) {
   };
   const exportFavorites = (json: string) => downloadJson(json, 'multiview-favorites.json');
   // 설정 전체 백업: 되살리면 저장값을 모두 바꾸므로 화면을 다시 읽어 처음부터 불러온다
-  const exportAll = () => downloadJson(exportBackup(kv), `multiview-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  // 백업: 설치형이면 창 크기·위치도 함께 담는다
+  const exportAll = async () => {
+    const layout = desktop?.windowLayout ? await desktop.windowLayout().catch(() => null) : null;
+    downloadJson(exportBackup(kv, Date.now(), layout), `multiview-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  };
+  // 불러오기: 내용을 확인한 뒤 요약을 보여 주고, 확인하면 되살린다
+  const [pendingBackup, setPendingBackup] = useState<{ text: string; summary: BackupSummary } | null>(null);
   const importAll = (text: string) => {
-    const r = importBackup(kv, text);
-    if (!r.ok) return r.error;
-    win.location.reload?.();
+    const d = describeBackup(text);
+    if (!d.ok) return d.error;
+    setPendingBackup({ text, summary: d.value });
     return null;
+  };
+  const confirmBackup = async () => {
+    if (!pendingBackup) return;
+    const r = importBackup(kv, pendingBackup.text);
+    setPendingBackup(null);
+    if (!r.ok) return;
+    if (r.value.desktop && desktop?.setWindowLayout) await desktop.setWindowLayout(r.value.desktop).catch(() => false);
+    win.location.reload?.();
   };
   const closeGuide = () => {
     kv.set(ONBOARDED_KEY, '1');
@@ -967,6 +1001,7 @@ export function App(props: Props) {
         canDonate={!!donateTarget}
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
+        onHelp={() => setHelpOpen(true)}
         onLive={() => setLiveOpen(true)}
         onReloadAll={() => {
           setReloadSeq((n) => n + 1);
@@ -1298,6 +1333,22 @@ export function App(props: Props) {
         />
       )}
       {guideOpen && <Onboarding onDone={closeGuide} />}
+      {pendingBackup && <BackupConfirmDialog summary={pendingBackup.summary} onConfirm={() => void confirmBackup()} onClose={() => setPendingBackup(null)} />}
+      {keysOpen && <ShortcutsDialog enabled={settings.shortcuts} onClose={closeKeys} />}
+      {helpOpen && (
+        <HelpDialog
+          onClose={closeHelp}
+          onShortcuts={() => {
+            setHelpOpen(false);
+            setKeysOpen(true);
+          }}
+          onTour={() => {
+            setHelpOpen(false);
+            setGuideOpen(true);
+          }}
+          onOpenSite={() => win.open(SUPPORT_URL, '_blank', 'noopener')}
+        />
+      )}
       {historyOpen && (
         <HistoryDialog
           load={loadHistory}

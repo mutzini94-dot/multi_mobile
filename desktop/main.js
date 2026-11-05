@@ -15,6 +15,7 @@ const { createWebStore } = require('./lib/webStore');
 const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
 const { restoreBounds } = require('./lib/windowBounds');
+const { pickWindowLayout, sanitizeWindowLayout } = require('./lib/windowLayout');
 const { createAppOptions, APP_OPTION_DEFAULTS } = require('./lib/appOptions');
 const { Updater } = require('./lib/updater');
 const { allowWebview, hardenWebPreferences, isWebUrl, isDonateUrl, WEB_PARTITION } = require('./lib/webviewPolicy');
@@ -533,6 +534,18 @@ function wireIpc() {
   ipcMain.on('mv:solo:alwaysOnTop', (e, on) => {
     const id = soloIdOf(e);
     if (id) soloWins.get(id).setAlwaysOnTop(!!on, 'floating');
+  });
+  // 백업: 창 크기·위치를 꺼내고 되살린다 (되살리면 메인 창에 바로 적용, 화면 밖이면 지금 자리 그대로)
+  ipcMain.handle('mv:windows:get', (e) => (fromWin(e) ? pickWindowLayout((k) => prefs.get(k)) : null));
+  ipcMain.handle('mv:windows:set', (e, raw) => {
+    if (!fromWin(e)) return false;
+    const l = sanitizeWindowLayout(raw);
+    for (const [k, v] of Object.entries(l)) prefs.set(k, v);
+    if (l.windowBounds && !win.isMaximized()) win.setBounds(restoreBounds(l.windowBounds, screen.getAllDisplays().map((d) => d.workArea), win.getBounds(), { width: 720, height: 480 }));
+    if (l.windowMaximized === true) win.maximize();
+    else if (l.windowMaximized === false && win.isMaximized()) win.unmaximize();
+    if (typeof l.alwaysOnTop === 'boolean') win.setAlwaysOnTop(l.alwaysOnTop);
+    return true;
   });
   // 앱 옵션 · 업데이트 (메인 창의 설정 화면에서)
   ipcMain.handle('mv:app:info', (e) => (fromWin(e) ? appInfo() : null));

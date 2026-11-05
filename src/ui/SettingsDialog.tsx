@@ -14,7 +14,7 @@ interface Props {
   favorites: FavoritesSource;
   onExportFavorites(json: string): void;
   onExportBackup(): void; // 설정 전체 백업 파일 저장
-  onImportBackup(text: string): string | null; // 오류 메시지 또는 null (성공하면 화면을 다시 읽는다)
+  onImportBackup(text: string): string | null; // 오류 메시지 또는 null (맞는 파일이면 내용을 보여 주고 확인을 받은 뒤 되살린다)
   onShowGuide(): void; // 처음 사용 안내 다시 보기
   onClose(): void;
   app?: { info: AppInfo | null; onSet(key: AppOption, value: boolean): void; onCheck(): void; onInstall(): void }; // 설치형 앱 옵션 · 업데이트
@@ -381,7 +381,7 @@ export function SettingsDialog(p: Props) {
         </Section>
 
         <Section title="백업·안내">
-          <p className="muted">설정·즐겨찾기(그룹 포함)·화면 구성·후원 메시지를 파일 하나로 저장해 두고, 다른 PC나 다시 설치한 뒤 그대로 되살립니다.</p>
+          <p className="muted">설정·즐겨찾기(그룹 포함)·화면 구성·후원 메시지·최근 본 방송·창 크기를 파일 하나로 저장해 두고, 다른 PC나 다시 설치한 뒤 그대로 되살립니다.</p>
           <div className="settings__actions">
             <button type="button" className="btn btn--ghost btn--sm" onClick={p.onExportBackup}>
               백업 파일 저장

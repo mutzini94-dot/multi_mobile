@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   setAlwaysOnTop: (on) => ipcRenderer.send('mv:window:alwaysOnTop', !!on),
   setMiniMode: (on) => ipcRenderer.send('mv:window:mini', !!on),
   // 앱 옵션(Windows 시작 시 실행·닫으면 트레이로·자동 업데이트)과 업데이트
+  // 백업: 창 크기·위치
+  windowLayout: () => ipcRenderer.invoke('mv:windows:get'),
+  setWindowLayout: (layout) => ipcRenderer.invoke('mv:windows:set', layout && typeof layout === 'object' ? layout : {}),
   appInfo: () => ipcRenderer.invoke('mv:app:info'),
   setAppOption: (key, value) => ipcRenderer.invoke('mv:app:set', String(key), !!value),
   checkUpdate: () => ipcRenderer.send('mv:app:checkUpdate'),
