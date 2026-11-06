@@ -15,6 +15,9 @@ interface Props {
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
+/** 왼쪽 메뉴 아이콘 (탭 이름별) */
+const TAB_ICON: Record<string, string> = { 방송: '▶', '투네이션 라이브': '●', '활동 위젯': '◷', '후원 페이지': '♥', 시그니처: '✦', 채팅: '💬', 웹페이지: '🌐' };
+
 export function FavoritesPicker({ source, onPick, onClose, children, tabs = [], filter, rowExtra }: Props) {
   const [tab, setTab] = useState(0); // 0: 방송
   const [list, setList] = useState(() => source.list());
@@ -40,22 +43,29 @@ export function FavoritesPicker({ source, onPick, onClose, children, tabs = [], 
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal picker" role="dialog" aria-label="불러오기" onClick={(e) => e.stopPropagation()}>
-        <div className="modal__head">
-          <h2>불러오기</h2>
-          <button type="button" className="btn btn--ghost" onClick={onClose}>
-            닫기
+      <div className={`modal picker${tabs.length ? ' picker--nav' : ''}`} role="dialog" aria-label="불러오기" onClick={(e) => e.stopPropagation()}>
+        <div className="picker__head">
+          <div>
+            <h2>불러오기</h2>
+            <p className="picker__sub">이 칸에 넣을 방송이나 페이지를 고르세요</p>
+          </div>
+          <button type="button" className="picker__close" aria-label="닫기" onClick={onClose}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
         </div>
+        <div className="picker__body">
         {tabs.length > 0 && (
-          <div className="picker__tabs" role="tablist">
+          <div className="picker__tabs" role="tablist" aria-orientation="vertical">
             {['방송', ...tabs.map((t) => t.label)].map((label, i) => (
-              <button key={label} type="button" role="tab" aria-selected={tab === i} className={`picker__tab${tab === i ? ' picker__tab--on' : ''}`} onClick={() => setTab(i)}>
+              <button key={label} type="button" role="tab" aria-selected={tab === i} className={`picker__tab${tab === i ? ' picker__tab--on' : ''}`} data-icon={TAB_ICON[label] ?? '•'} onClick={() => setTab(i)}>
                 {label}
               </button>
             ))}
           </div>
         )}
+        <div className="picker__content">
         {tab > 0 ? (
           <div role="tabpanel" aria-label={tabs[tab - 1].label}>
             {tabs[tab - 1].content}
@@ -83,7 +93,7 @@ export function FavoritesPicker({ source, onPick, onClose, children, tabs = [], 
           </ul>
         )}
         <form className="fav-form" onSubmit={submit}>
-          <h3>크리에이터 추가</h3>
+          <h3>크리에이터 직접 추가</h3>
           <label>
             이름
             <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -114,6 +124,8 @@ export function FavoritesPicker({ source, onPick, onClose, children, tabs = [], 
         </form>
           </div>
         )}
+        </div>
+        </div>
       </div>
     </div>
   );

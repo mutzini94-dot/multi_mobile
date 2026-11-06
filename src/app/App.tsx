@@ -19,6 +19,7 @@ import { quickFavorites, quickRecent, startedLive, withLive } from '../quick/qui
 import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY } from '../quick/shortsSize';
 import { AddWindowDialog } from '../ui/AddWindowDialog';
+import { ContextMenu } from '../ui/ContextMenu';
 import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
@@ -866,6 +867,8 @@ export function App(props: Props) {
   const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
   const growTo = growLayouts(state.layout);
+  const [emptyMenu, setEmptyMenu] = useState<{ slot: number; x: number; y: number } | null>(null); // 빈 칸 오른쪽 클릭 메뉴
+  const closeEmptyMenu = useCallback(() => setEmptyMenu(null), []);
   const quickPanel = quickOn ? (
     <QuickPanel
       side={settings.quickPanel === 'right' ? 'right' : 'left'}
@@ -878,6 +881,7 @@ export function App(props: Props) {
       }}
       onDismiss={dismissQuick}
       onAddWindow={growTo.length ? () => setAddOpen(true) : null}
+      login={{ loggedIn: !!toonation.state.account, onLogin: toonation.login }}
       shorts={{
         open: shortsOpen,
         onToggle: () => setShortsOpen((o) => !o),
@@ -1005,6 +1009,8 @@ export function App(props: Props) {
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
         onHelp={() => setHelpOpen(true)}
+        onLogin={toonation.state.account ? undefined : toonation.login}
+        loggingIn={toonation.state.status === 'waiting-login'}
         onLive={() => setLiveOpen(true)}
         onReloadAll={() => {
           setReloadSeq((n) => n + 1);
@@ -1052,6 +1058,7 @@ export function App(props: Props) {
                   onLoad={() => setPickerSlot(slot)}
                   quickPicks={emptyPicks}
                   onQuickPick={(c) => dispatch({ type: 'assign', slot, creator: c })}
+                  onEmptyMenu={(x, y) => setEmptyMenu({ slot, x, y })}
                   onDeleteWindow={shrinkLayout(state, slot) ? () => dispatch({ type: 'removeWindow', slot }) : undefined}
                   onToggleSound={() => dispatch({ type: 'toggleSound' })}
                   playerSlotRef={(el) => {
@@ -1302,6 +1309,26 @@ export function App(props: Props) {
             onPick={setLivePick}
           />
         </RecommendLiveDialog>
+      )}
+      {emptyMenu && (
+        <ContextMenu
+          x={emptyMenu.x}
+          y={emptyMenu.y}
+          label="빈 창 메뉴"
+          onClose={closeEmptyMenu}
+          items={[
+            { label: '불러오기', icon: '▶', onSelect: () => setPickerSlot(emptyMenu.slot) },
+            { label: '창 추가', icon: '+', hint: growTo.length ? undefined : '9분할', disabled: !growTo.length, onSelect: () => setAddOpen(true) },
+            {
+              label: '창 닫기',
+              icon: '✕',
+              danger: true,
+              hint: shrinkLayout(state, emptyMenu.slot) ? undefined : '줄일 수 없음',
+              disabled: !shrinkLayout(state, emptyMenu.slot),
+              onSelect: () => dispatch({ type: 'removeWindow', slot: emptyMenu.slot }),
+            },
+          ]}
+        />
       )}
       {addOpen && growTo.length > 0 && (
         <AddWindowDialog

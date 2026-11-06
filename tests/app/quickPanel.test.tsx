@@ -17,13 +17,19 @@ function setup({ settings, lives = vi.fn(async (_q: LiveQuery) => empty), kv = q
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: '하나', donateId: 'one' }));
   favorites.add(mkCreator(2, { name: '둘', donateId: 'two' }));
-  const request = vi.fn(async () => {
+  const request = vi.fn(async (_type?: string) => {
     throw new Error('NOT_LOGGED_IN');
   });
+  lastRequest = request;
   const win = { open: vi.fn(() => ({ closed: false }) as Window), screen: {} as Screen, location: { hash: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
   const r = render(<App favorites={favorites} kv={kv} win={win} bridge={{ request } as unknown as ToonationBridge} desktop={null} lives={lives} quickPollMs={60} />);
   return { lives, kv, unmount: r.unmount };
 }
+function setupWithRequest() {
+  setup();
+  return { request: lastRequest! };
+}
+let lastRequest: ReturnType<typeof vi.fn> | null = null;
 const panel = () => screen.getByRole('complementary', { name: '퀵패널' });
 const tiles = () => [...document.querySelectorAll<HTMLElement>('.tile')];
 const wait = (ms: number) => act(() => new Promise((r) => setTimeout(r, ms)));
@@ -178,4 +184,54 @@ test('퀵패널 항목은 이름표를 함께 갖고 있다 (마우스를 올려
   setup();
   expect(panel().querySelector('.quick-panel__label')).not.toBeNull();
   for (const n of ['추천 라이브', '즐겨찾기', '하나', '창 추가']) expect(within(panel()).getAllByText(n, { selector: '.quick-panel__label' }).length).toBeGreaterThan(0);
+});
+
+test('로그인 전: 퀵패널 즐겨찾기 자리에 로그인 버튼, 상단에도 로그인 (누르면 투네이션 로그인)', async () => {
+  const { request } = setupWithRequest();
+  const row = await within(panel()).findByRole('button', { name: '로그인 · 즐겨찾기 불러오기' });
+  fireEvent.click(row);
+  expect(request).toHaveBeenCalledWith('login');
+  request.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: '로그인' }));
+  expect(request).toHaveBeenCalledWith('login');
+});
+
+test('퀵패널에 마우스를 올리면 넓어지고, 떠나면 잠시 뒤 접힌다', () => {
+  vi.useFakeTimers();
+  try {
+    setup();
+    const rail = panel().querySelector('.quick-panel__rail')!;
+    fireEvent.pointerEnter(rail);
+    expect(panel().className).toMatch(/quick-panel--expanded/);
+    fireEvent.pointerLeave(rail);
+    expect(panel().className).toMatch(/quick-panel--expanded/);
+    act(() => vi.advanceTimersByTime(300));
+    expect(panel().className).not.toMatch(/quick-panel--expanded/);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('빈 칸 오른쪽 클릭: 창 추가 · 창 닫기', () => {
+  setup();
+  fireEvent.contextMenu(tiles()[3], { clientX: 300, clientY: 200 });
+  const menu = screen.getByRole('menu', { name: '빈 창 메뉴' });
+  fireEvent.click(within(menu).getByRole('menuitem', { name: '창 닫기' }));
+  expect(tiles()).toHaveLength(3);
+  expect(screen.queryByRole('menu')).toBeNull();
+  fireEvent.contextMenu(tiles()[2], { clientX: 300, clientY: 200 });
+  fireEvent.click(within(screen.getByRole('menu', { name: '빈 창 메뉴' })).getByRole('menuitem', { name: '창 추가' }));
+  expect(screen.getByRole('dialog', { name: '창 추가' })).toBeInTheDocument();
+});
+
+test('방송이 있는 칸은 오른쪽 클릭해도 빈 창 메뉴가 없다, Esc로 메뉴를 닫는다', () => {
+  setup();
+  fireEvent.click(within(panel()).getByRole('button', { name: '하나' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '1번 칸 · 빈 칸' }));
+  fireEvent.contextMenu(tiles()[0]);
+  expect(screen.queryByRole('menu')).toBeNull();
+  fireEvent.contextMenu(tiles()[1]);
+  expect(screen.getByRole('menu')).toBeInTheDocument();
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(screen.queryByRole('menu')).toBeNull();
 });

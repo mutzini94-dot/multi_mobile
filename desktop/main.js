@@ -118,7 +118,7 @@ function allowPopups(wc) {
   );
 }
 
-function webWindow({ url, width = 520, height = 860, title }) {
+function webWindow({ url, width = 520, height = 860, title, modal = false }) {
   const w = new BrowserWindow({
     width,
     height,
@@ -126,6 +126,7 @@ function webWindow({ url, width = 520, height = 860, title }) {
     icon: ICON,
     autoHideMenuBar: true,
     parent: win || undefined,
+    modal: !!(modal && win && win.isVisible()), // 로그인: 앱 위에 모달로
     webPreferences: { partition: PARTITION, contextIsolation: true, sandbox: true },
   });
   allowPopups(w.webContents);
@@ -139,7 +140,9 @@ function openLogin() {
     loginWin.focus();
     return;
   }
-  loginWin = webWindow({ url: `${ORIGIN}/donator/login?callback=/donator`, width: 520, height: 820, title: '투네이션 도네이터 로그인' });
+  // 앱 위 모달 창 (앱 창보다 크지 않게)
+  const parentH = win && !win.isDestroyed() ? win.getContentBounds().height : 820;
+  loginWin = webWindow({ url: `${ORIGIN}/donator/login?callback=/donator`, width: 520, height: Math.max(560, Math.min(820, parentH - 40)), title: '투네이션 로그인', modal: true });
   let checking = false;
   const check = async () => {
     if (checking || !loginWin || loginWin.isDestroyed()) return;

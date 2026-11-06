@@ -74,6 +74,14 @@ export const IconHelp = () => (
   </Svg>
 );
 
+/** 로그인: 사람 */
+export const IconUser = () => (
+  <Svg size={16}>
+    <circle cx="12" cy="8.5" r="3.5" />
+    <path d="M5 19.5c1.2-3.3 3.9-5 7-5s5.8 1.7 7 5" />
+  </Svg>
+);
+
 /** 캐시: 동전 */
 export const IconCoin = () => (
   <Svg size={16}>

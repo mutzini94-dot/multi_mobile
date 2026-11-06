@@ -14,6 +14,7 @@ interface Props {
   // 맨 위 '추천 라이브 탐색': 옆으로 펼치는 쇼츠처럼 넘겨 보기. size = 조절한 크기 (null = 기본), onResize = 조절을 마쳤을 때 (저장)
   shorts?: { open: boolean; onToggle(): void; content: ReactNode; size?: ShortsSize; onResize?(s: ShortsSize): void };
   onAddWindow?: (() => void) | null; // 맨 아래 '창 추가' (null = 더 늘릴 수 없음)
+  login?: { loggedIn: boolean; onLogin(): void }; // 투네이션 로그인 전이면 즐겨찾기 자리에 로그인 버튼
 }
 
 export interface ShortsSize {
@@ -26,101 +27,153 @@ const TABS = [
   { key: 'recent', label: '최근 본', icon: '🕘' },
 ] as const;
 
-/** 화면 옆 퀵패널 (Edge 사이드바처럼): 즐겨찾기·최근 본 크리에이터를 프로필로, 방송 시작 알림 */
-export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts, onAddWindow }: Props) {
+/** 마우스가 떠난 뒤 접기까지 (빠르게 지나갈 때 깜빡이지 않게) */
+const COLLAPSE_MS = 140;
+
+/**
+ * 화면 옆 퀵패널 (Edge 사이드바처럼): 즐겨찾기·최근 본 크리에이터를 프로필로, 방송 시작 알림.
+ * 마우스를 올리면 넓어지며(칸 위로 겹친다) 버튼 이름·크리에이터 이름을 함께 보여 준다.
+ */
+export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts, onAddWindow, login }: Props) {
   const [tab, setTab] = useState<'fav' | 'recent'>('fav');
+  const [expanded, setExpanded] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const newKeys = new Set(started.map((c) => c.key));
   const items = tab === 'fav' ? favorites : recent;
   const hasNew = (list: QuickItem[]) => list.some((i) => newKeys.has(i.creator.key));
+  const showLogin = tab === 'fav' && !!login && !login.loggedIn;
+  const enter = () => {
+    clearTimeout(leaveTimer.current);
+    setExpanded(true);
+  };
+  const leave = () => {
+    clearTimeout(leaveTimer.current);
+    leaveTimer.current = setTimeout(() => setExpanded(false), COLLAPSE_MS);
+  };
 
   return (
-    <aside className={`quick-panel quick-panel--${side}`} aria-label="퀵패널">
-      {/* 머리: 추천 라이브 탐색 · 즐겨찾기/최근 본 탭 */}
-      <div className="quick-panel__head">
-        {shorts && (
-          <>
-            <button
-              type="button"
-              className={`quick-panel__shorts${shorts.open ? ' quick-panel__shorts--on' : ''}`}
-              aria-label="추천 라이브 탐색"
-              aria-pressed={shorts.open}
-              title="추천 라이브를 한 개씩 넘겨 보기"
-              onClick={shorts.onToggle}
-            >
-              <span className="quick-panel__shorts-badge">LIVE</span>
-              <span className="quick-panel__label">추천 라이브</span>
-            </button>
-            <div className="quick-panel__divider" />
-          </>
-        )}
-        <div className="quick-panel__tabs" role="tablist">
-          {TABS.map((t) => {
-            const dot = t.key !== tab && hasNew(t.key === 'fav' ? favorites : recent);
-            return (
+    <aside className={`quick-panel quick-panel--${side}${expanded ? ' quick-panel--expanded' : ''}`} aria-label="퀵패널">
+      <div className="quick-panel__rail" onPointerEnter={enter} onPointerLeave={leave}>
+        {/* 머리: 추천 라이브 탐색 · 즐겨찾기/최근 본 탭 */}
+        <div className="quick-panel__head">
+          {shorts && (
+            <>
               <button
-                key={t.key}
                 type="button"
-                role="tab"
-                aria-selected={tab === t.key}
-                aria-label={dot ? `${t.label} · 새 방송` : t.label}
-                title={t.label}
-                className={`quick-panel__tab${dot ? ' quick-panel__tab--new' : ''}`}
-                onClick={() => setTab(t.key)}
+                className={`quick-panel__row quick-panel__shorts${shorts.open ? ' quick-panel__shorts--on' : ''}`}
+                aria-label="추천 라이브 탐색"
+                aria-pressed={shorts.open}
+                title="추천 라이브를 한 개씩 넘겨 보기"
+                onClick={shorts.onToggle}
               >
-                <span aria-hidden="true">{t.icon}</span>
-                <span className="quick-panel__label">{t.label}</span>
+                <span className="quick-panel__icon">
+                  <span className="quick-panel__shorts-badge">LIVE</span>
+                </span>
+                <span className="quick-panel__label">추천 라이브</span>
               </button>
-            );
-          })}
+              <div className="quick-panel__divider" />
+            </>
+          )}
+          <div className="quick-panel__tabs" role="tablist">
+            {TABS.map((t) => {
+              const dot = t.key !== tab && hasNew(t.key === 'fav' ? favorites : recent);
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.key}
+                  aria-label={dot ? `${t.label} · 새 방송` : t.label}
+                  title={t.label}
+                  className={`quick-panel__row quick-panel__tab${dot ? ' quick-panel__tab--new' : ''}`}
+                  onClick={() => setTab(t.key)}
+                >
+                  <span className="quick-panel__icon" aria-hidden="true">
+                    {t.icon}
+                  </span>
+                  <span className="quick-panel__label">{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      {/* 목록: 지금 탭의 크리에이터 */}
-      <div className="quick-panel__caption" aria-hidden="true">
-        {tab === 'fav' ? '즐겨찾기' : '최근 본'}
-      </div>
-      <ul className="quick-panel__list">
-        {items.length === 0 && <li className="quick-panel__empty">{tab === 'fav' ? '즐겨찾기 없음' : '최근 본 방송 없음'}</li>}
-        {items.map(({ creator: c, live }) => {
-          const isNew = newKeys.has(c.key);
-          const label = [c.name, live && '방송 중', isNew && '방금 시작'].filter(Boolean).join(' · ');
-          return (
-            <li key={c.key}>
-              <button
-                type="button"
-                aria-label={label}
-                title={live && c.live?.title ? `${c.name} · ${c.live.title}` : c.name}
-                className={`quick-panel__item${live ? ' quick-panel__item--live' : ''}${isNew ? ' quick-panel__item--new' : ''}`}
-                onClick={() => onPick(c)}
-                draggable
-                onDragStart={(e) => startCreatorDrag(e.dataTransfer, c)}
-              >
-                {c.profile ? <img src={c.profile} alt="" loading="lazy" referrerPolicy="no-referrer" draggable={false} /> : <span className="quick-panel__initial">{c.name.slice(0, 1)}</span>}
-                {live && <span className="quick-panel__live-dot" aria-hidden="true" />}
+        {/* 목록: 지금 탭의 크리에이터 (넓어졌을 때만 제목) */}
+        <div className="quick-panel__caption" aria-hidden="true">
+          {tab === 'fav' ? '즐겨찾기' : '최근 본'}
+          {items.length > 0 && <span>{items.length}</span>}
+        </div>
+        <ul className="quick-panel__list">
+          {showLogin && (
+            <li>
+              <button type="button" className="quick-panel__row quick-panel__item quick-panel__login" aria-label="로그인 · 즐겨찾기 불러오기" title="투네이션에 로그인하면 즐겨찾기를 불러옵니다" onClick={login!.onLogin}>
+                <span className="quick-panel__avatar quick-panel__avatar--icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8.5" r="3.5" />
+                    <path d="M5 19.5c1.2-3.3 3.9-5 7-5s5.8 1.7 7 5" />
+                  </svg>
+                </span>
                 <span className="quick-panel__label">
-                  {c.name}
-                  {live && <em>방송 중</em>}
+                  로그인
+                  <em className="quick-panel__sub">즐겨찾기 불러오기</em>
                 </span>
               </button>
             </li>
-          );
-        })}
-      </ul>
-      {/* 하단: 창 추가 */}
-      {onAddWindow !== undefined && (
-        <div className="quick-panel__foot">
-          <button
-            type="button"
-            className="quick-panel__add"
-            aria-label="창 추가"
-            title={onAddWindow ? '창 추가' : '더 이상 창을 추가할 수 없어요 (9분할)'}
-            disabled={!onAddWindow}
-            onClick={() => onAddWindow?.()}
-          >
-            <span aria-hidden="true">+</span>
-            <span className="quick-panel__label">창 추가</span>
-          </button>
-        </div>
-      )}
+          )}
+          {items.length === 0 && !showLogin && (
+            <li className="quick-panel__empty" title={tab === 'fav' ? '즐겨찾기한 크리에이터가 없습니다' : '최근 본 방송이 없습니다'}>
+              <span className="quick-panel__avatar quick-panel__avatar--ghost" aria-hidden="true" />
+              <span className="quick-panel__label">
+                {tab === 'fav' ? '즐겨찾기 없음' : '최근 본 방송 없음'}
+                <em className="quick-panel__sub">{tab === 'fav' ? '불러오기에서 추가' : '방송을 띄우면 쌓여요'}</em>
+              </span>
+            </li>
+          )}
+          {items.map(({ creator: c, live }) => {
+            const isNew = newKeys.has(c.key);
+            const label = [c.name, live && '방송 중', isNew && '방금 시작'].filter(Boolean).join(' · ');
+            return (
+              <li key={c.key}>
+                <button
+                  type="button"
+                  aria-label={label}
+                  title={live && c.live?.title ? `${c.name} · ${c.live.title}` : c.name}
+                  className={`quick-panel__row quick-panel__item${live ? ' quick-panel__item--live' : ''}${isNew ? ' quick-panel__item--new' : ''}`}
+                  onClick={() => onPick(c)}
+                  draggable
+                  onDragStart={(e) => startCreatorDrag(e.dataTransfer, c)}
+                >
+                  <span className="quick-panel__avatar">
+                    {c.profile ? <img src={c.profile} alt="" loading="lazy" referrerPolicy="no-referrer" draggable={false} /> : <span className="quick-panel__initial">{c.name.slice(0, 1)}</span>}
+                    {live && <span className="quick-panel__live-dot" aria-hidden="true" />}
+                  </span>
+                  <span className="quick-panel__label">
+                    {c.name}
+                    {live && <em className="quick-panel__sub quick-panel__sub--live">방송 중</em>}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {/* 하단: 창 추가 */}
+        {onAddWindow !== undefined && (
+          <div className="quick-panel__foot">
+            <button
+              type="button"
+              className="quick-panel__row quick-panel__add"
+              aria-label="창 추가"
+              title={onAddWindow ? '창 추가' : '더 이상 창을 추가할 수 없어요 (9분할)'}
+              disabled={!onAddWindow}
+              onClick={() => onAddWindow?.()}
+            >
+              <span className="quick-panel__icon" aria-hidden="true">
+                +
+              </span>
+              <span className="quick-panel__label">창 추가</span>
+            </button>
+          </div>
+        )}
+      </div>
       {shorts?.open && <ShortsDrawer side={side} size={shorts.size ?? { width: null, height: null }} onResize={shorts.onResize} content={shorts.content} />}
       {started.length > 0 && (
         <div className="quick-panel__alerts" role="status" aria-label="방송 시작 알림">

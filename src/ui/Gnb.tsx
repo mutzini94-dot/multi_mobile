@@ -2,7 +2,7 @@ import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import logoUrl from '../assets/logo.png';
-import { IconCoin, IconHeart, IconHelp, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
+import { IconCoin, IconHeart, IconHelp, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -25,6 +25,8 @@ interface Props {
   onDonate(): void;
   onSettings?(): void;
   onHelp?(): void; // 도움말 (자주 묻는 질문·단축키·둘러보기)
+  onLogin?(): void; // 투네이션 로그인 (로그인 전에만)
+  loggingIn?: boolean; // 로그인 창이 열려 있는 동안
   onPresets?(): void; // 화면 구성 저장·불러오기
   account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
@@ -34,7 +36,7 @@ interface Props {
   mode?: { value: RemoteMode; onChange(m: RemoteMode): void }; // 상단 스위치: 크리에이터 리모컨 ↔ 후원 리모컨
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
@@ -119,6 +121,12 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp,
               </button>
             )}
           </div>
+          {!account && onLogin && (
+            <button type="button" className="gnb__login" aria-label="로그인" data-tip="투네이션 로그인" onClick={onLogin} disabled={loggingIn}>
+              <IconUser />
+              {loggingIn ? '로그인 중…' : '로그인'}
+            </button>
+          )}
           {account && (
             <button
               type="button"
