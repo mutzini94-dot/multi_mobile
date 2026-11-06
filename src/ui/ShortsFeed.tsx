@@ -24,6 +24,24 @@ export function ShortsFeed({ load, onAdd, onDonate, onClose }: Props) {
   const pageRef = useRef({ page: 0, totalPages: 1, busy: false });
   const scroller = useRef<HTMLDivElement>(null);
   const handle = useRef<PlayerHandle | null>(null);
+  const activeRef = useRef(0);
+  activeRef.current = active;
+
+  // 창 크기가 바뀌면(추천 라이브 창 크기 조절) 한 칸의 높이가 바뀌어 스크롤 위치가 다른 방송을 가리키게 된다.
+  // 보던 방송 자리로 바로 맞춰, 다른 방송으로 넘어가며 영상이 다시 불러와지지 않게 한다
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let lastH = el.clientHeight;
+    const ro = new ResizeObserver(() => {
+      const h = el.clientHeight;
+      if (!h || h === lastH) return;
+      lastH = h;
+      el.scrollTop = activeRef.current * h;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const loadMore = useCallback(() => {
     const p = pageRef.current;

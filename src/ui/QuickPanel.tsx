@@ -220,15 +220,23 @@ function ShortsDrawer({ side, size, onResize, content }: { side: 'left' | 'right
     const w0 = width;
     const h0 = height;
     let last: ShortsSize = { width: now.width, height: now.height };
+    // 화면 갱신은 한 프레임에 한 번만 (포인터 이벤트마다 다시 그리지 않게)
+    let frame = 0;
     const move = (ev: PointerEvent) => {
       last = {
         width: axes.x ? fitW(w0 + (ev.clientX - sx) * sign) : now.width,
         height: axes.y ? fitH(h0 + (ev.clientY - sy)) : now.height,
       };
-      setLive(last);
+      if (!frame)
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          setLive(last);
+        });
     };
     const up = (ev: PointerEvent) => {
       move(ev);
+      cancelAnimationFrame(frame);
+      frame = 0;
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       document.body.classList.remove('is-resizing-x', 'is-resizing-y', 'is-resizing-xy');

@@ -1088,3 +1088,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 [data-skin="pure"] .picker .picker__tab--on, [data-skin="pure"] .picker .picker__tab--on:hover { color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
 [data-skin="pure"] .context-menu { border-radius: 16px; box-shadow: var(--elev-1), 0 0 0 1px var(--border-soft); }
 [data-skin="pure"] .context-menu__item { border-radius: 10px; }
+
+/* 추천 라이브 창 크기 조절 중: 스크롤 맞춤을 잠시 끄고(보던 방송 자리는 스크립트가 맞춘다), 바깥 배치 계산을 창 안으로 가둔다 */
+.quick-panel__drawer { contain: layout; }
+.quick-panel__drawer--resizing .shorts__scroller { scroll-snap-type: none; }

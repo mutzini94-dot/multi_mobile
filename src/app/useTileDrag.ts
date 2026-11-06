@@ -5,6 +5,7 @@ export interface TileDragState {
   over: number | null; // 커서 아래의 놓을 수 있는 칸 (.tile[data-drop])
   x: number;
   y: number;
+  shift: boolean; // Shift를 누르고 있다 (놓으면 자리 바꾸기 대신 고정)
 }
 
 interface Press extends TileDragState {
@@ -37,7 +38,7 @@ function dropSlotAt(x: number, y: number, from: number, canDropOn: (from: number
  * HTML5 drag & drop 대신 포인터 이벤트로 직접 처리한다 (버튼에서의 기본 드래그는 동작이 브라우저마다 다르다).
  */
 export function useTileDrag(
-  onDrop: (from: number, to: number) => void,
+  onDrop: (from: number, to: number, mods: { shift: boolean }) => void,
   onTap: (slot: number) => void,
   canDropOn: (from: number, to: number) => boolean,
   onCancel?: (from: number) => void,
@@ -56,14 +57,14 @@ export function useTileDrag(
         if (!p) return p;
         const started = p.started || (p.canDrag && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) >= DRAG_THRESHOLD);
         if (!started) return p;
-        return { ...p, started, x: e.clientX, y: e.clientY, over: dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) };
+        return { ...p, started, x: e.clientX, y: e.clientY, shift: e.shiftKey, over: dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) };
       });
     const up = (e: globalThis.PointerEvent) => {
       const p = pressRef.current;
       if (p?.started) {
         // 놓은 순간의 커서 위치로 다시 확인 (마지막 움직임 뒤 바로 놓은 경우)
         const to = dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) ?? p.over;
-        if (to !== null && to !== p.from) cb.current.onDrop(p.from, to);
+        if (to !== null && to !== p.from) cb.current.onDrop(p.from, to, { shift: e.shiftKey });
         else cb.current.onCancel?.(p.from); // 놓을 곳이 아니면 제자리로
       } else if (p) cb.current.onTap(p.from);
       setPress(null);
@@ -90,10 +91,10 @@ export function useTileDrag(
     if (e.button > 0) return; // 왼쪽 버튼·터치만 (button이 없는 환경도 허용)
     e.preventDefault(); // 끌다가 글자가 선택되지 않게
     e.stopPropagation();
-    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag });
+    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag, shift: e.shiftKey });
   };
 
   // 화면에는 실제로 끌기가 시작된 뒤에만 '끄는 중'으로 보인다
-  const drag: TileDragState | null = press?.started ? { from: press.from, over: press.over, x: press.x, y: press.y } : null;
+  const drag: TileDragState | null = press?.started ? { from: press.from, over: press.over, x: press.x, y: press.y, shift: press.shift } : null;
   return { drag, start };
 }

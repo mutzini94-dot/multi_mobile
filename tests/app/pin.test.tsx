@@ -53,18 +53,27 @@ test('📌 시그니처 칸을 A 방송에 고정하면 B를 선택해도 A, 해
   expect(await screen.findByText('tagB의시그')).toBeInTheDocument();
 });
 
-test('방송 칸을 끌어다 시그니처 칸에 놓으면 자리를 바꾸지 않고 그 방송에 고정', async () => {
+test('방송 칸을 시그니처 칸에 놓으면 자리를 바꾸고, Shift를 누른 채 놓으면 자리는 그대로 그 방송에 고정', async () => {
   setup();
   pickFav(0, 'A');
   pickFav(1, 'B');
   addSignature(3);
   await screen.findByText('tagB의시그');
-  const grip = within(tiles()[0]).getByRole('button', { name: '끌어서 자리 옮기기' });
-  const target = tiles()[3];
-  document.elementsFromPoint = () => [target];
-  fireEvent.pointerDown(grip, { clientX: 10, clientY: 10, pointerId: 1, button: 0 });
-  fireEvent.pointerMove(window, { clientX: 300, clientY: 300, pointerId: 1 });
-  fireEvent.pointerUp(window, { clientX: 300, clientY: 300, pointerId: 1 });
+  const drag = (from: number, to: number, shiftKey = false) => {
+    const target = tiles()[to];
+    document.elementsFromPoint = () => [target];
+    fireEvent.pointerDown(within(tiles()[from]).getByRole('button', { name: '끌어서 자리 옮기기' }), { clientX: 10, clientY: 10, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(window, { clientX: 300, clientY: 300, pointerId: 1, shiftKey });
+    fireEvent.pointerUp(window, { clientX: 300, clientY: 300, pointerId: 1, shiftKey });
+  };
+  // 기본: 자리 바꾸기
+  drag(0, 3);
+  expect(within(tiles()[3]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument();
+  expect(tiles()[0].querySelector('.tile__name')!.textContent).toMatch(/시그니처/);
+  drag(3, 0); // 되돌리기
+  expect(within(tiles()[0]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument();
+  // Shift를 누른 채 놓기: 고정
+  drag(0, 3, true);
   expect(within(tiles()[0]).getByText('A')).toBeInTheDocument(); // 자리 그대로
   expect(within(tiles()[3]).getByText('A 시그니처')).toBeInTheDocument();
   expect(await screen.findByText('tagA의시그')).toBeInTheDocument();

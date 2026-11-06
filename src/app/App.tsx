@@ -194,11 +194,11 @@ export function App(props: Props) {
   };
   useEffect(() => () => clearTimeout(settleTimer.current), []);
   const tileDrag = useTileDrag(
-    (from, to) => {
+    (from, to, { shift }) => {
       const src = stateRef.current.slots[from];
       const dst = stateRef.current.slots[to];
-      // 방송 칸을 후원 페이지·채팅·시그니처 칸에 놓으면 자리를 바꾸지 않고 그 방송에 고정한다
-      if (isStream(src) && isPinnable(dst)) {
+      // 기본은 자리 바꾸기. Shift를 누른 채 방송 칸을 후원 페이지·채팅·시그니처 칸에 놓으면 자리는 그대로 그 방송에 고정한다
+      if (shift && isStream(src) && isPinnable(dst)) {
         dispatch({ type: 'pinPage', slot: to, creator: src });
         settle([from]);
         return;
@@ -1180,7 +1180,18 @@ export function App(props: Props) {
             dragging={dragging || tileDrag.drag !== null || cardDrag}
             floating={
               tileDrag.drag && state.slots[tileDrag.drag.from]
-                ? { slot: tileDrag.drag.from, x: tileDrag.drag.x, y: tileDrag.drag.y, name: state.slots[tileDrag.drag.from]!.name }
+                ? {
+                    slot: tileDrag.drag.from,
+                    x: tileDrag.drag.x,
+                    y: tileDrag.drag.y,
+                    // 방송을 후원 페이지·채팅·시그니처 칸 위로 끌 때: Shift로 고정할 수 있다고 알려 준다
+                    name:
+                      tileDrag.drag.over !== null && isStream(state.slots[tileDrag.drag.from]) && isPinnable(state.slots[tileDrag.drag.over])
+                        ? tileDrag.drag.shift
+                          ? `${state.slots[tileDrag.drag.from]!.name} · 이 방송에 고정`
+                          : `${state.slots[tileDrag.drag.from]!.name} · Shift를 누르면 고정`
+                        : state.slots[tileDrag.drag.from]!.name,
+                  }
                 : null
             }
             settling={settling}

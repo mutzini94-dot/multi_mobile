@@ -80,3 +80,33 @@ test('버튼: 칸에 넣기 · 후원 · 소리 · 닫기', async () => {
   fireEvent.click(within(feed()).getByRole('button', { name: '닫기' }));
   expect(onClose).toHaveBeenCalled();
 });
+
+test('창 크기를 바꾸는 동안에도 보던 방송을 그대로 (다른 방송으로 넘어가거나 다시 불러오지 않는다)', async () => {
+  let resized: (() => void) | null = null;
+  const RO = globalThis.ResizeObserver;
+  globalThis.ResizeObserver = class {
+    constructor(cb: () => void) {
+      resized = cb;
+    }
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  } as unknown as typeof ResizeObserver;
+  try {
+    const { feed, scrollTo } = setup();
+    await within(feed()).findByTestId('player-방송1');
+    act(() => scrollTo(2)); // 높이 600에서 3번째 방송
+    expect(within(feed()).getByTestId('player-방송3')).toBeInTheDocument();
+    const s = feed().querySelector('.shorts__scroller') as HTMLElement;
+    // 높이를 400으로 줄이면: 스크롤 위치(1200)는 그대로라 그냥 두면 4번째(1200/400 = 3)로 넘어간다
+    Object.defineProperty(s, 'clientHeight', { value: 400, configurable: true });
+    act(() => resized?.());
+    expect(s.scrollTop).toBe(800); // 3번째 방송 자리로 맞춘다
+    act(() => {
+      fireEvent.scroll(s);
+    });
+    expect(within(feed()).getByTestId('player-방송3')).toBeInTheDocument();
+  } finally {
+    globalThis.ResizeObserver = RO;
+  }
+});
