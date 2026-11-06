@@ -11,6 +11,7 @@ interface Props {
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onFullscreen?(): void;
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
+  slotNumber?: number; // 칸 번호 (1부터): 불러오기 앞(빈 칸은 왼쪽 위)에 작게
   quickPicks?: { creator: Creator; live: boolean | null }[]; // 빈 칸: 최근 본 크리에이터 바로 넣기 (최대 3)
   onQuickPick?(c: Creator): void;
   starting?: boolean; // 트위치가 자동 재생을 시작하는 중: 영상 위 바를 잠깐 숨긴다 (겹치면 트위치가 재생을 막는다)
@@ -79,6 +80,11 @@ export function Tile(props: Props) {
       {/* 빈 칸: 점선 영역 안에 불러오기 · 최근 본 크리에이터 바로 넣기 · 끌어 놓기 안내 */}
       {!filled && !props.detached && (
         <div className="tile__empty">
+          {props.slotNumber !== undefined && (
+            <span className="tile__num tile__num--corner" aria-label={`${props.slotNumber}번 화면`} title={`${props.slotNumber}번 화면`}>
+              {props.slotNumber}
+            </span>
+          )}
           <button type="button" className="tile__load" onClick={onLoad}>
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
@@ -152,6 +158,11 @@ export function Tile(props: Props) {
           >
             되돌리기
           </button>
+        )}
+        {(filled || props.detached) && props.slotNumber !== undefined && (
+          <span className="tile__num" aria-label={`${props.slotNumber}번 화면`} title={`${props.slotNumber}번 화면 (숫자 키 ${props.slotNumber}로 선택)`}>
+            {props.slotNumber}
+          </span>
         )}
         {(filled || props.detached) && (
           <button

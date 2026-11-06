@@ -80,6 +80,14 @@ describe('Tile', () => {
     expect(screen.queryByRole('button', { name: '더보기' })).toBeNull();
     expect(screen.getAllByRole('button', { name: '불러오기' })).toHaveLength(1);
   });
+  test('칸 번호: 방송 칸은 불러오기 앞에, 빈 칸은 왼쪽 위에 작게', () => {
+    const { rerender } = render(<Tile {...tileProps} creator={mkCreator(1)} slotNumber={3} />);
+    const badge = screen.getByLabelText('3번 화면');
+    expect(badge).toHaveTextContent('3');
+    expect(badge.nextElementSibling).toHaveTextContent('불러오기');
+    rerender(<Tile {...tileProps} slotNumber={5} />);
+    expect(screen.getByLabelText('5번 화면')).toHaveTextContent('5');
+  });
   test('선택되면 tile--selected', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} selected />);
     expect(container.firstChild).toHaveClass('tile--selected');

@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   liveRefreshMinutes: 0,
   liveNotify: false,
   theme: 'system',
-  skin: 'classic',
+  skin: 'breeze', // 기본 스킨: 브리즈
   shortcuts: true,
   alwaysOnTop: false,
   quickPanel: 'left',

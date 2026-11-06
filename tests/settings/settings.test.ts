@@ -23,7 +23,7 @@ test('기본값', () => {
     liveRefreshMinutes: 0,
     liveNotify: false,
     theme: 'system',
-    skin: 'classic',
+    skin: 'breeze',
     shortcuts: true,
     alwaysOnTop: false,
     quickPanel: 'left',

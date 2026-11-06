@@ -950,3 +950,9 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 [data-skin="breeze"] .picker { border-radius: 24px; }
 [data-skin="breeze"] .context-menu { border-radius: 16px; box-shadow: var(--elev-1), 0 0 0 1px var(--border-soft); }
 [data-skin="breeze"] .context-menu__item { border-radius: 10px; }
+
+/* 칸 번호: 불러오기 앞에 작게 (빈 칸은 점선 영역 왼쪽 위) */
+.tile__num { flex: none; min-width: 20px; height: 20px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255, 255, 255, 0.22); color: #fff; font-size: 11px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile__num--corner { position: absolute; top: 10px; left: 10px; background: var(--surface); color: var(--ink-sub); }
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__num { background: var(--surface); color: var(--ink-sub); }
+@media (prefers-color-scheme: light) { :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__num { background: var(--surface); color: var(--ink-sub); } }

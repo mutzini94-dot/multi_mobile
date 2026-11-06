@@ -1064,6 +1064,7 @@ export function App(props: Props) {
                   onSelect={() => dispatch({ type: 'select', slot })}
                   onLoad={() => setPickerSlot(slot)}
                   quickPicks={emptyPicks}
+                  slotNumber={slot + 1}
                   onQuickPick={(c) => dispatch({ type: 'assign', slot, creator: c })}
                   onEmptyMenu={(x, y) => setEmptyMenu({ slot, x, y })}
                   onDeleteWindow={shrinkLayout(state, slot) ? () => dispatch({ type: 'removeWindow', slot }) : undefined}

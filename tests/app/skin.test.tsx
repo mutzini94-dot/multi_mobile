@@ -22,32 +22,32 @@ afterEach(() => {
   delete document.documentElement.dataset.skin;
 });
 
-test('스킨: 기본과 브리즈, 기본값은 기본', () => {
+test('스킨: 기본과 브리즈, 기본값은 브리즈', () => {
   expect(SKINS.map((s) => s.label)).toEqual(['기본', '브리즈']);
-  expect(DEFAULT_SETTINGS.skin).toBe('classic');
+  expect(DEFAULT_SETTINGS.skin).toBe('breeze');
   const kv = safeStorage(undefined);
   kv.set(SETTINGS_KEY, JSON.stringify({ skin: 'neon' }));
-  expect(loadSettings(kv).skin).toBe('classic');
+  expect(loadSettings(kv).skin).toBe('breeze');
 });
 
-test('상단 스킨 메뉴에서 브리즈를 고르면 바로 바뀌고 다음 실행에도 그대로', () => {
+test('상단 스킨 메뉴에서 기본을 고르면 바로 바뀌고 다음 실행에도 그대로', () => {
   const { kv, unmount } = setup();
-  expect(document.documentElement.dataset.skin).toBe('classic');
+  expect(document.documentElement.dataset.skin).toBe('breeze');
   fireEvent.click(screen.getByRole('button', { name: '스킨' }));
   const menu = screen.getByRole('menu', { name: '스킨' });
-  expect(within(menu).getByRole('menuitem', { name: /기본/ })).toHaveTextContent('사용 중');
-  fireEvent.click(within(menu).getByRole('menuitem', { name: /브리즈/ }));
-  expect(document.documentElement.dataset.skin).toBe('breeze');
-  expect(loadSettings(kv).skin).toBe('breeze');
+  expect(within(menu).getByRole('menuitem', { name: /브리즈/ })).toHaveTextContent('사용 중');
+  fireEvent.click(within(menu).getByRole('menuitem', { name: /기본/ }));
+  expect(document.documentElement.dataset.skin).toBe('classic');
+  expect(loadSettings(kv).skin).toBe('classic');
   unmount();
   setup(JSON.parse(kv.get(SETTINGS_KEY)!));
-  expect(document.documentElement.dataset.skin).toBe('breeze');
+  expect(document.documentElement.dataset.skin).toBe('classic');
 });
 
 test('설정 창 화면 항목에서도 스킨을 바꾼다', () => {
   setup();
   fireEvent.click(screen.getByRole('button', { name: '설정' }));
   const dlg = screen.getByRole('dialog', { name: '설정' });
-  fireEvent.change(within(dlg).getByLabelText('스킨'), { target: { value: 'breeze' } });
-  expect(document.documentElement.dataset.skin).toBe('breeze');
+  fireEvent.change(within(dlg).getByLabelText('스킨'), { target: { value: 'classic' } });
+  expect(document.documentElement.dataset.skin).toBe('classic');
 });
