@@ -25,7 +25,7 @@ const LABELS: Record<keyof Settings, [string, (v: unknown) => string]> = {
   defaultLayout: ['기본 레이아웃', pick(LAYOUT_LABEL)],
   videoClick: ['영상 클릭', pick({ select: '칸 선택', player: '플레이어 재생·정지' })],
   theme: ['테마', pick({ system: '시스템 설정 따라가기', light: '라이트', dark: '다크' })],
-  skin: ['스킨', pick({ classic: '기본', breeze: '브리즈' })],
+  skin: ['스킨', pick({ classic: '기본', breeze: '브리즈', pure: '퓨어' })],
   showLiveInfo: ['칸에 방송 정보 표시', onOff],
   shortcuts: ['단축키', onOff],
   alwaysOnTop: ['항상 위에 표시', onOff],

@@ -22,8 +22,8 @@ afterEach(() => {
   delete document.documentElement.dataset.skin;
 });
 
-test('스킨: 기본과 브리즈, 기본값은 브리즈', () => {
-  expect(SKINS.map((s) => s.label)).toEqual(['기본', '브리즈']);
+test('스킨: 기본·브리즈·퓨어, 기본값은 브리즈', () => {
+  expect(SKINS.map((s) => s.label)).toEqual(['기본', '브리즈', '퓨어']);
   expect(DEFAULT_SETTINGS.skin).toBe('breeze');
   const kv = safeStorage(undefined);
   kv.set(SETTINGS_KEY, JSON.stringify({ skin: 'neon' }));
@@ -50,4 +50,12 @@ test('설정 창 화면 항목에서도 스킨을 바꾼다', () => {
   const dlg = screen.getByRole('dialog', { name: '설정' });
   fireEvent.change(within(dlg).getByLabelText('스킨'), { target: { value: 'classic' } });
   expect(document.documentElement.dataset.skin).toBe('classic');
+});
+
+test('퓨어 스킨을 고르면 바로 바뀐다', () => {
+  const { kv } = setup();
+  fireEvent.click(screen.getByRole('button', { name: '스킨' }));
+  fireEvent.click(within(screen.getByRole('menu', { name: '스킨' })).getByRole('menuitem', { name: /퓨어/ }));
+  expect(document.documentElement.dataset.skin).toBe('pure');
+  expect(loadSettings(kv).skin).toBe('pure');
 });

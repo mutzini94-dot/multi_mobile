@@ -28,11 +28,12 @@ export interface Settings {
   quickPanel: 'left' | 'right' | 'off'; // 퀵패널 (즐겨찾기·최근 본 크리에이터) 위치
 }
 
-export type Skin = 'classic' | 'breeze';
+export type Skin = 'classic' | 'breeze' | 'pure';
 /** 스킨 목록: 기본 = 지금까지의 모양, 브리즈 = 슬레이트 중립색·둥근 판·파랑→청록 포인트 (라이트 테마에서 색까지, 다크에서는 모양만) */
 export const SKINS: { id: Skin; label: string; hint: string }[] = [
   { id: 'classic', label: '기본', hint: '투네이션 기본 모양' },
   { id: 'breeze', label: '브리즈', hint: '산뜻한 슬레이트 · 둥근 판 · 파랑→청록 포인트' },
+  { id: 'pure', label: '퓨어', hint: '흰 바탕과 알루미늄 회색 · 큰 모서리 · 파랑 하나' },
 ];
 
 export const SETTINGS_KEY = 'mv.settings.v1';
@@ -104,7 +105,7 @@ export function normalizeSettings(raw: unknown): Settings {
     liveRefreshMinutes: oneOf(r.liveRefreshMinutes, LIVE_REFRESH_OPTIONS, d.liveRefreshMinutes),
     liveNotify: bool(r.liveNotify, d.liveNotify),
     theme: oneOf(r.theme, ['system', 'light', 'dark'] as const, d.theme),
-    skin: oneOf(r.skin, ['classic', 'breeze'] as const, d.skin),
+    skin: oneOf(r.skin, ['classic', 'breeze', 'pure'] as const, d.skin),
     shortcuts: bool(r.shortcuts, d.shortcuts),
     alwaysOnTop: bool(r.alwaysOnTop, d.alwaysOnTop),
     quickPanel: oneOf(r.quickPanel, ['left', 'right', 'off'] as const, d.quickPanel),
