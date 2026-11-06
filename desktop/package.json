@@ -1,7 +1,7 @@
 {
   "name": "multiview-desktop",
   "productName": "투네이션 후원 브라우저",
-  "version": "0.1.50",
+  "version": "0.1.51",
   "description": "유튜브·트위치 방송을 여러 개 동시에 보며 투네이션으로 후원하는 설치형 멀티뷰",
   "main": "main.js",
   "author": "Toonation",
@@ -18,6 +18,11 @@
     "appId": "at.toon.donator.multiview",
     "productName": "투네이션 후원 브라우저",
     "artifactName": "MultiviewDonate-Setup-${version}.${ext}",
+    "electronLanguages": [
+      "ko",
+      "en-US"
+    ],
+    "compression": "maximum",
     "directories": {
       "output": "dist",
       "buildResources": "build"

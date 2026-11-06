@@ -8,8 +8,8 @@ test('기본값', () => {
   expect(DEFAULT_SETTINGS).toEqual({
     restoreLastView: true,
     defaultLayout: 'wideSide',
-    hiddenSlotPlayback: 'keep',
-    lowQualityOthers: false,
+    hiddenSlotPlayback: 'pause',
+    lowQualityOthers: true,
     autoReplaceEnded: false,
     showLiveInfo: true,
     monthlyGoal: 0,

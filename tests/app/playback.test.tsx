@@ -73,8 +73,8 @@ test('여러 칸 동시 듣기: 칸마다 소리 켜기/끄기와 볼륨', () =>
   expect(tile(0)).not.toHaveClass('tile--selected') ; // 소리 버튼은 선택을 바꾸지 않는다 (B가 선택된 상태 유지)
 });
 
-test('숨긴 칸 정지: 레이아웃을 줄이면 정지, 다시 보이면 재생', () => {
-  setup({ hiddenSlotPlayback: 'pause' });
+test('숨긴 칸 정지(기본, 가볍게): 레이아웃을 줄이면 정지, 다시 보이면 재생', () => {
+  setup();
   pick(3, 'A');
   expect(fakes[A].paused).toBe(false);
   fireEvent.click(screen.getByRole('button', { name: '2분할' }));
@@ -84,15 +84,15 @@ test('숨긴 칸 정지: 레이아웃을 줄이면 정지, 다시 보이면 재�
   expect(fakes[A].paused).toBe(false);
 });
 
-test('숨긴 칸 계속 재생(기본)이면 정지하지 않는다', () => {
-  setup();
+test('숨긴 칸 계속 재생으로 바꾸면 정지하지 않는다', () => {
+  setup({ hiddenSlotPlayback: 'keep' });
   pick(3, 'A');
   fireEvent.click(screen.getByRole('button', { name: '2분할' }));
   expect(fakes[A].paused).toBe(false);
 });
 
-test('선택하지 않은 칸은 낮은 화질', () => {
-  setup({ lowQualityOthers: true });
+test('선택하지 않은 칸은 낮은 화질 (기본, 가볍게)', () => {
+  setup();
   pick(0, 'A');
   pick(1, 'B'); // B 선택
   expect(fakes[A].low).toBe(true);

@@ -40,8 +40,8 @@ export const SETTINGS_KEY = 'mv.settings.v1';
 export const DEFAULT_SETTINGS: Settings = {
   restoreLastView: true,
   defaultLayout: 'wideSide', // 큰 화면(방송) + 오른쪽 후원 페이지
-  hiddenSlotPlayback: 'keep',
-  lowQualityOthers: false,
+  hiddenSlotPlayback: 'pause', // 가볍게: 숨긴 칸은 정지
+  lowQualityOthers: true, // 가볍게: 선택하지 않은 칸은 낮은 화질
   autoReplaceEnded: false,
   showLiveInfo: true,
   videoClick: 'select',

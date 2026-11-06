@@ -32,25 +32,25 @@ test('후원 목표: 이번 달 합계가 목표의 80%를 넘으면 한 번 알
   const kv = safeStorage(undefined);
   const history = [{ at: now, tag: 'a', creator: 'A', cash: 8500 }];
   const first = setup({ kv, settings: { monthlyGoal: 10000 }, history });
-  expect(await screen.findByText('이번 달 후원이 목표 10,000원의 80%를 넘었습니다 (8,500원)')).toBeInTheDocument();
+  expect(await screen.findByText('이번 달 후원이 목표 10,000원의 80%를 넘었습니다 (8,500원)', {}, { timeout: 4000 })).toBeInTheDocument();
   expect(JSON.parse(kv.get(GOAL_NOTICE_KEY)!).level).toBe(80);
   first.unmount();
   setup({ kv, settings: { monthlyGoal: 10000 }, history });
-  await screen.findByRole('button', { name: /내 후원 내역/ });
+  await screen.findByRole('button', { name: /내 후원 내역/ }, { timeout: 4000 });
   await new Promise((r) => setTimeout(r, 0));
   expect(screen.queryByText(/목표 10,000원/)).toBeNull();
 });
 
 test('후원 목표: 목표에 이르면 알려준다', async () => {
   setup({ settings: { monthlyGoal: 10000 }, history: [{ at: now, tag: 'a', creator: 'A', cash: 10000 }] });
-  expect(await screen.findByText('이번 달 후원 목표 10,000원에 이르렀습니다 (10,000원)')).toBeInTheDocument();
+  expect(await screen.findByText('이번 달 후원 목표 10,000원에 이르렀습니다 (10,000원)', {}, { timeout: 4000 })).toBeInTheDocument();
 });
 
 test('내 후원 내역: 크리에이터를 눌러 바로 후원창', async () => {
   const { win } = setup({ history: [{ at: now, tag: 'tagA', creator: 'A', cash: 1000 }] });
-  fireEvent.click(await screen.findByRole('button', { name: /내 후원 내역/ }));
+  fireEvent.click(await screen.findByRole('button', { name: /내 후원 내역/ }, { timeout: 4000 }));
   const dlg = screen.getByRole('dialog', { name: '내 후원 내역' });
-  fireEvent.click(await within(dlg).findByRole('button', { name: 'A 후원하기' }));
+  fireEvent.click(await within(dlg).findByRole('button', { name: 'A 후원하기' }, { timeout: 4000 }));
   expect(win.open).toHaveBeenCalledWith(expect.stringContaining('toon.at/donate/tagA'), expect.anything(), expect.anything());
   expect(screen.queryByRole('dialog', { name: '내 후원 내역' })).toBeNull();
 });

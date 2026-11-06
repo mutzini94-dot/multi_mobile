@@ -655,10 +655,11 @@ span.group-select input { width: 96px; height: 30px; padding: 0 6px; font-size: 
 .modal-backdrop--dragging .modal { opacity: 0.2; transition: opacity 0.15s; }
 
 /* 시작 로딩 화면: toonation.co.kr/main 첫 화면처럼 흰 덮개가 오른쪽으로 걷히며 로고가 드러나고, 2초 뒤 흐려진다 */
-.splash { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: var(--canvas); animation: mv-splash-out 0.5s ease 2s forwards; pointer-events: none; }
+.splash { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: var(--canvas); pointer-events: none; transition: opacity 0.25s ease; }
+.splash--out { opacity: 0; }
 .splash__box { position: relative; overflow: hidden; }
 .splash__logo { display: block; width: 180px; height: auto; }
-.splash__cover { position: absolute; inset: -10px; background: var(--canvas); animation: mv-splash-reveal 3.2s ease forwards; }
+.splash__cover { position: absolute; inset: -10px; background: var(--canvas); animation: mv-splash-reveal 0.75s ease forwards; }
 @keyframes mv-splash-reveal { from { transform: translateX(0); } to { transform: translateX(150%); visibility: hidden; } }
 @keyframes mv-splash-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .splash__cover { animation-duration: 0.01s; } }
