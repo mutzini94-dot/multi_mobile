@@ -36,6 +36,14 @@ export function recordWatch(kv: KV, creator: Creator, now: number): WatchEntry[]
   return next;
 }
 
+/** 최근 본 목록에서 지우기: 그 크리에이터의 기록을 모두 (같은 후원 아이디의 다른 채널 기록까지) */
+export function forgetWatch(kv: KV, creator: Creator): WatchEntry[] {
+  const same = (c: Creator) => c.key === creator.key || (!!creator.donateId && c.donateId === creator.donateId);
+  const next = readWatchLog(kv).filter((e) => !same(e.creator));
+  kv.set(WATCH_LOG_KEY, JSON.stringify(next));
+  return next;
+}
+
 /** next에 새로 들어온 방송 (prev에 같은 방송이 없던 것) */
 export function newlyPlaced(prev: (SlotItem | null)[], next: (SlotItem | null)[]): Creator[] {
   const had = new Set(prev.filter(isStream).map((c) => c.key));

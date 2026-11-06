@@ -20,7 +20,7 @@ import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY } from '../quick/shortsSize';
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
-import { newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
+import { forgetWatch, newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
 import { buildTimeline } from '../activity/timeline';
@@ -888,6 +888,7 @@ export function App(props: Props) {
       onDismiss={dismissQuick}
       onAddWindow={growTo.length ? () => setAddOpen(true) : null}
       login={{ loggedIn: !!toonation.state.account, onLogin: toonation.login }}
+      onRemoveRecent={(c) => setWatchLog(forgetWatch(kv, c))}
       shorts={{
         open: shortsOpen,
         onToggle: () => setShortsOpen((o) => !o),

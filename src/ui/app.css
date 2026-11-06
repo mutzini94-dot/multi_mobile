@@ -1092,3 +1092,29 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 /* 추천 라이브 창 크기 조절 중: 스크롤 맞춤을 잠시 끄고(보던 방송 자리는 스크립트가 맞춘다), 바깥 배치 계산을 창 안으로 가둔다 */
 .quick-panel__drawer { contain: layout; }
 .quick-panel__drawer--resizing .shorts__scroller { scroll-snap-type: none; }
+
+/* ---------- 퀵패널 크리에이터 카드: 넓어지면 크리에이터마다 카드 한 장 (접혀 있으면 프로필만) ---------- */
+.quick-panel__card { position: relative; display: flex; align-items: center; border-radius: 16px; transition: background 0.15s, box-shadow 0.15s; }
+.quick-panel--expanded .quick-panel__list { gap: 6px; }
+.quick-panel--expanded .quick-panel__card { padding: 4px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.quick-panel--expanded .quick-panel__card:hover { background: var(--canvas); box-shadow: inset 0 0 0 1px var(--line), var(--elev-2); }
+.quick-panel--expanded .quick-panel__card--live { background: var(--canvas); box-shadow: inset 0 0 0 1px rgba(248, 73, 73, 0.35); }
+.quick-panel--expanded .quick-panel__card--live:hover { box-shadow: inset 0 0 0 1px rgba(248, 73, 73, 0.5), var(--elev-2); }
+.quick-panel--expanded .quick-panel__card .quick-panel__item { flex: 1; min-width: 0; height: 44px; background: transparent; }
+.quick-panel--expanded .quick-panel__card .quick-panel__item:hover { background: transparent; }
+.quick-panel--expanded .quick-panel__card .quick-panel__label { flex: 1; min-width: 0; max-width: none; }
+/* 이름은 한 줄로, 넘치면 말줄임 (긴 이름이 패널 밖으로 잘려 나가지 않게) */
+.quick-panel__name { display: block; align-self: stretch; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick-panel__sub { display: block; align-self: stretch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 최근 본 삭제: 넓어졌을 때 카드에 마우스를 올리면 */
+.quick-panel__remove { display: none; flex: none; width: 22px; height: 22px; margin: 0 4px; padding: 0; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: var(--ink-mute); cursor: pointer; opacity: 0; transition: opacity 0.12s, background 0.12s, color 0.12s; }
+.quick-panel--expanded .quick-panel__remove { display: inline-flex; }
+.quick-panel__card:hover .quick-panel__remove, .quick-panel__remove:focus-visible { opacity: 1; }
+.quick-panel__remove:hover { background: rgba(248, 73, 73, 0.1); color: var(--live); }
+.quick-panel--right .quick-panel__card { flex-direction: row-reverse; }
+.quick-panel--right .quick-panel__card .quick-panel__label { text-align: right; }
+/* 스킨별 카드 감도 */
+[data-skin="pure"] .quick-panel--expanded .quick-panel__card { background: var(--surface); box-shadow: none; }
+[data-skin="pure"] .quick-panel--expanded .quick-panel__card:hover { background: var(--surface-2); box-shadow: none; }
+[data-skin="pure"] .quick-panel--expanded .quick-panel__card--live { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--live); }
+[data-skin="breeze"] .quick-panel--expanded .quick-panel__card { border-radius: 18px; }

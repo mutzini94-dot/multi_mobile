@@ -15,6 +15,7 @@ interface Props {
   shorts?: { open: boolean; onToggle(): void; content: ReactNode; size?: ShortsSize; onResize?(s: ShortsSize): void };
   onAddWindow?: (() => void) | null; // 맨 아래 '창 추가' (null = 더 늘릴 수 없음)
   login?: { loggedIn: boolean; onLogin(): void }; // 투네이션 로그인 전이면 즐겨찾기 자리에 로그인 버튼
+  onRemoveRecent?(c: Creator): void; // 최근 본 목록에서 지우기
 }
 
 export interface ShortsSize {
@@ -34,7 +35,7 @@ const COLLAPSE_MS = 140;
  * 화면 옆 퀵패널 (Edge 사이드바처럼): 즐겨찾기·최근 본 크리에이터를 프로필로, 방송 시작 알림.
  * 마우스를 올리면 넓어지며(칸 위로 겹친다) 버튼 이름·크리에이터 이름을 함께 보여 준다.
  */
-export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts, onAddWindow, login }: Props) {
+export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts, onAddWindow, login, onRemoveRecent }: Props) {
   const [tab, setTab] = useState<'fav' | 'recent'>('fav');
   const [expanded, setExpanded] = useState(false);
   const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -132,7 +133,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
             const isNew = newKeys.has(c.key);
             const label = [c.name, live && '방송 중', isNew && '방금 시작'].filter(Boolean).join(' · ');
             return (
-              <li key={c.key}>
+              <li key={c.key} className={`quick-panel__card${live ? ' quick-panel__card--live' : ''}`}>
                 <button
                   type="button"
                   aria-label={label}
@@ -147,10 +148,21 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
                     {live && <span className="quick-panel__live-dot" aria-hidden="true" />}
                   </span>
                   <span className="quick-panel__label">
-                    {c.name}
-                    {live && <em className="quick-panel__sub quick-panel__sub--live">방송 중</em>}
+                    <span className="quick-panel__name">{c.name}</span>
+                    {live ? (
+                      <em className="quick-panel__sub quick-panel__sub--live">{c.live?.viewers ? `방송 중 · ${c.live.viewers.toLocaleString('ko-KR')}명` : '방송 중'}</em>
+                    ) : (
+                      <em className="quick-panel__sub">{c.platform === 'youtube' ? 'YouTube' : 'Twitch'}</em>
+                    )}
                   </span>
                 </button>
+                {tab === 'recent' && onRemoveRecent && (
+                  <button type="button" className="quick-panel__remove" aria-label={`최근 본 목록에서 ${c.name} 삭제`} title="최근 본 목록에서 삭제" onClick={() => onRemoveRecent(c)}>
+                    <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                      <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  </button>
+                )}
               </li>
             );
           })}

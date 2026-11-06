@@ -183,7 +183,7 @@ test('빈 칸의 최근 본 크리에이터를 누르면 그 칸에 바로 넣�
 test('퀵패널 항목은 이름표를 함께 갖고 있다 (마우스를 올려 넓어지면 보인다)', () => {
   setup();
   expect(panel().querySelector('.quick-panel__label')).not.toBeNull();
-  for (const n of ['추천 라이브', '즐겨찾기', '하나', '창 추가']) expect(within(panel()).getAllByText(n, { selector: '.quick-panel__label' }).length).toBeGreaterThan(0);
+  for (const n of ['추천 라이브', '즐겨찾기', '하나', '창 추가']) expect(within(panel()).getAllByText(n, { selector: '.quick-panel__label, .quick-panel__name' }).length).toBeGreaterThan(0);
 });
 
 test('로그인 전: 퀵패널 즐겨찾기 자리에 로그인 버튼, 상단에도 로그인 (누르면 투네이션 로그인)', async () => {
@@ -234,4 +234,24 @@ test('방송이 있는 칸은 오른쪽 클릭해도 빈 창 메뉴가 없다, E
   expect(screen.getByRole('menu')).toBeInTheDocument();
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('menu')).toBeNull();
+});
+
+test('최근 본 탭: 삭제 버튼으로 목록에서 지운다 (다시 켜도 그대로 지워져 있다)', () => {
+  const first = setup();
+  fireEvent.click(within(panel()).getByRole('button', { name: '하나' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '1번 칸 · 빈 칸' }));
+  fireEvent.click(within(panel()).getByRole('tab', { name: '최근 본' }));
+  expect(within(panel()).getByRole('button', { name: '하나' })).toBeInTheDocument();
+  expect(within(panel()).queryByRole('button', { name: '즐겨찾기에서 하나 삭제' })).toBeNull();
+  fireEvent.click(within(panel()).getByRole('button', { name: '최근 본 목록에서 하나 삭제' }));
+  expect(within(panel()).queryByRole('button', { name: '하나' })).toBeNull();
+  first.unmount();
+  setup({ kv: first.kv });
+  fireEvent.click(within(panel()).getByRole('tab', { name: '최근 본' }));
+  expect(within(panel()).queryByRole('button', { name: '하나' })).toBeNull();
+});
+
+test('즐겨찾기 탭에는 삭제 버튼이 없다', () => {
+  setup();
+  expect(within(panel()).queryByRole('button', { name: /목록에서 .* 삭제/ })).toBeNull();
 });

@@ -1,4 +1,4 @@
-import { newlyPlaced, readWatchLog, recordWatch, WATCH_LOG_KEY } from '../../src/activity/watchLog';
+import { forgetWatch, newlyPlaced, readWatchLog, recordWatch, WATCH_LOG_KEY } from '../../src/activity/watchLog';
 import { makeChatPage } from '../../src/domain/pages';
 import { safeStorage } from '../../src/storage/safeStorage';
 import { mkCreator } from '../helpers/fixtures';
@@ -61,4 +61,17 @@ test('30분 안에 같은 방송을 다시 띄우면 사이에 다른 방송이 
     ['twitch:chan_1', 2 * MIN],
     ['twitch:chan_2', MIN],
   ]);
+});
+
+test('최근 본 목록에서 지우기: 그 크리에이터의 기록을 모두 지운다 (같은 후원 아이디의 다른 채널까지)', () => {
+  const kv = safeStorage(undefined);
+  const yt = mkCreator(1, { platform: 'youtube', key: 'youtube:UC1', donateId: 'same' });
+  const tw = mkCreator(2, { donateId: 'same' });
+  const other = mkCreator(3);
+  recordWatch(kv, yt, 1000);
+  recordWatch(kv, other, 2000);
+  recordWatch(kv, tw, 3000);
+  const left = forgetWatch(kv, tw);
+  expect(left.map((e) => e.creator.key)).toEqual([other.key]);
+  expect(readWatchLog(kv).map((e) => e.creator.key)).toEqual([other.key]);
 });
