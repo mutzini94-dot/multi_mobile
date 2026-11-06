@@ -224,14 +224,16 @@ test('빈 칸 오른쪽 클릭: 창 추가 · 창 닫기', () => {
   expect(screen.getByRole('dialog', { name: '창 추가' })).toBeInTheDocument();
 });
 
-test('방송이 있는 칸은 오른쪽 클릭해도 빈 창 메뉴가 없다, Esc로 메뉴를 닫는다', () => {
+test('방송이 있는 칸은 빈 창 메뉴 대신 영상 메뉴, Esc로 메뉴를 닫는다', () => {
   setup();
   fireEvent.click(within(panel()).getByRole('button', { name: '하나' }));
   fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '1번 칸 · 빈 칸' }));
   fireEvent.contextMenu(tiles()[0]);
-  expect(screen.queryByRole('menu')).toBeNull();
+  expect(screen.queryByRole('menu', { name: '빈 창 메뉴' })).toBeNull();
+  expect(screen.getByRole('menu', { name: '영상 메뉴' })).toBeInTheDocument();
+  fireEvent.keyDown(window, { key: 'Escape' });
   fireEvent.contextMenu(tiles()[1]);
-  expect(screen.getByRole('menu')).toBeInTheDocument();
+  expect(screen.getByRole('menu', { name: '빈 창 메뉴' })).toBeInTheDocument();
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('menu')).toBeNull();
 });
