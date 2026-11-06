@@ -16,6 +16,7 @@ interface Props {
   onQuickPick?(c: Creator): void;
   starting?: boolean; // 트위치가 자동 재생을 시작하는 중: 영상 위 바를 잠깐 숨긴다 (겹치면 트위치가 재생을 막는다)
   onDeleteWindow?(): void;
+  onStreamMenu?(x: number, y: number): void; // 방송 칸 오른쪽 클릭 (소리·전체 화면·새 창·창 닫기 메뉴)
   onEmptyMenu?(x: number, y: number): void; // 빈 칸 오른쪽 클릭 (창 추가·창 닫기 메뉴) // 빈 창 삭제 (칸을 빼고 한 단계 작은 레이아웃으로)
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
   onSoundClick?(): void; // 소리 버튼 (없으면 선택된 칸은 소리 켜기/끄기, 아니면 선택)
@@ -73,7 +74,12 @@ export function Tile(props: Props) {
               e.preventDefault();
               props.onEmptyMenu!(e.clientX, e.clientY);
             }
-          : undefined
+          : creator && props.onStreamMenu
+            ? (e) => {
+                e.preventDefault();
+                props.onStreamMenu!(e.clientX, e.clientY);
+              }
+            : undefined
       }
     >
       {filled && <div className="tile__player" ref={playerSlotRef} />}

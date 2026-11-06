@@ -54,6 +54,7 @@ export interface DesktopApi {
   checkUpdate?(): void;
   installUpdate?(): void;
   onAppInfo?(cb: (info: AppInfo) => void): () => void;
+  onFrameContextMenu?(cb: (p: { x: number; y: number }) => void): () => void; // 영상(iframe) 안 오른쪽 클릭 자리 (앱 화면 좌표)
 }
 
 /** 설치형 앱 정보: 버전 · 앱 옵션 · 업데이트 상태 (desktop/main.js appInfo) */

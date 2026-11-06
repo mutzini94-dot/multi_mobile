@@ -35,6 +35,12 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
   setAppOption: (key, value) => ipcRenderer.invoke('mv:app:set', String(key), !!value),
   checkUpdate: () => ipcRenderer.send('mv:app:checkUpdate'),
   installUpdate: () => ipcRenderer.send('mv:app:installUpdate'),
+  // 영상(iframe) 안에서 오른쪽 클릭: 앱이 그 자리를 알려 주면 칸 메뉴를 띄운다
+  onFrameContextMenu: (cb) => {
+    const fn = (_e, p) => cb(p);
+    ipcRenderer.on('mv:frame:contextmenu', fn);
+    return () => ipcRenderer.removeListener('mv:frame:contextmenu', fn);
+  },
   onAppInfo: (cb) => {
     const fn = (_e, info) => cb(info);
     ipcRenderer.on('mv:app:info', fn);

@@ -31,7 +31,7 @@ const DEV = process.argv.includes('--dev');
 const DEV_URL = 'http://localhost:5230/';
 const ICON = path.join(__dirname, 'assets', 'icon.ico'); // 창·작업 표시줄 아이콘 (build/는 설치 파일에 들어가지 않는다)
 const LOGO_ICON = path.join(__dirname, 'assets', 'logo-square.png'); // 알림 아이콘 (build/는 설치 파일에 들어가지 않는다)
-const TRAY_ICON = path.join(__dirname, 'assets', 'tray.png'); // 로고 (+OO), tray@2x.png는 고해상도 화면에서 자동으로 쓴다
+const TRAY_ICON = path.join(__dirname, 'assets', 'tray.png'); // 앱 아이콘(TOO 멀티뷰)과 같은 그림, tray@2x.png는 고해상도 화면에서 자동으로 쓴다
 const DONATE_TAG_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 app.setPath('userData', userDataDir(app.getPath('appData')));
@@ -397,6 +397,11 @@ function createWindow(url) {
   });
   appOrigin = new URL(url).origin;
   guardAppContents(win.webContents);
+  // 영상(iframe) 안 오른쪽 클릭은 앱 화면이 받지 못한다: 그 자리를 알려 칸 메뉴(소리·전체 화면·새 창·창 닫기)를 띄우게 한다
+  win.webContents.on('context-menu', (_e, params) => {
+    if (!params.frame || params.frame === win.webContents.mainFrame) return;
+    send('mv:frame:contextmenu', { x: Math.round(params.x), y: Math.round(params.y) });
+  });
   remoteHost.trackMain(win);
   win.webContents.on('did-start-navigation', (_e, _u, inPage, isMain) => {
     if (!isMain || inPage) return;

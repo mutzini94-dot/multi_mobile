@@ -875,6 +875,26 @@ export function App(props: Props) {
   const growTo = growLayouts(state.layout);
   const [emptyMenu, setEmptyMenu] = useState<{ slot: number; x: number; y: number } | null>(null); // 빈 칸 오른쪽 클릭 메뉴
   const closeEmptyMenu = useCallback(() => setEmptyMenu(null), []);
+  const [videoMenu, setVideoMenu] = useState<{ slot: number; x: number; y: number } | null>(null); // 영상 칸 오른쪽 클릭 메뉴
+  const closeVideoMenu = useCallback(() => setVideoMenu(null), []);
+  const openVideoMenu = (slot: number, x: number, y: number) => {
+    if (!isStream(stateRef.current.slots[slot])) return;
+    setEmptyMenu(null);
+    setVideoMenu({ slot, x, y });
+  };
+  const openVideoMenuRef = useRef(openVideoMenu);
+  openVideoMenuRef.current = openVideoMenu;
+  // 설치형: 영상(iframe) 안 오른쪽 클릭 → 그 자리의 칸 메뉴
+  useEffect(
+    () =>
+      desktop?.onFrameContextMenu?.(({ x, y }) => {
+        for (const el of document.elementsFromPoint?.(x, y) ?? []) {
+          const item = el.closest<HTMLElement>('.player-layer__item[data-slot]');
+          if (item) return openVideoMenuRef.current(Number(item.dataset.slot), x, y);
+        }
+      }),
+    [desktop],
+  );
   const quickPanel = quickOn ? (
     <QuickPanel
       side={settings.quickPanel === 'right' ? 'right' : 'left'}
@@ -1068,6 +1088,7 @@ export function App(props: Props) {
                   slotNumber={slot + 1}
                   onQuickPick={(c) => dispatch({ type: 'assign', slot, creator: c })}
                   onEmptyMenu={(x, y) => setEmptyMenu({ slot, x, y })}
+                  onStreamMenu={(x, y) => openVideoMenu(slot, x, y)}
                   onDeleteWindow={shrinkLayout(state, slot) ? () => dispatch({ type: 'removeWindow', slot }) : undefined}
                   onToggleSound={() => dispatch({ type: 'toggleSound' })}
                   playerSlotRef={(el) => {
@@ -1199,6 +1220,7 @@ export function App(props: Props) {
             onReady={(key, h) => setHandles((prev) => ({ ...prev, [key]: h }))}
             onStatus={onStreamStatus}
             onStarting={onStreamStarting}
+            onItemMenu={openVideoMenu}
             starting={startingKeys}
             renderOverlay={endedOverlay}
             renderControls={pauseControl}
@@ -1337,6 +1359,49 @@ export function App(props: Props) {
           label="스킨"
           onClose={closeSkinMenu}
           items={SKINS.map((k) => ({ label: k.label, icon: settings.skin === k.id ? '✓' : '', hint: settings.skin === k.id ? '사용 중' : undefined, onSelect: () => changeSettings({ skin: k.id }) }))}
+        />
+      )}
+      {videoMenu && isStream(state.slots[videoMenu.slot]) && (
+        <ContextMenu
+          x={videoMenu.x}
+          y={videoMenu.y}
+          label="영상 메뉴"
+          onClose={closeVideoMenu}
+          items={(() => {
+            const slot = videoMenu.slot;
+            const k = keys[slot];
+            const on = audible[slot];
+            return [
+              {
+                label: on ? '소리 끄기' : '소리 켜기',
+                icon: on ? '🔇' : '🔊',
+                onSelect: () => {
+                  if (mix && k) {
+                    if (!on && !state.soundOn) dispatch({ type: 'toggleSound' });
+                    setMixMuted((m) => ({ ...m, [k]: on }));
+                  } else if (on) dispatch({ type: 'toggleSound' }); // 이 칸만 소리가 나므로 전체 소리 끄기
+                  else {
+                    dispatch({ type: 'select', slot }); // 이 칸 소리로
+                    if (!state.soundOn) dispatch({ type: 'toggleSound' });
+                  }
+                },
+              },
+              { label: '전체 화면', icon: '⛶', onSelect: () => enterFullscreen(slot) },
+              { label: '새 창으로 분리', icon: '⧉', onSelect: () => detachSlot(slot) },
+              {
+                label: '창 닫기',
+                icon: '✕',
+                danger: true,
+                onSelect: () => {
+                  // 방송을 내리고, 줄일 수 있으면 그 창도 닫는다
+                  const cleared = { ...state, slots: state.slots.map((s, i) => (i === slot ? null : s)) };
+                  dispatch({ type: 'clear', slot });
+                  if (shrinkLayout(cleared, slot)) dispatch({ type: 'removeWindow', slot });
+                  setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([hk]) => hk !== k)));
+                },
+              },
+            ];
+          })()}
         />
       )}
       {emptyMenu && (

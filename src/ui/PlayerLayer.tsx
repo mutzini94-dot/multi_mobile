@@ -24,6 +24,7 @@ interface Props {
   // 영상 위의 잡는 층: 플레이어(iframe)가 마우스를 가져가므로 그 위에 투명한 층을 깔아 끌기·선택을 받는다.
   // 아래쪽 플레이어 조작 영역은 비워 둔다.
   onGrab?(slot: number, e: ReactPointerEvent): void;
+  onItemMenu?(slot: number, x: number, y: number): void; // 영상 위(잡는 층·버튼)에서 오른쪽 클릭
   // 끄는 중인 방송: 작은 창으로 줄어 커서(x, y: 화면 좌표)를 따라간다 — 위치·크기만 바꿔 iframe은 그대로
   floating?: { slot: number; x: number; y: number; name: string } | null;
   settling?: number[]; // 놓은 직후 제자리로 부드럽게 들어가는 칸들
@@ -53,7 +54,7 @@ const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
  * 플레이어를 칸 번호 key로 한 번만 마운트하고, 레이아웃이 정한 칸 자리에 절대 위치로 덮는다.
  * 레이아웃을 바꿔도 iframe이 DOM에서 옮겨지지 않으므로 방송이 다시 로딩되지 않는다.
  */
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, renderOverlay, renderControls, reloadSeq = 0, tileSeq }: Props) {
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, onItemMenu, renderOverlay, renderControls, reloadSeq = 0, tileSeq }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
   const onSelectRef = useRef(onSelectSlot);
   onSelectRef.current = onSelectSlot;
@@ -127,6 +128,14 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
             className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}${starting?.has(key) ? ' player-layer__item--starting' : ''}`}
             data-slot={slot}
             data-kind={isStream(creator) ? 'stream' : 'page'}
+            onContextMenu={
+              isStream(creator) && onItemMenu
+                ? (e) => {
+                    e.preventDefault();
+                    onItemMenu(slot, e.clientX, e.clientY);
+                  }
+                : undefined
+            }
             // 전체 화면 중 다른 칸은 숨기기만 하고 재생은 계속한다
             style={{ left: r.left, top: r.top, width: r.width, height: r.height, visibility: offscreen || (focused !== null && focused !== slot) ? 'hidden' : undefined }}
           >
