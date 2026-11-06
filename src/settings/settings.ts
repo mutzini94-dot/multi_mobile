@@ -22,10 +22,18 @@ export interface Settings {
   liveRefreshMinutes: 0 | 1 | 3 | 5 | 10; // 즐겨찾기 라이브 자동 갱신 간격 (0 = 끔)
   liveNotify: boolean; // 즐겨찾기 방송 시작 알림
   theme: 'system' | 'light' | 'dark';
+  skin: Skin; // 화면 스킨 (색·모서리·버튼 모양). 배치와 기능은 같다
   shortcuts: boolean; // 1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원
   alwaysOnTop: boolean; // 창 항상 위 (설치형)
   quickPanel: 'left' | 'right' | 'off'; // 퀵패널 (즐겨찾기·최근 본 크리에이터) 위치
 }
+
+export type Skin = 'classic' | 'breeze';
+/** 스킨 목록: 기본 = 지금까지의 모양, 브리즈 = 슬레이트 중립색·둥근 판·파랑→청록 포인트 (라이트 테마에서 색까지, 다크에서는 모양만) */
+export const SKINS: { id: Skin; label: string; hint: string }[] = [
+  { id: 'classic', label: '기본', hint: '투네이션 기본 모양' },
+  { id: 'breeze', label: '브리즈', hint: '산뜻한 슬레이트 · 둥근 판 · 파랑→청록 포인트' },
+];
 
 export const SETTINGS_KEY = 'mv.settings.v1';
 
@@ -47,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   liveRefreshMinutes: 0,
   liveNotify: false,
   theme: 'system',
+  skin: 'classic',
   shortcuts: true,
   alwaysOnTop: false,
   quickPanel: 'left',
@@ -95,6 +104,7 @@ export function normalizeSettings(raw: unknown): Settings {
     liveRefreshMinutes: oneOf(r.liveRefreshMinutes, LIVE_REFRESH_OPTIONS, d.liveRefreshMinutes),
     liveNotify: bool(r.liveNotify, d.liveNotify),
     theme: oneOf(r.theme, ['system', 'light', 'dark'] as const, d.theme),
+    skin: oneOf(r.skin, ['classic', 'breeze'] as const, d.skin),
     shortcuts: bool(r.shortcuts, d.shortcuts),
     alwaysOnTop: bool(r.alwaysOnTop, d.alwaysOnTop),
     quickPanel: oneOf(r.quickPanel, ['left', 'right', 'off'] as const, d.quickPanel),

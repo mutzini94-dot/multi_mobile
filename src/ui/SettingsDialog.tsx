@@ -2,7 +2,7 @@ import { useState, type ChangeEvent, type ReactNode } from 'react';
 import type { Creator } from '../domain/types';
 import type { FavoritesSource } from '../favorites/favorites';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
-import { cleanAmounts, cleanMessages, LIVE_REFRESH_OPTIONS, type Settings } from '../settings/settings';
+import { cleanAmounts, cleanMessages, LIVE_REFRESH_OPTIONS, type Settings, SKINS } from '../settings/settings';
 import type { AppInfo, AppOption } from '../desktop/desktopApi';
 
 interface Props {
@@ -194,6 +194,7 @@ export function SettingsDialog(p: Props) {
             ]}
             onChange={(v) => p.onChange({ theme: v })}
           />
+          <Select label="스킨" value={s.skin} options={SKINS.map((k) => [k.id, k.label])} onChange={(v) => p.onChange({ skin: v })} hint="색·모서리·버튼 모양만 바뀌고 배치와 기능은 같습니다" />
           <Toggle label="칸에 방송 정보 표시" checked={s.showLiveInfo} onChange={(v) => p.onChange({ showLiveInfo: v })} hint="제목·시청자 수·방송한 시간 (투네이션에 등록된 크리에이터)" />
           <Select
             label="퀵패널"

@@ -2,7 +2,7 @@ import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import logoUrl from '../assets/logo.png';
-import { IconCoin, IconHeart, IconHelp, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
+import { IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -25,6 +25,7 @@ interface Props {
   onDonate(): void;
   onSettings?(): void;
   onHelp?(): void; // 도움말 (자주 묻는 질문·단축키·둘러보기)
+  onSkin?(x: number, y: number): void; // 스킨 바꾸기 메뉴 (누른 버튼 아래에)
   onLogin?(): void; // 투네이션 로그인 (로그인 전에만)
   loggingIn?: boolean; // 로그인 창이 열려 있는 동안
   onPresets?(): void; // 화면 구성 저장·불러오기
@@ -36,7 +37,7 @@ interface Props {
   mode?: { value: RemoteMode; onChange(m: RemoteMode): void }; // 상단 스위치: 크리에이터 리모컨 ↔ 후원 리모컨
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
+export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
@@ -113,6 +114,20 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp,
             {onHelp && (
               <button type="button" className="gnb__tool" aria-label="도움말" data-tip="도움말 · 단축키 (?)" onClick={onHelp}>
                 <IconHelp />
+              </button>
+            )}
+            {onSkin && (
+              <button
+                type="button"
+                className="gnb__tool"
+                aria-label="스킨"
+                data-tip="스킨 바꾸기"
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onSkin(r.left, r.bottom + 6);
+                }}
+              >
+                <IconPalette />
               </button>
             )}
             {onSettings && (

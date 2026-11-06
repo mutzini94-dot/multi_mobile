@@ -52,7 +52,7 @@ import { playerKeys, visibleCount, visibleSlots } from '../layout/layouts';
 import { initialViewState, viewReducer } from './viewState';
 import { loadLastView, saveLastView } from './lastView';
 import { applyLayout, growLayouts, shrinkLayout } from '../layout/layouts';
-import { useSettings } from '../settings/settings';
+import { useSettings, SKINS } from '../settings/settings';
 import { SettingsDialog } from '../ui/SettingsDialog';
 import { PresetsDialog } from '../ui/PresetsDialog';
 import { describeBackup, exportBackup, importBackup, type BackupSummary } from './backup';
@@ -143,6 +143,12 @@ export function App(props: Props) {
     if (settings.theme === 'system') delete root.dataset.theme;
     else root.dataset.theme = settings.theme;
   }, [settings.theme]);
+  // 스킨: 색·모서리·버튼 모양 (app.css의 [data-skin])
+  useEffect(() => {
+    document.documentElement.dataset.skin = settings.skin;
+  }, [settings.skin]);
+  const [skinMenu, setSkinMenu] = useState<{ x: number; y: number } | null>(null);
+  const closeSkinMenu = useCallback(() => setSkinMenu(null), []);
   // 설치형: 창 항상 위
   useEffect(() => {
     desktop?.setAlwaysOnTop?.(settings.alwaysOnTop);
@@ -1009,6 +1015,7 @@ export function App(props: Props) {
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
         onHelp={() => setHelpOpen(true)}
+        onSkin={(x, y) => setSkinMenu({ x, y })}
         onLogin={toonation.state.account ? undefined : toonation.login}
         loggingIn={toonation.state.status === 'waiting-login'}
         onLive={() => setLiveOpen(true)}
@@ -1309,6 +1316,15 @@ export function App(props: Props) {
             onPick={setLivePick}
           />
         </RecommendLiveDialog>
+      )}
+      {skinMenu && (
+        <ContextMenu
+          x={skinMenu.x}
+          y={skinMenu.y}
+          label="스킨"
+          onClose={closeSkinMenu}
+          items={SKINS.map((k) => ({ label: k.label, icon: settings.skin === k.id ? '✓' : '', hint: settings.skin === k.id ? '사용 중' : undefined, onSelect: () => changeSettings({ skin: k.id }) }))}
+        />
       )}
       {emptyMenu && (
         <ContextMenu

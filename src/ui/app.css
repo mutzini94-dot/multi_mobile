@@ -859,3 +859,94 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .picker .fav-form { grid-template-columns: 1fr; }
   .picker .fav-form .btn--donate { grid-column: 1; justify-self: stretch; }
 }
+
+/* ================= 스킨: 브리즈 =================
+   배치·기능은 그대로, 감도만: 슬레이트 중립색 · 둥근 판(16~20px) · 부드러운 그림자 · 파랑→청록 포인트는 후원하기에만.
+   색은 라이트 테마에서만 바꾸고(다크는 기존 다크 색), 모서리·버튼 모양은 두 테마 모두에 적용한다 */
+:root[data-skin="breeze"][data-theme="light"] {
+  --primary: #1f6fe0;
+  --primary-press: #175bc0;
+  --primary-soft: #eaf3ff;
+  --ink: #1e293b;
+  --ink-sub: #334155;
+  --ink-mute: #64748b;
+  --canvas: #ffffff;
+  --surface: #f1f5f9;
+  --surface-2: #f8fafc;
+  --line: #e2e8f0;
+  --border-soft: rgba(30, 41, 59, 0.08);
+  --live: #dc2626;
+  --stage: #f8fafc;
+  --elev-1: 0 16px 28px rgba(30, 41, 59, 0.12);
+  --elev-2: 0 6px 14px rgba(30, 41, 59, 0.06);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-skin="breeze"]:not([data-theme]) {
+    --primary: #1f6fe0;
+    --primary-press: #175bc0;
+    --primary-soft: #eaf3ff;
+    --ink: #1e293b;
+    --ink-sub: #334155;
+    --ink-mute: #64748b;
+    --canvas: #ffffff;
+    --surface: #f1f5f9;
+    --surface-2: #f8fafc;
+    --line: #e2e8f0;
+    --border-soft: rgba(30, 41, 59, 0.08);
+    --live: #dc2626;
+    --stage: #f8fafc;
+    --elev-1: 0 16px 28px rgba(30, 41, 59, 0.12);
+    --elev-2: 0 6px 14px rgba(30, 41, 59, 0.06);
+  }
+}
+:root[data-skin="breeze"] {
+  --r-sm: 10px;
+  --r-md: 18px;
+  --r-lg: 22px;
+  --breeze-grad: linear-gradient(90deg, #1f6fe0 0%, #0b98a6 100%);
+  --breeze-ring: 0 0 0 3px var(--canvas), 0 0 0 5px var(--primary);
+}
+/* 상단 메뉴: 흰 바, 선 대신 아주 옅은 경계 */
+[data-skin="breeze"] .gnb { border-bottom: 0; box-shadow: 0 1px 0 var(--line); }
+[data-skin="breeze"] .gnb__mode { box-shadow: none; }
+[data-skin="breeze"] .gnb__mode-btn[aria-checked='true'] { background: var(--canvas); color: var(--primary); box-shadow: var(--elev-2), inset 0 0 0 1px var(--border-soft); }
+[data-skin="breeze"] .layout-icon[aria-pressed='true'] { box-shadow: var(--elev-2), inset 0 0 0 1px var(--border-soft); }
+[data-skin="breeze"] .gnb__tool:hover, [data-skin="breeze"] .gnb__tool:focus-visible { box-shadow: var(--elev-2); }
+[data-skin="breeze"] .gnb__login, [data-skin="breeze"] .gnb__cash { background: var(--canvas); box-shadow: inset 0 0 0 1px var(--line); }
+/* 후원하기: 파랑→청록 (이 스킨의 유일한 그라데이션) */
+[data-skin="breeze"] .btn--donate:not(:disabled) { background: var(--breeze-grad); box-shadow: none; }
+[data-skin="breeze"] .btn--donate:not(:disabled):hover { background: var(--breeze-grad); filter: brightness(0.94); }
+[data-skin="breeze"] .tile__load { background: var(--breeze-grad); }
+[data-skin="breeze"] .tile__load:hover { background: var(--breeze-grad); filter: brightness(0.94); }
+/* 퀵패널: 그림자로 뜬 흰 판 */
+[data-skin="breeze"] .quick-panel { background: var(--canvas); border-radius: 20px; box-shadow: var(--elev-2), inset 0 0 0 1px var(--border-soft); }
+[data-skin="breeze"] .quick-panel--expanded { box-shadow: var(--elev-1); }
+[data-skin="breeze"] .quick-panel__head { background: var(--surface-2); box-shadow: none; border-radius: 16px; }
+[data-skin="breeze"] .quick-panel .quick-panel__foot { background: var(--canvas); border-radius: 0 0 20px 20px; }
+/* 칸: 둥근 판, 선택은 흰 틈을 둔 파란 링 (빛번짐 없음) */
+[data-skin="breeze"] .tile { box-shadow: var(--elev-2), 0 0 0 1px var(--border-soft); }
+[data-skin="breeze"] .tile--empty { box-shadow: var(--elev-2); }
+[data-skin="breeze"] .tile--selected, [data-skin="breeze"] .player-layer__item--selected { box-shadow: var(--breeze-ring); }
+[data-skin="breeze"] .player-layer__highlight { box-shadow: none; }
+[data-skin="breeze"] .tile__empty { inset: 12px; border-radius: 14px; border-color: rgba(31, 111, 224, 0.28); }
+[data-skin="breeze"] .sound { backdrop-filter: none; }
+/* 페이지 칸(후원 페이지·채팅·웹)의 위쪽 바: 검정 대신 흰 바 (라이트에서) */
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__bar { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__bar .chip { background: var(--primary-soft); color: var(--primary); }
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__bar .sound { background: var(--surface); color: var(--ink-sub); }
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__bar .sound:hover { background: var(--line); }
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__grip { color: var(--ink-mute); }
+:root[data-skin="breeze"][data-theme="light"] .tile--page .tile__grip:hover { background: var(--surface); }
+@media (prefers-color-scheme: light) {
+  :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__bar { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
+  :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__bar .chip { background: var(--primary-soft); color: var(--primary); }
+  :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__bar .sound { background: var(--surface); color: var(--ink-sub); }
+  :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__bar .sound:hover { background: var(--line); }
+  :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__grip { color: var(--ink-mute); }
+  :root[data-skin="breeze"]:not([data-theme]) .tile--page .tile__grip:hover { background: var(--surface); }
+}
+/* 창들: 둥근 모서리와 부드러운 그림자 */
+[data-skin="breeze"] .modal { border-radius: 24px; box-shadow: var(--elev-1); }
+[data-skin="breeze"] .picker { border-radius: 24px; }
+[data-skin="breeze"] .context-menu { border-radius: 16px; box-shadow: var(--elev-1), 0 0 0 1px var(--border-soft); }
+[data-skin="breeze"] .context-menu__item { border-radius: 10px; }
