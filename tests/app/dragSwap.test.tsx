@@ -248,3 +248,62 @@ test('빈 칸의 불러오기 버튼을 누르는 것은 끌기가 아니다', (
   expect(tile(0)).not.toHaveClass('tile--drag-source');
   drop();
 });
+
+describe('터치 (휴대폰): 길게 눌러야 끌기', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+  afterEach(() => vi.useRealTimers());
+  const touchDown = (el: Element) => fireEvent.pointerDown(el, { button: 0, pointerId: 7, pointerType: 'touch', clientX: 10, clientY: 10 });
+  const touchMove = (to: number | null, x = 200) => {
+    under = to === null ? null : tile(to);
+    fireEvent.pointerMove(window, { pointerId: 7, pointerType: 'touch', clientX: x, clientY: 200 });
+  };
+
+  test('바로 움직이면 끌지 않는다 (스크롤처럼 지나감)', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    touchDown(tile(0).querySelector('.tile__bar')!);
+    touchMove(1);
+    expect(tile(0)).not.toHaveClass('tile--drag-source');
+    fireEvent.pointerUp(window, { pointerId: 7, pointerType: 'touch', clientX: 200, clientY: 200 });
+    expect(tile(0).querySelector('.tile__name')?.textContent).toBe('A');
+  });
+
+  test('0.3초 길게 누른 뒤 끌면 자리 바꾸기, 누르는 동안 칸이 들려 보이고 길게 누름 메뉴는 뜨지 않는다', () => {
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true });
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    touchDown(tile(0).querySelector('.tile__bar')!);
+    act(() => vi.advanceTimersByTime(320));
+    expect(tile(0)).toHaveClass('tile--drag-source');
+    expect(vibrate).toHaveBeenCalled();
+    const menu = fireEvent.contextMenu(tile(0));
+    expect(menu).toBe(false); // 길게 누름 메뉴(contextmenu)를 막는다
+    expect(screen.queryByRole('menu')).toBeNull();
+    touchMove(1);
+    fireEvent.pointerUp(window, { pointerId: 7, pointerType: 'touch', clientX: 200, clientY: 200 });
+    expect(tile(0).querySelector('.tile__name')?.textContent).toBe('B');
+    expect(tile(1).querySelector('.tile__name')?.textContent).toBe('A');
+  });
+
+  test('빈 칸도 길게 눌러 끈다', () => {
+    setup();
+    pick(1, 'B');
+    touchDown(tile(0).querySelector('.tile__empty')!);
+    act(() => vi.advanceTimersByTime(320));
+    touchMove(1);
+    fireEvent.pointerUp(window, { pointerId: 7, pointerType: 'touch', clientX: 200, clientY: 200 });
+    expect(tile(0).querySelector('.tile__name')?.textContent).toBe('B');
+  });
+
+  test('짧게 탭하면 그 칸 선택', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    touchDown(tile(1).querySelector('.tile__bar')!);
+    fireEvent.pointerUp(window, { pointerId: 7, pointerType: 'touch', clientX: 10, clientY: 10 });
+    expect(tile(1)).toHaveClass('tile--selected');
+  });
+});

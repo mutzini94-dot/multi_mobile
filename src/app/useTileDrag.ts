@@ -14,7 +14,12 @@ interface Press extends TileDragState {
   y0: number;
   started: boolean; // 기준 거리 이상 움직여 끌기가 시작됨
   canDrag: boolean; // false면 눌러도 선택만
+  touch: boolean; // 손가락: 길게 눌러야(armed) 끌 수 있다
+  armed: boolean;
 }
+
+/** 손가락은 이만큼 길게 눌러야 끌기 (바로 움직이면 스크롤·탭으로 둔다) */
+export const TOUCH_HOLD_MS = 300;
 
 /** 이만큼 움직여야 끌기로 본다 (그보다 작으면 짧게 누른 것 = 칸 선택) */
 export const DRAG_THRESHOLD = 6;
@@ -69,7 +74,9 @@ export function useTileDrag(
     const move = (e: globalThis.PointerEvent) =>
       setPress((p) => {
         if (!p) return p;
-        const started = p.started || (p.canDrag && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) >= DRAG_THRESHOLD);
+        const far = Math.hypot(e.clientX - p.x0, e.clientY - p.y0) >= DRAG_THRESHOLD;
+        if (p.touch && !p.armed) return far ? null : p; // 길게 누르기 전에 움직이면 끌기가 아니다
+        const started = p.started || (p.canDrag && far);
         if (!started) return p;
         return { ...p, started, x: e.clientX, y: e.clientY, shift: e.shiftKey, outside: isOutside(e.clientX, e.clientY), over: dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) };
       });
@@ -82,7 +89,7 @@ export function useTileDrag(
         if (to !== null && to !== p.from) cb.current.onDrop(p.from, to, { shift: e.shiftKey });
         else if (cb.current.onOutside && out) cb.current.onOutside(p.from, e.clientX, e.clientY);
         else cb.current.onCancel?.(p.from); // 놓을 곳이 아니면 제자리로
-      } else if (p) cb.current.onTap(p.from);
+      } else if (p && !(p.touch && p.armed)) cb.current.onTap(p.from); // 길게 누르고 그대로 떼면 아무것도 하지 않는다
       setPress(null);
     };
     const key = (e: KeyboardEvent) => {
@@ -94,8 +101,24 @@ export function useTileDrag(
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
+    // 손가락으로 길게 누르면 뜨는 메뉴(contextmenu)는 끌기 중에는 막는다
+    const menu = (e: Event) => {
+      if (!pressRef.current?.touch) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
     window.addEventListener('keydown', key);
+    window.addEventListener('contextmenu', menu, true);
+    // 길게 누르면 끌 준비 (짧은 진동)
+    const hold = pressRef.current?.touch
+      ? setTimeout(() => {
+          setPress((p) => (p && !p.armed ? { ...p, armed: true } : p));
+          navigator.vibrate?.(15);
+        }, TOUCH_HOLD_MS)
+      : undefined;
     return () => {
+      clearTimeout(hold);
+      window.removeEventListener('contextmenu', menu, true);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
@@ -107,10 +130,12 @@ export function useTileDrag(
     if (e.button > 0) return; // 왼쪽 버튼·터치만 (button이 없는 환경도 허용)
     e.preventDefault(); // 끌다가 글자가 선택되지 않게
     e.stopPropagation();
-    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag, shift: e.shiftKey, outside: false });
+    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag, shift: e.shiftKey, outside: false, touch: e.pointerType === 'touch', armed: false });
   };
 
   // 화면에는 실제로 끌기가 시작된 뒤에만 '끄는 중'으로 보인다
   const drag: TileDragState | null = press?.started ? { from: press.from, over: press.over, x: press.x, y: press.y, shift: press.shift, outside: press.outside } : null;
-  return { drag, start };
+  // 손가락으로 길게 눌러 끌 준비가 된 칸 (아직 움직이기 전, 칸을 들려 보이게)
+  const armed = press && press.armed && !press.started ? press.from : null;
+  return { drag, start, armed };
 }

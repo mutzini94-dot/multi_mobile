@@ -1181,7 +1181,7 @@ export function App(props: Props) {
                     canDrag: true, // 빈 칸도 끌어서 자리를 옮긴다
                     canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot,
                     over: tileDrag.drag?.over === slot,
-                    source: tileDrag.drag?.from === slot,
+                    source: tileDrag.drag?.from === slot || tileDrag.armed === slot,
                     onPress: (e) => tileDrag.start(slot, e),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}

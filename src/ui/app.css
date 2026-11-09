@@ -1121,6 +1121,8 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 
 .tile__empty--grab { cursor: grab; }
 .app--dragging .tile__empty--grab { cursor: grabbing; }
+/* 손가락: 칸 위쪽 바·빈 칸을 끄는 동안 브라우저가 스크롤로 가져가지 않게, 길게 눌러도 글자 선택·메뉴가 뜨지 않게 */
+.tile__bar--grab, .tile__empty--grab { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* 창 사이 끌어 놓기: 칸을 메인 창 밖으로 끄는 중 · 분리 창 위쪽 바를 끄는 중 */
 .drag-out-hint { position: fixed; top: 10px; left: 50%; z-index: 90; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); pointer-events: none; white-space: nowrap; }
 .solo__bar { cursor: grab; }
