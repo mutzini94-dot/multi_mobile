@@ -1210,4 +1210,15 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   /* 후원하기: 위에 뜨는 창 (방송 소리·재생은 그대로) */
   .donate-modal__backdrop { align-items: flex-start; padding: 64px 10px 10px; }
   .modal.donate-modal { height: min(78vh, 680px); border-radius: 18px !important; }
+  /* 칸이 많아도 작아지지 않게: 칸은 최소 화면 폭의 16:9 (세로 방송은 2배), 넘치면 화면을 위아래로 넘긴다 (상단 바·하단 바는 붙어 있다) */
+  :root { --phone-row: calc((100vw - 16px) * 9 / 16); }
+  html, body, #root { height: auto; min-height: 100%; }
+  html { overflow-x: hidden; overflow-y: auto; }
+  body { overflow: visible; } /* 스크롤은 html 하나만 (body까지 스크롤 상자가 되면 상단·하단 바가 붙지 않는다) */
+  .app { height: auto; min-height: 100vh; min-height: 100dvh; }
+  .gnb { position: sticky; top: 0; z-index: 6; }
+  .app__body { flex: 1 0 auto; }
+  .stage { flex: 1 0 auto; }
+  .tile-grid--phone { flex: 1 0 auto; }
+  .quick-panel { position: sticky; bottom: 0; z-index: 6; }
 }

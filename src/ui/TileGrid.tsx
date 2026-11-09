@@ -18,7 +18,7 @@ export function TileGrid({ state, renderTile, onSizes, onDragging, phone = false
     const count = visibleCount(state);
     return (
       <div className={`tile-grid tile-grid--phone tile-grid--${state.layout} tile-grid--n${Math.min(count, 4)}`} key={`phone-${state.layout}`}
-        style={{ gridTemplateRows: Array.from({ length: count }, (_, i) => `minmax(0, ${tallSlots.includes(i) ? 2 : 1}fr)`).join(' ') }}
+        style={{ gridTemplateRows: Array.from({ length: count }, (_, i) => tallSlots.includes(i) ? 'minmax(calc(var(--phone-row) * 2), 2fr)' : 'minmax(var(--phone-row), 1fr)').join(' ') }}
       >
         {Array.from({ length: count }, (_, slot) => (
           <div key={slot} className="phone-cell">

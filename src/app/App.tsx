@@ -1014,6 +1014,7 @@ export function App(props: Props) {
     const s = state.selected;
     if (s !== null && s > 0 && isStream(state.slots[s])) dispatch({ type: 'swap', from: s, to: 0 });
     setPageSheet({ kind: 'chat', creator: sheetTarget });
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0; // 맨 위 방송이 보이게
   };
   const chatDock = phone && pageSheet?.kind === 'chat';
   const [dockTop, setDockTop] = useState<number | null>(null);

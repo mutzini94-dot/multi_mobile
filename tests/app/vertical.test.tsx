@@ -84,7 +84,7 @@ test('휴대폰: 세로 방송은 칸 폭을 줄이지 않고 칸 높이를 2배
     setup();
     pick(0, 'A');
     fireEvent.click(within(tiles()[0]).getByRole('button', { name: '세로로 보기' }));
-    expect((document.querySelector('.tile-grid') as HTMLElement).style.gridTemplateRows.startsWith('minmax(0, 2fr)')).toBe(true);
+    expect((document.querySelector('.tile-grid') as HTMLElement).style.gridTemplateRows.startsWith('minmax(calc(var(--phone-row) * 2), 2fr)')).toBe(true);
     expect(item(0)).toHaveClass('player-layer__item--vertical');
     expect(item(0)).not.toHaveClass('player-layer__item--fit'); // 폭을 9:16로 줄이지 않는다 (넓은 화면에서만)
   } finally {
