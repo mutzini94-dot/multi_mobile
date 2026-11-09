@@ -179,15 +179,21 @@ test('휴대폰 전체보기: 상단 아이콘을 누르면 모든 창을 작은
     fireEvent.click(btn);
     expect(btn).toHaveAttribute('aria-pressed', 'true');
     expect(document.querySelector('.app')).toHaveClass('app--overview');
-    // 방송 A로 이동
+    // 방송 A를 누르면: A가 맨 위 칸으로 올라가고 그 아래에 A 채팅
     fireEvent.click(screen.getByRole('button', { name: 'A 보기' }));
     expect(document.querySelector('.app')).not.toHaveClass('app--overview');
-    const aTile = tiles().find((t) => t.querySelector('.tile__name')?.textContent === 'A')!;
-    expect(aTile).toHaveClass('tile--selected');
-    expect(scrolled.some((e) => e.contains(aTile))).toBe(true);
-    // 빈 창·페이지도 고를 수 있다
+    expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('A');
+    expect(tiles()[0]).toHaveClass('tile--selected');
+    expect(screen.getByRole('dialog', { name: 'A 채팅' })).toHaveClass('page-sheet--dock');
+    expect(document.querySelector('.app')).toHaveClass('app--chat-dock');
+    // 빈 창·페이지도 고를 수 있다 (그 자리로 이동만)
     fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
-    expect(screen.getByRole('button', { name: '3번 화면 보기' })).toBeInTheDocument(); // 후원 페이지 칸
+    expect(screen.queryByRole('dialog', { name: 'A 채팅' })).toBeNull(); // 전체보기를 열면 채팅은 닫힌다
+    fireEvent.click(screen.getByRole('button', { name: '3번 화면 보기' })); // 후원 페이지 칸
+    expect(scrolled.length).toBeGreaterThan(0);
+    expect(screen.queryByRole('dialog', { name: /채팅$/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
+    expect(screen.getByRole('button', { name: '3번 화면 보기' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '전체보기' })); // 다시 누르면 닫힌다
     expect(document.querySelector('.app')).not.toHaveClass('app--overview');
   } finally {

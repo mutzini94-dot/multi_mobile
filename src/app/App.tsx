@@ -1163,8 +1163,15 @@ export function App(props: Props) {
       label: isStream(item) ? `${item.name} 보기` : `${slot + 1}번 화면 보기`,
       onClick: () => {
         setOverview(false);
-        if (isStream(item)) dispatch({ type: 'select', slot });
-        setScrollToSlot(slot);
+        if (isStream(item)) {
+          // 방송: 맨 위 칸으로 올리고 그 아래에 채팅 (채팅 버튼과 같다)
+          dispatch({ type: 'select', slot });
+          if (slot > 0) dispatch({ type: 'swap', from: slot, to: 0 });
+          setPageSheet({ kind: 'chat', creator: item });
+          if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+          return;
+        }
+        setScrollToSlot(slot); // 빈 창·페이지: 그 자리로
       },
     };
   };
