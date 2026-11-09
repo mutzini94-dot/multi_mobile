@@ -36,7 +36,9 @@ export interface DesktopApi {
   onDonateClosed(cb: () => void): () => void;
   onDonateMode(cb: (mode: DonateMode) => void): () => void;
   // 칸 분리 창 (src/detach/channel.ts). 메인 화면 쪽
-  detachOpen?(p: { id: string; url: string; title: string }): void;
+  detachOpen?(p: { id: string; url: string; title: string; at?: { x: number; y: number } | null }): void;
+  onDetachDropped?(cb: (id: string, x: number, y: number) => void): () => void; // 분리 창을 메인 창 (x, y)에 놓음
+  onDragHover?(cb: (p: { x: number; y: number } | null) => void): () => void; // 분리 창을 끄는 동안 메인 창 안 커서 자리
   detachClose?(id: string): void;
   detachPost?(id: string, msg: unknown): void;
   onDetachMessage?(cb: (id: string, msg: unknown) => void): () => void;
@@ -45,6 +47,8 @@ export interface DesktopApi {
   soloPost?(msg: unknown): void;
   onSoloMessage?(cb: (msg: unknown) => void): () => void;
   soloSetAlwaysOnTop?(on: boolean): void;
+  dragMove?(x: number, y: number): void; // 분리 창 위쪽 바를 끄는 중 (분리 창 안 좌표, 창 밖이면 음수 등)
+  dragEnd?(x: number, y: number): Promise<'main' | 'solo' | 'self' | 'outside' | null>;
   // 앱 옵션 · 업데이트
   // 백업: 창 크기·위치 (desktop/lib/windowLayout.js)
   windowLayout?(): Promise<Record<string, unknown> | null>;

@@ -55,7 +55,24 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
     return () => ipcRenderer.removeListener('mv:donate:closed', fn);
   },
   // 칸 분리 창 (메인 화면 쪽)
-  detachOpen: (p) => ipcRenderer.send('mv:detach:open', { id: String(p && p.id), url: String(p && p.url), title: String((p && p.title) || '') }),
+  detachOpen: (p) =>
+    ipcRenderer.send('mv:detach:open', {
+      id: String(p && p.id),
+      url: String(p && p.url),
+      title: String((p && p.title) || ''),
+      ...(p && p.at ? { at: { x: +p.at.x, y: +p.at.y } } : {}),
+    }),
+  // 창 사이 끌어 놓기: 분리 창을 메인 창 칸에 놓음 · 끄는 동안 메인 창 안 커서 자리 (없으면 null)
+  onDetachDropped: (cb) => {
+    const fn = (_e, d) => d && cb(String(d.id), +d.x, +d.y);
+    ipcRenderer.on('mv:detach:dropped', fn);
+    return () => ipcRenderer.removeListener('mv:detach:dropped', fn);
+  },
+  onDragHover: (cb) => {
+    const fn = (_e, p) => cb(p ? { x: +p.x, y: +p.y } : null);
+    ipcRenderer.on('mv:drag:hover', fn);
+    return () => ipcRenderer.removeListener('mv:drag:hover', fn);
+  },
   detachClose: (id) => ipcRenderer.send('mv:detach:close', String(id)),
   detachPost: (id, msg) => ipcRenderer.send('mv:detach:post', String(id), msg),
   onDetachMessage: (cb) => {
@@ -76,6 +93,8 @@ contextBridge.exposeInMainWorld('multiviewDesktop', {
     return () => ipcRenderer.removeListener('mv:solo:message', fn);
   },
   soloSetAlwaysOnTop: (on) => ipcRenderer.send('mv:solo:alwaysOnTop', !!on),
+  dragMove: (x, y) => ipcRenderer.send('mv:drag:move', +x, +y), // 분리 창 위쪽 바를 끄는 중 (분리 창 안 좌표)
+  dragEnd: (x, y) => ipcRenderer.invoke('mv:drag:end', +x, +y),
   onDonateMode: (cb) => {
     const fn = (_e, mode) => cb(mode === 'pip' ? 'pip' : 'modal');
     ipcRenderer.on('mv:donate:mode', fn);

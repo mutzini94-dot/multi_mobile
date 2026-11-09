@@ -62,7 +62,7 @@ import { Onboarding, ONBOARDED_KEY } from '../ui/Onboarding';
 import { HelpDialog, ShortcutsDialog, SUPPORT_URL } from '../ui/HelpDialog';
 import { HistoryDialog } from '../ui/HistoryDialog';
 import { goalLevel, GOAL_NOTICE_KEY, monthKey, monthTotal, type DonationRecord } from '../toonation/history';
-import { useTileDrag } from './useTileDrag';
+import { slotAtPoint, useTileDrag } from './useTileDrag';
 
 type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
 
@@ -84,6 +84,8 @@ interface Detached {
   item: SlotItem;
 }
 
+/** 새 창으로 분리할 수 있는 칸 (방송·후원 페이지·채팅·웹페이지) */
+const canDetach = (item: SlotItem | null | undefined) => isStream(item) || (isPage(item) && item.kind !== 'activity' && item.kind !== 'signature');
 const detachedId = (item: SlotItem | null | undefined) => (item && !isStream(item) && item.kind === 'detached' ? item.id : null);
 
 /** 저장용: 분리 표시 칸은 분리 창에 가 있는 원래 내용으로 (다음 실행에서는 칸 안에서 연다) */
@@ -210,6 +212,8 @@ export function App(props: Props) {
     (slot) => dispatch({ type: 'select', slot }), // 짧게 누름 = 그 칸 선택 (그 칸만 소리)
     () => true,
     (from) => settle([from]), // 취소: 제자리로
+    // 창 밖에 놓음: 그 자리에 새 창으로 분리 (분리할 수 없는 칸은 제자리로)
+    (from, x, y) => (canDetach(stateRef.current.slots[from]) ? detachActions.current.detach(from, { x, y }) : settle([from])),
   );
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
@@ -730,8 +734,8 @@ export function App(props: Props) {
   keyActions.current = { onDonate, fullscreen: enterFullscreen };
 
   // ---------- 칸 새 창으로 분리 ----------
-  const detachSlot = (slot: number) => {
-    const item = state.slots[slot];
+  const detachSlot = (slot: number, at?: { x: number; y: number }) => {
+    const item = stateRef.current.slots[slot];
     if (!isStream(item) && !isPage(item)) return;
     const id = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const ok = detachHost.open(
@@ -743,6 +747,7 @@ export function App(props: Props) {
         videoId: isPage(item) && item.kind === 'chat' ? videoIdOf(targetOf(item)) : null,
       },
       isPage(item) ? pageLabel(item) : item.name,
+      at,
     );
     if (!ok) {
       setMessage('새 창을 열지 못했습니다. 팝업을 허용해 주세요');
@@ -775,10 +780,38 @@ export function App(props: Props) {
     if (slot >= 0) dispatch({ type: 'restore', slot, item: entry.item });
     setMessage(null);
   };
+  /**
+   * 분리 창을 메인 창의 칸에 끌어 놓음 (설치형): 빈 칸·분리 표시 칸이면 그 칸으로 (분리 표시 칸은 비운다),
+   * 다른 내용이 있는 칸이면 자리 바꾸기 (그 내용은 분리 표시 칸으로). 분리 표시 칸이 없으면 빈 칸에만.
+   */
+  const dropDetached = (id: string, x: number, y: number) => {
+    setExtHover(null);
+    const entry = detachedRef.current.find((d) => d.id === id);
+    const slot = slotAtPoint(x, y);
+    if (!entry || slot === null) return;
+    const s = stateRef.current;
+    const marker = s.slots.findIndex((v) => detachedId(v) === id);
+    const dst = s.slots[slot];
+    if (slot !== marker && dst) {
+      if (marker < 0) {
+        setMessage('빈 칸에 놓아 주세요');
+        return;
+      }
+      dispatch({ type: 'restore', slot: marker, item: dst });
+    } else if (marker >= 0 && marker !== slot) dispatch({ type: 'clear', slot: marker });
+    setDetached((d) => d.filter((v) => v.id !== id));
+    detachHost.close(id);
+    dispatch({ type: 'restore', slot, item: entry.item });
+    settle(marker >= 0 && marker !== slot ? [slot, marker] : [slot]);
+    setMessage(null);
+  };
+  const [extHover, setExtHover] = useState<number | null>(null); // 분리 창을 끄는 동안 놓일 칸 (테두리 강조)
   const detachedRef = useRef(detached);
   detachedRef.current = detached;
-  const detachActions = useRef({ restore: restoreDetached, donate: (_id: string) => {} });
+  const detachActions = useRef({ restore: restoreDetached, donate: (_id: string) => {}, drop: dropDetached, detach: detachSlot });
   detachActions.current = {
+    drop: dropDetached,
+    detach: detachSlot,
     restore: restoreDetached,
     donate: (id) => {
       const item = detachedRef.current.find((d) => d.id === id)?.item;
@@ -788,9 +821,13 @@ export function App(props: Props) {
   useEffect(() => {
     const offMsg = detachHost.onMessage((id, msg) => (msg.type === 'return' ? detachActions.current.restore(id, 'return') : detachActions.current.donate(id)));
     const offClosed = detachHost.onClosed((id) => detachActions.current.restore(id, 'closed'));
+    const offDrop = detachHost.onDropped?.((id, x, y) => detachActions.current.drop(id, x, y));
+    const offHover = detachHost.onDragHover?.((p) => setExtHover(p ? slotAtPoint(p.x, p.y) : null));
     return () => {
       offMsg();
       offClosed();
+      offDrop?.();
+      offHover?.();
     };
   }, [detachHost]);
 
@@ -1030,6 +1067,11 @@ export function App(props: Props) {
   };
   return (
     <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${creatorMode ? ' app--creator' : ''}${phone ? ' app--phone' : ''}`}>
+      {tileDrag.drag?.outside && canDetach(state.slots[tileDrag.drag.from]) && (
+        <div className="drag-out-hint" role="status" aria-label="창 밖으로 끌기">
+          ⧉ {state.slots[tileDrag.drag.from]!.name} · 놓으면 새 창으로 분리
+        </div>
+      )}
 
       <Gnb
         layout={state.layout}
@@ -1144,7 +1186,7 @@ export function App(props: Props) {
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
                   acceptCard={!markId}
-                  cardOver={cardOverSlot === slot}
+                  cardOver={cardOverSlot === slot || extHover === slot}
                   onDetach={creator || (page && page.kind !== 'activity' && page.kind !== 'signature') ? () => detachSlot(slot) : undefined}
                   detached={markId && item ? { name: item.name, onReturn: () => restoreDetached(markId, 'button') } : undefined}
                   onRemove={

@@ -6,6 +6,7 @@ export interface TileDragState {
   x: number;
   y: number;
   shift: boolean; // Shift를 누르고 있다 (놓으면 자리 바꾸기 대신 고정)
+  outside: boolean; // 커서가 창 밖에 있다 (놓으면 onOutside = 새 창으로 분리)
 }
 
 interface Press extends TileDragState {
@@ -17,6 +18,18 @@ interface Press extends TileDragState {
 
 /** 이만큼 움직여야 끌기로 본다 (그보다 작으면 짧게 누른 것 = 칸 선택) */
 export const DRAG_THRESHOLD = 6;
+
+/** 창 밖인지 (끄는 동안에는 창 밖 좌표도 계속 들어온다) */
+const isOutside = (x: number, y: number) => x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight;
+
+/** 이 좌표 아래의 칸 번호 (분리 창을 메인 창에 끌어 놓을 때) */
+export function slotAtPoint(x: number, y: number): number | null {
+  for (const el of document.elementsFromPoint?.(x, y) ?? []) {
+    const tile = el.closest<HTMLElement>('.tile[data-slot]');
+    if (tile) return Number(tile.dataset.slot);
+  }
+  return null;
+}
 
 /**
  * 커서 아래 칸 중 놓을 수 있는 칸 번호 (끄는 동안 플레이어 레이어는 포인터를 받지 않는다).
@@ -42,12 +55,13 @@ export function useTileDrag(
   onTap: (slot: number) => void,
   canDropOn: (from: number, to: number) => boolean,
   onCancel?: (from: number) => void,
+  onOutside?: (from: number, x: number, y: number) => void, // 창 밖에 놓음
 ) {
   const [press, setPress] = useState<Press | null>(null);
   const pressRef = useRef<Press | null>(null);
   pressRef.current = press;
-  const cb = useRef({ onDrop, onTap, canDropOn, onCancel });
-  cb.current = { onDrop, onTap, canDropOn, onCancel };
+  const cb = useRef({ onDrop, onTap, canDropOn, onCancel, onOutside });
+  cb.current = { onDrop, onTap, canDropOn, onCancel, onOutside };
 
   const pressing = press !== null;
   useEffect(() => {
@@ -57,14 +71,16 @@ export function useTileDrag(
         if (!p) return p;
         const started = p.started || (p.canDrag && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) >= DRAG_THRESHOLD);
         if (!started) return p;
-        return { ...p, started, x: e.clientX, y: e.clientY, shift: e.shiftKey, over: dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) };
+        return { ...p, started, x: e.clientX, y: e.clientY, shift: e.shiftKey, outside: isOutside(e.clientX, e.clientY), over: dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) };
       });
     const up = (e: globalThis.PointerEvent) => {
       const p = pressRef.current;
       if (p?.started) {
         // 놓은 순간의 커서 위치로 다시 확인 (마지막 움직임 뒤 바로 놓은 경우)
-        const to = dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) ?? p.over;
+        const out = isOutside(e.clientX, e.clientY); // 창 밖에서 놓으면 마지막으로 지나간 칸이 아니라 창 밖
+        const to = out ? null : dropSlotAt(e.clientX, e.clientY, p.from, cb.current.canDropOn) ?? p.over;
         if (to !== null && to !== p.from) cb.current.onDrop(p.from, to, { shift: e.shiftKey });
+        else if (cb.current.onOutside && out) cb.current.onOutside(p.from, e.clientX, e.clientY);
         else cb.current.onCancel?.(p.from); // 놓을 곳이 아니면 제자리로
       } else if (p) cb.current.onTap(p.from);
       setPress(null);
@@ -91,10 +107,10 @@ export function useTileDrag(
     if (e.button > 0) return; // 왼쪽 버튼·터치만 (button이 없는 환경도 허용)
     e.preventDefault(); // 끌다가 글자가 선택되지 않게
     e.stopPropagation();
-    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag, shift: e.shiftKey });
+    setPress({ from, over: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, started: false, canDrag, shift: e.shiftKey, outside: false });
   };
 
   // 화면에는 실제로 끌기가 시작된 뒤에만 '끄는 중'으로 보인다
-  const drag: TileDragState | null = press?.started ? { from: press.from, over: press.over, x: press.x, y: press.y, shift: press.shift } : null;
+  const drag: TileDragState | null = press?.started ? { from: press.from, over: press.over, x: press.x, y: press.y, shift: press.shift, outside: press.outside } : null;
   return { drag, start };
 }

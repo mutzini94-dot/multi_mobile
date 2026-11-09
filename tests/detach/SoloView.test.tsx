@@ -77,3 +77,27 @@ test('웹페이지 (웹은 iframe), 이상한 크리에이터 메시지는 무�
   fromHost({ type: 'donateFor', creator: { ...mkCreator(1), donateId: '../evil' } });
   expect(document.querySelector('iframe')!.getAttribute('src')).toBe('https://naver.com/');
 });
+
+test('설치형: 위쪽 바를 끌어 창 밖에 놓으면 앱에 알린다 (메인 창 칸 위면 그 칸으로 돌아간다)', () => {
+  const { link } = fakeLink();
+  const api = { soloSetAlwaysOnTop: vi.fn(), dragMove: vi.fn(), dragEnd: vi.fn() } as unknown as DesktopApi;
+  render(<SoloView payload={{ id: 'd1', item: mkCreator(1, { name: 'A' }), sound: false }} link={link} desktop={api} kv={safeStorage(undefined)} />);
+  const bar = document.querySelector('.solo__bar')!;
+  // 창 안에서 끌다 놓으면 아무 일도 없다
+  fireEvent.pointerDown(bar, { button: 0, pointerId: 1, clientX: 100, clientY: 10 });
+  fireEvent.pointerMove(window, { pointerId: 1, clientX: 140, clientY: 60 });
+  fireEvent.pointerUp(window, { pointerId: 1, clientX: 140, clientY: 60 });
+  expect(api.dragEnd).not.toHaveBeenCalled();
+  // 창 밖으로
+  fireEvent.pointerDown(bar, { button: 0, pointerId: 1, clientX: 100, clientY: 10 });
+  fireEvent.pointerMove(window, { pointerId: 1, clientX: -300, clientY: 50 });
+  expect(screen.getByRole('status', { name: '창 끌기' })).toHaveTextContent('메인 창의 칸에 놓으면');
+  expect(api.dragMove).toHaveBeenLastCalledWith(-300, 50);
+  fireEvent.pointerUp(window, { pointerId: 1, clientX: -300, clientY: 50 });
+  expect(api.dragEnd).toHaveBeenCalledWith(-300, 50);
+  expect(screen.queryByRole('status', { name: '창 끌기' })).toBeNull();
+  // 버튼을 누르는 것은 끌기가 아니다
+  fireEvent.pointerDown(screen.getByRole('button', { name: '되돌리기' }), { button: 0, pointerId: 1, clientX: 100, clientY: 10 });
+  fireEvent.pointerMove(window, { pointerId: 1, clientX: -300, clientY: 50 });
+  expect(screen.queryByRole('status', { name: '창 끌기' })).toBeNull();
+});

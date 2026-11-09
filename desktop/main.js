@@ -15,6 +15,7 @@ const { createWebStore } = require('./lib/webStore');
 const { createDonateController } = require('./lib/donateController');
 const { createPrefs } = require('./lib/prefs');
 const { restoreBounds } = require('./lib/windowBounds');
+const { dropTarget, soloPlacement } = require('./lib/dropTarget');
 const { pickWindowLayout, sanitizeWindowLayout } = require('./lib/windowLayout');
 const { createAppOptions, APP_OPTION_DEFAULTS } = require('./lib/appOptions');
 const { Updater } = require('./lib/updater');
@@ -275,7 +276,7 @@ function guardAppContents(wc) {
 const SOLO_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
 /** 칸 하나를 새 창으로 (웹의 #solo= 화면). 지난번 분리 창 크기·위치를 쓰고, 여러 개면 조금씩 비켜 놓는다 */
-function createSoloWindow({ id, url, title }) {
+function createSoloWindow({ id, url, title, at }) {
   if (!SOLO_ID_RE.test(id) || soloWins.has(id)) return;
   let u;
   try {
@@ -287,11 +288,13 @@ function createSoloWindow({ id, url, title }) {
   const area = screen.getDisplayMatching(win.getBounds()).workArea;
   const fallback = { width: 720, height: 444, x: area.x + area.width - 720 - 40, y: area.y + 60 };
   const b = restoreBounds(prefs.get('soloBounds'), screen.getAllDisplays().map((d) => d.workArea), fallback, { width: 360, height: 240 });
+  // 칸을 메인 창 밖으로 끌어 놓았으면 놓은 자리에, 아니면 지난 자리에서 여러 개면 조금씩 비켜 놓는다
+  const c = win.getContentBounds();
+  const placed = at ? soloPlacement({ x: c.x + at.x, y: c.y + at.y }, { width: b.width, height: b.height }, screen.getAllDisplays().map((d) => d.workArea)) : null;
   const shift = 28 * soloWins.size;
   const w = new BrowserWindow({
     ...b,
-    x: b.x + shift,
-    y: b.y + shift,
+    ...(placed || { x: b.x + shift, y: b.y + shift }),
     minWidth: 360,
     minHeight: 240,
     title: `${String(title || '').slice(0, 40)} · ${APP_NAME}`,
@@ -524,7 +527,33 @@ function wireIpc() {
   });
   // 칸 분리 창: 여닫기·메시지는 메인 창에서, 분리 창의 메시지·항상 위는 그 분리 창에서 온 것만
   const soloIdOf = (e) => [...soloWins].find(([, w]) => !w.isDestroyed() && w.webContents === e.sender)?.[0];
-  ipcMain.on('mv:detach:open', (e, p) => fromWin(e) && p && createSoloWindow({ id: String(p.id), url: String(p.url), title: String(p.title || '') }));
+  ipcMain.on('mv:detach:open', (e, p) => {
+    if (!fromWin(e) || !p) return;
+    const at = p.at && Number.isFinite(+p.at.x) && Number.isFinite(+p.at.y) ? { x: +p.at.x, y: +p.at.y } : null;
+    createSoloWindow({ id: String(p.id), url: String(p.url), title: String(p.title || ''), at });
+  });
+  // 창 사이 끌어 놓기: 분리 창의 위쪽 바를 끌어 메인 창의 칸에 놓으면 그 칸으로 (lib/dropTarget.js)
+  const dragWorld = () => {
+    const shown = (w) => !w.isDestroyed() && w.isVisible() && !w.isMinimized();
+    return {
+      main: { bounds: win.getContentBounds(), visible: shown(win) },
+      solos: [...soloWins].filter(([, w]) => !w.isDestroyed()).map(([sid, w]) => ({ id: sid, bounds: w.getContentBounds(), visible: shown(w) })),
+    };
+  };
+  ipcMain.on('mv:drag:move', (e, x, y) => {
+    const id = soloIdOf(e);
+    if (!id || !win || win.isDestroyed()) return;
+    const t = dropTarget({ source: id, client: { x: +x, y: +y }, ...dragWorld() });
+    send('mv:drag:hover', t && t.where === 'main' ? { x: t.x, y: t.y } : null);
+  });
+  ipcMain.handle('mv:drag:end', (e, x, y) => {
+    const id = soloIdOf(e);
+    if (!id || !win || win.isDestroyed()) return null;
+    const t = dropTarget({ source: id, client: { x: +x, y: +y }, ...dragWorld() });
+    send('mv:drag:hover', null);
+    if (t && t.where === 'main') send('mv:detach:dropped', { id, x: t.x, y: t.y });
+    return t ? t.where : null;
+  });
   ipcMain.on('mv:detach:close', (e, id) => {
     const w = fromWin(e) && soloWins.get(String(id));
     if (w && !w.isDestroyed()) w.close();
@@ -620,6 +649,19 @@ function runSmoke(outDir) {
             .catch((e) => console.error('[smoke]', e));
           await new Promise((r) => setTimeout(r, 1500));
         }
+        // MV_SMOKE_SOLO_DRAG=1: 첫 분리 창 위쪽 바를 끌어 메인 창 왼쪽 1/4 지점에 놓은 것처럼 (분리 창이 끄는 동안 보내는 것과 같은 호출, 합성 마우스는 분리 창에 잘 닿지 않는다)
+        if (process.env.MV_SMOKE_SOLO_DRAG && firstSolo) {
+          for (let i = 0; i < 50 && firstSolo.webContents.isLoading(); i++) await new Promise((r) => setTimeout(r, 100));
+          await new Promise((r) => setTimeout(r, 1000));
+          const sc = firstSolo.getContentBounds();
+          const c = win.getContentBounds();
+          const tx = c.x + Math.round(c.width / 4) - sc.x;
+          const ty = c.y + Math.round(c.height / 2) - sc.y;
+          global.__sdEnd = await firstSolo.webContents
+            .executeJavaScript(`(async () => { const d = window.multiviewDesktop; const z = (ms) => new Promise((r) => setTimeout(r, ms)); d.dragMove(-40, 30); await z(150); d.dragMove(${tx}, ${ty}); await z(400); return d.dragEnd(${tx}, ${ty}); })()`)
+            .catch((e) => String(e));
+          await new Promise((r) => setTimeout(r, 1500));
+        }
       }
       const result = await win.webContents
         .executeJavaScript(
@@ -647,6 +689,8 @@ function runSmoke(outDir) {
       result.pageInfo = await win.webContents
         .executeJavaScript(`({ webviews: [...document.querySelectorAll('webview')].map((w) => [w.getAttribute('partition'), w.getAttribute('src')]), notices: [...document.querySelectorAll('.ended-notice')].map((n) => n.textContent), tileLabels: [...document.querySelectorAll('.tile .tile__name')].map((n) => n.textContent) })`)
         .catch(() => null);
+      if (process.env.MV_SMOKE_SOLO_DRAG) result.displays = screen.getAllDisplays().map((d) => [d.workArea, d.scaleFactor]);
+      if (process.env.MV_SMOKE_SOLO_DRAG) result.soloDrag = global.__sdEnd;
       result.solos = [...soloWins].map(([id, w]) => ({ id, title: w.getTitle(), url: w.webContents.getURL().slice(0, 60), bounds: w.getBounds(), alwaysOnTop: w.isAlwaysOnTop() }));
       for (const [id, w] of soloWins) await shot(w.webContents, `solo-${id}.png`);
       // 크리에이터 리모컨 위젯 창 (lib/remoteHost.js)

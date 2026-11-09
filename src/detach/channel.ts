@@ -9,11 +9,13 @@ export type SoloToHost = { type: 'return' } | { type: 'donate' }; // 되돌리�
 
 /** 메인 화면이 분리 창을 여닫고 주고받는 통로 (웹: 팝업 창, 설치형: 앱 창) */
 export interface DetachHost {
-  open(p: SoloPayload, title: string): boolean; // false: 팝업 차단 등으로 열지 못함
+  open(p: SoloPayload, title: string, at?: { x: number; y: number }): boolean; // false: 팝업 차단 등으로 열지 못함. at: 메인 창 밖 놓은 자리 (메인 창 안 좌표)
   close(id: string): void;
   post(id: string, msg: HostToSolo): void;
   onMessage(cb: (id: string, msg: SoloToHost) => void): () => void;
   onClosed(cb: (id: string) => void): () => void; // 사용자가 분리 창을 닫음
+  onDropped?(cb: (id: string, x: number, y: number) => void): () => void; // 분리 창을 메인 창 (x, y)에 끌어 놓음 (설치형)
+  onDragHover?(cb: (p: { x: number; y: number } | null) => void): () => void; // 분리 창을 끄는 동안 메인 창 안 커서 자리
 }
 
 /** 분리 창 쪽 통로 */
@@ -100,14 +102,16 @@ export function webSoloLink(win: Window): SoloLink {
 /** 설치형: 앱이 따로 창을 만들고 메시지를 이어 준다 (desktop/main.js) */
 export function desktopDetachHost(api: DesktopApi, currentUrl: () => string): DetachHost {
   return {
-    open(p, title) {
-      api.detachOpen?.({ id: p.id, url: soloUrl(currentUrl(), p), title });
+    open(p, title, at) {
+      api.detachOpen?.({ id: p.id, url: soloUrl(currentUrl(), p), title, at: at ?? null });
       return !!api.detachOpen;
     },
     close: (id) => api.detachClose?.(id),
     post: (id, msg) => api.detachPost?.(id, msg),
     onMessage: (cb) => api.onDetachMessage?.((id, msg) => isSoloMsg(msg) && cb(id, msg)) ?? (() => {}),
     onClosed: (cb) => api.onDetachClosed?.(cb) ?? (() => {}),
+    onDropped: (cb) => api.onDetachDropped?.(cb) ?? (() => {}),
+    onDragHover: (cb) => api.onDragHover?.(cb) ?? (() => {}),
   };
 }
 

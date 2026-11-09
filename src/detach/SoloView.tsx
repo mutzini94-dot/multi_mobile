@@ -40,6 +40,49 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
   const [onTop, setOnTop] = useState(false);
   const [player, setPlayer] = useState<PlayerHandle | null>(null);
   const page = useRef<PageHandle | null>(null);
+  // 위쪽 바를 끌어 창 밖(메인 창의 칸)에 놓기 (설치형). 버튼을 누른 것은 끌기가 아니다
+  const [drag, setDrag] = useState<{ x0: number; y0: number; started: boolean; out: boolean } | null>(null);
+  const dragRef = useRef(drag);
+  dragRef.current = drag;
+  const dragging = drag !== null;
+  useEffect(() => {
+    if (!dragging || !desktop?.dragEnd) return;
+    const outside = (x: number, y: number) => x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight;
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const started = d.started || Math.hypot(e.clientX - d.x0, e.clientY - d.y0) >= 6;
+      if (!started) return;
+      desktop.dragMove?.(e.clientX, e.clientY);
+      setDrag({ ...d, started, out: outside(e.clientX, e.clientY) });
+    };
+    const up = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (d?.started && outside(e.clientX, e.clientY)) void desktop.dragEnd?.(e.clientX, e.clientY);
+      setDrag(null);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const d = dragRef.current;
+      if (d?.started) desktop.dragMove?.(d.x0, d.y0); // 메인 창 강조 지우기
+      setDrag(null);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    window.addEventListener('keydown', key);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('keydown', key);
+    };
+  }, [dragging, desktop]);
+  const startDrag = (e: React.PointerEvent) => {
+    if (!desktop?.dragEnd || e.button > 0 || (e.target as Element).closest('button')) return;
+    e.preventDefault();
+    setDrag({ x0: e.clientX, y0: e.clientY, started: false, out: false });
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -78,8 +121,13 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
   );
 
   return (
-    <div className="solo">
-      <div className="tile__bar solo__bar">
+    <div className={`solo${drag?.started ? ' solo--dragging' : ''}`}>
+      {drag?.started && drag.out && (
+        <div className="solo__drag-hint" role="status" aria-label="창 끌기">
+          메인 창의 칸에 놓으면 그 칸으로 돌아갑니다
+        </div>
+      )}
+      <div className="tile__bar solo__bar" onPointerDown={startDrag} title={desktop?.dragEnd ? '끌어서 메인 창의 칸에 놓기' : undefined}>
         <span className="tile__name">{title}</span>
         <span className="tile__bar-gap" />
         {isStream(item) && barButton(soundOn ? '소리 끄기' : '소리 켜기', soundOn ? '🔊' : '🔇', () => setSoundOn((v) => !v), soundOn)}

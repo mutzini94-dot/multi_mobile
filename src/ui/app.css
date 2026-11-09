@@ -1119,6 +1119,14 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 [data-skin="pure"] .quick-panel--expanded .quick-panel__card--live { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--live); }
 [data-skin="breeze"] .quick-panel--expanded .quick-panel__card { border-radius: 18px; }
 
+/* 창 사이 끌어 놓기: 칸을 메인 창 밖으로 끄는 중 · 분리 창 위쪽 바를 끄는 중 */
+.drag-out-hint { position: fixed; top: 10px; left: 50%; z-index: 90; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); pointer-events: none; white-space: nowrap; }
+.solo__bar { cursor: grab; }
+.solo__bar button { cursor: pointer; }
+.solo--dragging .solo__bar { cursor: grabbing; }
+.solo--dragging .solo__body { pointer-events: none; }
+.solo__drag-hint { position: fixed; left: 50%; bottom: 16px; z-index: 30; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); pointer-events: none; white-space: nowrap; }
+
 /* ================= 휴대폰 (폭 640px 이하) =================
    상단 바 = 로고 · 메뉴 · 후원하기, 칸은 세로로 쌓기, 퀵패널은 하단 바, 창은 아래에서 올라오는 시트 */
 .gnb__more { display: none; }
