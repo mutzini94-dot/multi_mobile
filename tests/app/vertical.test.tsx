@@ -77,3 +77,24 @@ test('세로 칸 자리: 높이는 그대로, 폭만 9:16로 줄여 가운데', 
   // 칸이 이미 좁고 길면 그대로
   expect(fitVertical({ left: 5, top: 0, width: 100, height: 400 })).toEqual({ left: 5, top: 0, width: 100, height: 400 });
 });
+
+test('휴대폰: 세로 방송은 칸 폭을 줄이지 않고 칸 높이를 2배로', () => {
+  window.matchMedia = ((q: string) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
+  try {
+    setup();
+    pick(0, 'A');
+    fireEvent.click(within(tiles()[0]).getByRole('button', { name: '세로로 보기' }));
+    expect((document.querySelector('.tile-grid') as HTMLElement).style.gridTemplateRows.startsWith('minmax(0, 2fr)')).toBe(true);
+    expect(item(0)).toHaveClass('player-layer__item--vertical');
+    expect(item(0)).not.toHaveClass('player-layer__item--fit'); // 폭을 9:16로 줄이지 않는다 (넓은 화면에서만)
+  } finally {
+    delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  }
+});
+
+test('넓은 화면: 세로 방송은 칸 안에서 폭을 9:16로 줄인다', () => {
+  setup();
+  pick(0, 'A');
+  fireEvent.click(within(tiles()[0]).getByRole('button', { name: '세로로 보기' }));
+  expect(item(0)).toHaveClass('player-layer__item--fit');
+});

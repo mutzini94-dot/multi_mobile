@@ -1225,6 +1225,7 @@ export function App(props: Props) {
             state={state}
             onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
             phone={phone}
+            tallSlots={visibleSlots(state).flatMap((s, i) => (isStream(s) && isVertical(s, i) ? [i] : []))}
             onDragging={setDragging}
             renderTile={(slot) => {
               const item = state.slots[slot] ?? null;
@@ -1351,6 +1352,7 @@ export function App(props: Props) {
           <PlayerLayer
             state={state}
             verticalKeys={verticalKeys}
+            fitVerticalWidth={!phone}
             focused={focusedCreator ? focused : null}
             focusEl={focusEl}
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}

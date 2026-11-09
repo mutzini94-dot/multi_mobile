@@ -9,14 +9,17 @@ interface Props {
   onSizes(group: string, sizes: number[]): void;
   onDragging?(dragging: boolean): void;
   phone?: boolean; // 휴대폰: 나누기 손잡이 없이 세로로 쌓는다 (app.css .tile-grid--phone)
+  tallSlots?: readonly number[]; // 휴대폰: 세로 방송 칸은 2배 높이
 }
 
-export function TileGrid({ state, renderTile, onSizes, onDragging, phone = false }: Props) {
+export function TileGrid({ state, renderTile, onSizes, onDragging, phone = false, tallSlots = [] }: Props) {
   if (phone) {
     // 휴대폰: 모든 창을 같은 크기로 세로 한 줄 (app.css .tile-grid--phone)
     const count = visibleCount(state);
     return (
-      <div className={`tile-grid tile-grid--phone tile-grid--${state.layout} tile-grid--n${Math.min(count, 4)}`} key={`phone-${state.layout}`}>
+      <div className={`tile-grid tile-grid--phone tile-grid--${state.layout} tile-grid--n${Math.min(count, 4)}`} key={`phone-${state.layout}`}
+        style={{ gridTemplateRows: Array.from({ length: count }, (_, i) => `minmax(0, ${tallSlots.includes(i) ? 2 : 1}fr)`).join(' ') }}
+      >
         {Array.from({ length: count }, (_, slot) => (
           <div key={slot} className="phone-cell">
             <div className="panel-inner">{renderTile(slot)}</div>

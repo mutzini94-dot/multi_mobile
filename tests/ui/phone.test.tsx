@@ -16,6 +16,12 @@ test('휴대폰: 칸을 세로로 쌓는다 (나누기 손잡이 없이), 보이
   expect(quad.container.querySelectorAll('.q')).toHaveLength(4);
 });
 
+test('휴대폰: 세로 방송 칸은 다른 칸의 2배 높이', () => {
+  const state = applyLayout(initialViewState, 'oneTwo');
+  const { container } = render(<TileGrid state={state} phone tallSlots={[1]} onSizes={() => {}} renderTile={(slot) => <div data-slot={slot} />} />);
+  expect((container.querySelector('.tile-grid') as HTMLElement).style.gridTemplateRows).toBe('minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)');
+});
+
 test('휴대폰 상단 메뉴: 메뉴 버튼이 레이아웃·도구·설정을 담은 시트를 열고, 고르면 닫힌다', () => {
   const onLayout = vi.fn();
   const onSettings = vi.fn();
