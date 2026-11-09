@@ -101,6 +101,11 @@ export const IconCoin = () => (
 );
 
 /** 후원하기: 하트 */
+export const IconChat = () => (
+  <Svg size={16}>
+    <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />
+  </Svg>
+);
 export const IconHeart = () => (
   <Svg size={16}>
     <path d="M12 20s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.1a4.4 4.4 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z" />

@@ -1131,6 +1131,13 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 .solo--dragging .solo__body { pointer-events: none; }
 .solo__drag-hint { position: fixed; left: 50%; bottom: 16px; z-index: 30; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); pointer-events: none; white-space: nowrap; }
 
+/* 휴대폰 후원·채팅 시트 (상단 후원하기·채팅) */
+.page-sheet { display: flex; flex-direction: column; height: 86vh; padding: 8px 12px 0 !important; overflow: hidden !important; }
+.page-sheet__head { display: flex; align-items: center; gap: 8px; padding: 0 2px 8px; }
+.page-sheet__head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.page-sheet__body { position: relative; flex: 1; min-height: 0; margin: 0 -12px; border-top: 1px solid var(--line); }
+.page-sheet__body > * { position: absolute; inset: 0; }
+.gnb__chat { gap: 6px; height: 36px; padding: 0 12px; }
 /* ================= 휴대폰 (폭 640px 이하) =================
    상단 바 = 로고 · 메뉴 · 후원하기, 칸은 세로로 쌓기, 퀵패널은 하단 바, 창은 아래에서 올라오는 시트 */
 .gnb__more { display: none; }
@@ -1166,6 +1173,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .gnb__mode, .gnb__layouts, .gnb__tools, .gnb__login, .gnb__cash { display: none !important; }
   .gnb__more { order: 9; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border: 0; border-radius: 12px; background: var(--surface); color: var(--ink); }
   .gnb__donate { order: 8; height: 36px; padding: 0 14px 0 12px; }
+  .gnb__chat { order: 7; display: inline-flex; align-items: center; border: 0; border-radius: 999px; background: var(--surface); color: var(--ink); font-weight: 600; }
   /* 본문: 칸 위, 퀵패널은 아래 바 */
   .app__body { flex-direction: column; gap: 8px; padding: 8px 8px 0; }
   .quick-panel { order: 2; width: auto !important; max-width: none; margin: 0 -8px !important; height: auto; border-radius: 0; box-shadow: 0 -1px 0 var(--line) !important; background: var(--canvas) !important; }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Creator, PageSlot, SlotItem, ViewState } from '../domain/types';
 import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/channel';
-import { chatUrl, donatePageUrl, followDonateCreator, isPage, isPinnable, isStream, pageTarget, withSidePage } from '../domain/pages';
+import { chatUrl, donatePageUrl, followDonateCreator, isPage, makeChatPage, makeDonatePage, isPinnable, isStream, pageTarget, withSidePage } from '../domain/pages';
 import { PinDialog } from '../ui/PinDialog';
 import { hasCreatorDrag, readCreatorDrag } from './creatorDrag';
 import { CREATOR_REMOTE_URL, MODE_KEY, REMOTE_PARTITION, readMode, type RemoteMode } from './remoteMode';
@@ -21,6 +21,7 @@ import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY 
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone } from '../ui/usePhone';
+import { lockLandscape, unlockOrientation } from '../ui/orientation';
 import { forgetWatch, newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
@@ -84,6 +85,8 @@ interface Detached {
   item: SlotItem;
 }
 
+/** 휴대폰 후원·채팅 시트에 띄우는 페이지 (렌더마다 새로 만들지 않는다) */
+const SHEET_PAGES = { donate: makeDonatePage(), chat: makeChatPage() };
 /** 새 창으로 분리할 수 있는 칸 (방송·후원 페이지·채팅·웹페이지) */
 const canDetach = (item: SlotItem | null | undefined) => isStream(item) || (isPage(item) && item.kind !== 'activity' && item.kind !== 'signature');
 const detachedId = (item: SlotItem | null | undefined) => (item && !isStream(item) && item.kind === 'detached' ? item.id : null);
@@ -139,6 +142,10 @@ export function App(props: Props) {
   const [liveOpen, setLiveOpen] = useState(false);
   const [livePick, setLivePick] = useState<Creator | null>(null);
   const [limitAsk, setLimitAsk] = useState<{ creator: Creator; total: number } | null>(null);
+  // 휴대폰: 후원 페이지·채팅을 새 창 대신 아래에서 올라오는 시트로
+  const phoneRef = useRef(false);
+  const sheetTargetRef = useRef<Creator | null>(null);
+  const [pageSheet, setPageSheet] = useState<{ kind: 'donate' | 'chat'; creator: Creator } | null>(null);
 
   // 테마: 시스템을 따르거나 라이트·다크로 고정
   useEffect(() => {
@@ -483,7 +490,12 @@ export function App(props: Props) {
     dispatch({ type: 'select', slot });
     setFocused(slot);
     // 브라우저(설치형은 창) 전체 화면도 함께. 지원하지 않거나 거부되면 앱 안에서만 크게 본다
-    document.documentElement.requestFullscreen?.().catch(() => {});
+    // 휴대폰은 전체 화면이 되면 가로 화면으로 돌린다
+    const phoneNow = phoneRef.current;
+    document.documentElement
+      .requestFullscreen?.()
+      .then(() => phoneNow && lockLandscape())
+      .catch(() => {});
   };
   // 미니 모드: 선택한 방송(없으면 보이는 첫 방송) 하나만, 상단 메뉴 없이. 설치형은 앱 창도 작게·항상 위로
   const [mini, setMini] = useState(false);
@@ -504,6 +516,7 @@ export function App(props: Props) {
       setMini(false);
       desktop?.setMiniMode?.(false);
     }
+    unlockOrientation();
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }, [desktop]);
   useEffect(() => {
@@ -695,6 +708,10 @@ export function App(props: Props) {
       setLimitAsk({ creator: c, total });
       return;
     }
+    if (phoneRef.current) {
+      setPageSheet({ kind: 'donate', creator: c });
+      return;
+    }
     openPopup(c);
   };
   // 시그니처로 후원: 후원창을 열고 그 시그니처를 골라 둔다 (설치형). 웹 팝업은 다른 사이트라 고르는 방법을 알린다
@@ -728,7 +745,8 @@ export function App(props: Props) {
     );
   };
   const onDonate = () => {
-    if (donateTarget) donateTo(donateTarget);
+    const c = phoneRef.current ? sheetTargetRef.current : donateTarget;
+    if (c) donateTo(c);
   };
 
   keyActions.current = { onDonate, fullscreen: enterFullscreen };
@@ -909,6 +927,15 @@ export function App(props: Props) {
   // 퀵패널 맨 위 '추천 라이브 탐색' (쇼츠처럼 한 개씩)
   const [shortsOpen, setShortsOpen] = useState(false);
   const phone = usePhone(); // 휴대폰 폭: 세로로 쌓는 배치
+  phoneRef.current = phone;
+  // 휴대폰 후원·채팅 대상: 선택한 방송, 없으면 보이는 후원 페이지·채팅 칸이 따라가는 크리에이터
+  const sheetTarget =
+    donateTarget ??
+    visibleSlots(state)
+      .map((p) => (isPage(p) && (p.kind === 'donate' || p.kind === 'chat') ? targetOf(p) : null))
+      .find((c): c is Creator => !!c) ??
+    null;
+  sheetTargetRef.current = sheetTarget;
   const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
   const growTo = growLayouts(state.layout);
@@ -1076,7 +1103,9 @@ export function App(props: Props) {
       <Gnb
         layout={state.layout}
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
-        canDonate={!!donateTarget}
+        canDonate={phone ? !!sheetTarget : !!donateTarget}
+        onChat={phone ? () => sheetTarget && setPageSheet({ kind: 'chat', creator: sheetTarget }) : undefined}
+        canChat={!!sheetTarget}
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
         onHelp={() => setHelpOpen(true)}
@@ -1534,6 +1563,35 @@ export function App(props: Props) {
           onCharge={() => win.open('https://toon.at/donator/account/charge', '_blank', 'noopener')}
           onClose={() => setHistoryOpen(false)}
         />
+      )}
+      {pageSheet && (
+        <div className="modal-backdrop page-sheet__backdrop" onClick={() => setPageSheet(null)}>
+          <div
+            className="modal page-sheet"
+            role="dialog"
+            aria-label={`${pageSheet.creator.name} ${pageSheet.kind === 'donate' ? '후원하기' : '채팅'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="phone-sheet__grip" aria-hidden="true" />
+            <div className="page-sheet__head">
+              <strong>
+                {pageSheet.creator.name} {pageSheet.kind === 'donate' ? '후원하기' : '채팅'}
+              </strong>
+              <button type="button" className="btn btn--icon" aria-label="닫기" onClick={() => setPageSheet(null)}>
+                ✕
+              </button>
+            </div>
+            <div className="page-sheet__body">
+              <PageView
+                page={SHEET_PAGES[pageSheet.kind]}
+                url={pageSheet.kind === 'donate' ? donatePageUrl(pageSheet.creator) : chatUrl(pageSheet.creator, videoIdOf(pageSheet.creator), embed, host)}
+                embed={embed}
+      onOpenWindow={() => openPopup(pageSheet.creator)} // 웹: 투네이션 후원 페이지는 다른 사이트 안에 띄울 수 없어 새 창 버튼
+                emptyText={pageSheet.kind === 'chat' ? '유튜브 채팅은 방송이 재생되면 표시됩니다' : undefined}
+              />
+            </div>
+          </div>
+        </div>
       )}
       {limitAsk && (
         <div className="modal-backdrop" onClick={() => setLimitAsk(null)}>

@@ -3,7 +3,7 @@ import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import logoUrl from '../assets/logo.png';
-import { IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
+import { IconChat, IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -24,6 +24,8 @@ interface Props {
   onLayout(l: LayoutKind): void;
   canDonate: boolean;
   onDonate(): void;
+  onChat?(): void; // 휴대폰: 선택한 방송의 채팅 시트
+  canChat?: boolean;
   onSettings?(): void;
   onHelp?(): void; // 도움말 (자주 묻는 질문·단축키·둘러보기)
   onSkin?(x: number, y: number): void; // 스킨 바꾸기 메뉴 (누른 버튼 아래에)
@@ -48,7 +50,7 @@ export function Gnb(props: Props) {
   );
 }
 
-function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
+function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
@@ -169,6 +171,12 @@ function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onSettings, on
             >
               <IconCoin />
               {account.cash === null ? '후원 내역' : account.cash.toLocaleString('ko-KR')}
+            </button>
+          )}
+          {onChat && (
+            <button type="button" className="btn gnb__chat" aria-label="채팅" disabled={!canChat} onClick={onChat}>
+              <IconChat />
+              채팅
             </button>
           )}
           <button type="button" className="btn btn--donate gnb__donate" aria-label="후원하기" disabled={!canDonate} onClick={onDonate}>
