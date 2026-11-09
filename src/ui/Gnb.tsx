@@ -3,7 +3,7 @@ import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import logoUrl from '../assets/logo.png';
-import { IconChat, IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
+import { IconChat, IconShare, IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -32,6 +32,7 @@ interface Props {
   onLogin?(): void; // 투네이션 로그인 (로그인 전에만)
   loggingIn?: boolean; // 로그인 창이 열려 있는 동안
   onPresets?(): void; // 화면 구성 저장·불러오기
+  onShare?(): void; // 화면 구성 공유 (링크·QR)
   account?: { cash: number | null; onHistory(): void } | null; // 투네이션 로그인: 캐시 잔액 · 내 후원 내역
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
   sound?: { on: boolean; onToggle(): void }; // 전체 음소거·해제 (단축키 M과 같은 상태)
@@ -50,7 +51,7 @@ export function Gnb(props: Props) {
   );
 }
 
-function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
+function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
@@ -130,6 +131,11 @@ function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onChat, canCha
                 <IconPresets />
               </button>
             )}
+            {onShare && (
+              <button type="button" className="gnb__tool" aria-label="화면 공유" data-tip="화면 구성 공유 (링크·QR)" onClick={onShare}>
+                <IconShare />
+              </button>
+            )}
             {onHelp && (
               <button type="button" className="gnb__tool" aria-label="도움말" data-tip="도움말 · 단축키 (?)" onClick={onHelp}>
                 <IconHelp />
@@ -190,7 +196,7 @@ function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onChat, canCha
 }
 
 /** 휴대폰 '메뉴' 시트: 상단 바에 다 들어가지 않는 레이아웃·도구·설정·로그인·리모컨 전환 (고르면 닫힌다) */
-function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode, onClose }: Props & { onClose(): void }) {
+function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode, onClose }: Props & { onClose(): void }) {
   const creator = mode?.value === 'creator';
   const run = (fn?: () => void) => () => {
     onClose();
@@ -231,6 +237,7 @@ function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, log
               {sound && row(sound.on ? '전체 음소거' : '음소거 해제', sound.on ? <IconVolume /> : <IconMute />, sound.onToggle, { pressed: !sound.on })}
               {row('미니 모드', <IconMini />, onMini)}
               {row('화면 구성', <IconPresets />, onPresets)}
+              {row('화면 공유', <IconShare />, onShare)}
               {row('스킨', <IconPalette />, onSkin && (() => onSkin(Math.round(window.innerWidth / 2) - 90, Math.round(window.innerHeight / 3))))}
               {row('도움말', <IconHelp />, onHelp)}
               {row('설정', <IconSettings />, onSettings)}

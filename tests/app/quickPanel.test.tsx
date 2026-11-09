@@ -257,3 +257,33 @@ test('즐겨찾기 탭에는 삭제 버튼이 없다', () => {
   setup();
   expect(within(panel()).queryByRole('button', { name: /목록에서 .* 삭제/ })).toBeNull();
 });
+
+test('방송 시작 알림(설정)을 켜면 퀵패널 크리에이터가 방송을 시작할 때 휴대폰·PC 알림도 띄운다', async () => {
+  const shown: { title: string; options?: NotificationOptions }[] = [];
+  class FakeNotification {
+    static permission = 'granted';
+    static requestPermission = vi.fn(async () => 'granted');
+    constructor(title: string, options?: NotificationOptions) {
+      shown.push({ title, options });
+    }
+  }
+  const prevN = globalThis.Notification;
+  (globalThis as unknown as { Notification: unknown }).Notification = FakeNotification;
+  try {
+    let liveNow = false;
+    const lives = vi.fn(async (q: LiveQuery): Promise<LivePage> =>
+      liveNow && q.q === '둘'
+        ? { items: [{ creator: { ...mkCreator(2, { name: '둘', donateId: 'two', source: 'toonation' }), live: { title: '저녁 방송', viewers: 10 } }, thumbnail: '', category: '' }], page: 1, totalPages: 1, total: 1 }
+        : empty,
+    );
+    setup({ lives, settings: { liveNotify: true } });
+    await wait(150);
+    expect(shown).toHaveLength(0);
+    liveNow = true;
+    await wait(200);
+    expect(shown.map((n) => n.title)).toEqual(['둘 방송 시작']);
+    expect(shown[0].options).toMatchObject({ body: '저녁 방송', tag: 'mv-live:twitch:chan_2' });
+  } finally {
+    (globalThis as unknown as { Notification: unknown }).Notification = prevN;
+  }
+});

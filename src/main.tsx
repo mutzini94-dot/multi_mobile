@@ -8,6 +8,7 @@ import { Splash } from './ui/Splash';
 import { getDesktopApi } from './desktop/desktopApi';
 import { restoreIfNewer, startMirror } from './storage/webStoreSync';
 import './ui/app.css';
+import { registerServiceWorker } from './pwa/registerSW';
 
 // #solo=… 로 열리면 칸 하나만 보여 주는 분리 창
 const solo = decodeSolo(window.location.hash);
@@ -43,3 +44,5 @@ async function start() {
 }
 
 start();
+// 웹 버전: 앱처럼 설치(홈 화면에 추가)·빠른 시작·알림 (설치형·분리 창은 제외)
+if (!desktop && !solo) registerServiceWorker();

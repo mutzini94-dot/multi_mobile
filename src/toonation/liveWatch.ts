@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Creator } from '../domain/types';
+import { showAppNotification } from '../pwa/registerSW';
 
 /** 이전 목록에서 꺼져 있다가 지금 켜진 방송. 처음 불러온 목록·새 즐겨찾기는 알리지 않는다. */
 export function newlyLive(prev: Creator[], next: Creator[]): Creator[] {
@@ -37,9 +38,7 @@ export function useLiveWatch({ minutes, active, refresh, creators, notifyOn, not
   }, [creators, notifyOn]);
 }
 
-/** 브라우저·설치형 앱의 데스크톱 알림 (권한이 있을 때만) */
+/** 브라우저·설치형 앱의 알림 (권한이 있을 때만). 휴대폰(안드로이드)은 서비스 워커로 띄운다 */
 export function showLiveNotification(c: Creator): void {
-  const N = globalThis.Notification;
-  if (!N || N.permission !== 'granted') return;
-  new N(`${c.name} 방송 시작`, { body: c.live?.title || '', tag: `mv-live:${c.key}` });
+  void showAppNotification(`${c.name} 방송 시작`, { body: c.live?.title || '', tag: `mv-live:${c.key}`, data: { key: c.key } });
 }

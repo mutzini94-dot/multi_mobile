@@ -234,6 +234,18 @@ export function SettingsDialog(p: Props) {
             ]}
             onChange={(v) => p.onChange({ hiddenSlotPlayback: v })}
           />
+          <Toggle label="화면 꺼짐 방지" checked={s.keepScreenOn} onChange={(v) => p.onChange({ keepScreenOn: v })} hint="방송을 보는 동안 휴대폰 화면이 저절로 꺼지지 않게 합니다 (지원하는 브라우저)" />
+          <Select
+            label="데이터 절약"
+            value={s.dataSaver}
+            options={[
+              ['off', '끔'],
+              ['auto', '모바일 데이터일 때'],
+              ['on', '항상'],
+            ]}
+            onChange={(v) => p.onChange({ dataSaver: v })}
+            hint="선택한 칸만 재생하고 다른 칸은 멈춥니다 (트위치는 낮은 화질)"
+          />
           <Toggle label="선택하지 않은 칸은 낮은 화질" checked={s.lowQualityOthers} onChange={(v) => p.onChange({ lowQualityOthers: v })} hint="트위치만 (유튜브는 화질 지정을 지원하지 않습니다)" />
           <Toggle
             label="방송이 끝나면 라이브 중인 즐겨찾기로 바꾸기"
@@ -300,7 +312,7 @@ export function SettingsDialog(p: Props) {
             options={LIVE_REFRESH_OPTIONS.map((m) => [m, m === 0 ? '끔 (불러오기 창을 열 때만)' : `${m}분마다`])}
             onChange={(v) => p.onChange({ liveRefreshMinutes: v })}
           />
-          <Toggle label="즐겨찾기 방송 시작 알림" checked={s.liveNotify} onChange={(v) => p.onChange({ liveNotify: v })} hint="라이브 자동 갱신이 켜져 있어야 합니다" />
+          <Toggle label="즐겨찾기 방송 시작 알림" checked={s.liveNotify} onChange={(v) => p.onChange({ liveNotify: v })} hint="즐겨찾기·최근 본 크리에이터가 방송을 시작하면 휴대폰·PC 알림으로 알립니다 (앱이 열려 있을 때)" />
           <label className="settings__row">
             <span>
               월 후원 목표

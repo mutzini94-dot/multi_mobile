@@ -39,6 +39,8 @@ const LABELS: Record<keyof Settings, [string, (v: unknown) => string]> = {
   quickAmounts: ['빠른 후원 금액', list],
   liveRefreshMinutes: ['라이브 자동 갱신', (v) => (Number(v) > 0 ? `${v}분마다` : '끔')],
   liveNotify: ['즐겨찾기 방송 시작 알림', onOff],
+  keepScreenOn: ['화면 꺼짐 방지', onOff],
+  dataSaver: ['데이터 절약', pick({ off: '끔', auto: '모바일 데이터일 때', on: '항상' })],
   monthlyGoal: ['월 후원 목표', won],
   monthlyLimit: ['월 후원 한도', won],
   quickPanel: ['퀵패널', pick({ left: '왼쪽', right: '오른쪽', off: '숨기기' })],

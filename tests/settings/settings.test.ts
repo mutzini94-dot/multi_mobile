@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, SETTINGS_KEY, loadSettings, saveSettings } from '../../src/settings/settings';
+import { DEFAULT_SETTINGS, SETTINGS_KEY, loadSettings, normalizeSettings, saveSettings } from '../../src/settings/settings';
 import { safeStorage } from '../../src/storage/safeStorage';
 
 const kv = () => safeStorage(undefined);
@@ -27,6 +27,8 @@ test('기본값', () => {
     shortcuts: true,
     alwaysOnTop: false,
     quickPanel: 'left',
+    keepScreenOn: true,
+    dataSaver: 'off',
   });
 });
 
@@ -60,4 +62,11 @@ test('깨진 저장값이면 기본값', () => {
   const k = kv();
   k.set(SETTINGS_KEY, '{bad');
   expect(loadSettings(k)).toEqual(DEFAULT_SETTINGS);
+});
+
+test('화면 꺼짐 방지·데이터 절약: 잘못된 값은 기본값', () => {
+  const s = normalizeSettings({ keepScreenOn: 'yes', dataSaver: 'sometimes' });
+  expect(s.keepScreenOn).toBe(true);
+  expect(s.dataSaver).toBe('off');
+  expect(normalizeSettings({ keepScreenOn: false, dataSaver: 'auto' })).toMatchObject({ keepScreenOn: false, dataSaver: 'auto' });
 });

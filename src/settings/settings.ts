@@ -26,6 +26,8 @@ export interface Settings {
   shortcuts: boolean; // 1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원
   alwaysOnTop: boolean; // 창 항상 위 (설치형)
   quickPanel: 'left' | 'right' | 'off'; // 퀵패널 (즐겨찾기·최근 본 크리에이터) 위치
+  keepScreenOn: boolean; // 방송을 보는 동안 화면 꺼짐 방지 (지원하는 브라우저)
+  dataSaver: 'off' | 'auto' | 'on'; // 데이터 절약: 선택한 칸만 재생하고 나머지는 멈춘다 (auto = 모바일 데이터일 때)
 }
 
 export type Skin = 'classic' | 'breeze' | 'pure';
@@ -60,6 +62,8 @@ export const DEFAULT_SETTINGS: Settings = {
   shortcuts: true,
   alwaysOnTop: false,
   quickPanel: 'left',
+  keepScreenOn: true,
+  dataSaver: 'off',
 };
 
 const oneOf = <T>(v: unknown, allowed: readonly T[], fallback: T): T => (allowed.includes(v as T) ? (v as T) : fallback);
@@ -109,6 +113,8 @@ export function normalizeSettings(raw: unknown): Settings {
     shortcuts: bool(r.shortcuts, d.shortcuts),
     alwaysOnTop: bool(r.alwaysOnTop, d.alwaysOnTop),
     quickPanel: oneOf(r.quickPanel, ['left', 'right', 'off'] as const, d.quickPanel),
+    keepScreenOn: bool(r.keepScreenOn, d.keepScreenOn),
+    dataSaver: oneOf(r.dataSaver, ['off', 'auto', 'on'] as const, d.dataSaver),
   };
 }
 

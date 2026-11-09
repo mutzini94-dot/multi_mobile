@@ -101,6 +101,14 @@ export const IconCoin = () => (
 );
 
 /** 후원하기: 하트 */
+export const IconShare = () => (
+  <Svg size={16}>
+    <circle cx="6" cy="12" r="2.3" />
+    <circle cx="17.5" cy="6" r="2.3" />
+    <circle cx="17.5" cy="18" r="2.3" />
+    <path d="M8.1 10.9l7.3-3.8M8.1 13.1l7.3 3.8" />
+  </Svg>
+);
 export const IconChat = () => (
   <Svg size={16}>
     <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />

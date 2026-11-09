@@ -20,6 +20,10 @@ import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY 
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone } from '../ui/usePhone';
+import { canDocumentPip, openPipWindow } from '../ui/pipWindow';
+import { readSharedView, shareUrl } from './shareView';
+import { ShareDialog } from '../ui/ShareDialog';
+import { useDataSaver, useWakeLock } from '../ui/useDevice';
 import { detectVertical } from '../players/verticalThumb';
 import { lockLandscape, unlockOrientation } from '../ui/orientation';
 import { forgetWatch, newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
@@ -65,7 +69,7 @@ import { HistoryDialog } from '../ui/HistoryDialog';
 import { goalLevel, GOAL_NOTICE_KEY, monthKey, monthTotal, type DonationRecord } from '../toonation/history';
 import { slotAtPoint, useTileDrag } from './useTileDrag';
 
-type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'>;
+type AppWindow = Pick<Window, 'open' | 'screen' | 'location' | 'navigator'> & { history?: Pick<History, 'replaceState'> };
 
 interface Props {
   favorites?: FavoritesSource;
@@ -166,11 +170,24 @@ export function App(props: Props) {
   }, [desktop, settings.alwaysOnTop]);
 
   // 시작 화면: 마지막 화면 복원(설정) > 기본 레이아웃(설정)
+  const [sharedAtStart] = useState(() => readSharedView(win.location.hash ?? ''));
   const [state, dispatch] = useReducer(
     viewReducer,
     null,
-    () => (settings.restoreLastView ? loadLastView(kv) : null) ?? withSidePage(applyLayout(initialViewState, settings.defaultLayout)),
+    // 공유 링크(#view=)로 열었으면 그 화면 구성, 아니면 마지막 화면 · 기본 레이아웃
+    () => sharedAtStart ?? (settings.restoreLastView ? loadLastView(kv) : null) ?? withSidePage(applyLayout(initialViewState, settings.defaultLayout)),
   );
+  useEffect(() => {
+    if (!sharedAtStart) return;
+    // 새로고침하면 다시 공유 구성으로 돌아가지 않게 주소에서 지운다
+    try {
+      win.history?.replaceState(null, '', win.location.href.split('#')[0]);
+    } catch {
+      // 바꿀 수 없는 주소
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [shareOpen, setShareOpen] = useState(false);
   // 새 창으로 분리한 칸들 (칸에는 분리 표시만 남는다)
   const [detached, setDetached] = useState<Detached[]>([]);
   // 화면이 바뀔 때마다 저장
@@ -217,7 +234,7 @@ export function App(props: Props) {
       dispatch({ type: 'swap', from, to });
       settle([from, to]);
     },
-    (slot) => dispatch({ type: 'select', slot }), // 짧게 누름 = 그 칸 선택 (그 칸만 소리)
+    (slot) => tapActions.current(slot), // 짧게 누름 = 그 칸 선택 (그 칸만 소리), 두 번 = 그 방송 소리만
     () => true,
     (from) => settle([from]), // 취소: 제자리로
     // 창 밖에 놓음: 그 자리에 새 창으로 분리 (분리할 수 없는 칸은 제자리로)
@@ -225,6 +242,11 @@ export function App(props: Props) {
   );
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
+  // 전체 화면에서 다음·이전 방송으로 (좌우로 밀기·←→ 키). 빈 칸·페이지 칸은 건너뛰고 끝에서 처음으로
+  const focusStepRef = useRef<(dir: 1 | -1) => void>(() => {});
+  // 짧게 누름 = 칸 선택, 같은 칸을 0.35초 안에 두 번 = 그 방송 소리만 (여러 칸 동시 듣기에서 다른 칸 소리를 끈다)
+  const lastTap = useRef<{ slot: number; at: number } | null>(null);
+  const tapActions = useRef<(slot: number) => void>(() => {});
   // 전체 화면 화면 잠금: 화면 전체를 덮어 터치를 막는다. 풀 때는 자물쇠를 길게 누른다 (전체 화면이 끝나면 함께 풀린다)
   const [locked, setLocked] = useState(false);
   const lockedRef = useRef(false);
@@ -266,11 +288,15 @@ export function App(props: Props) {
   const audible = keys.map((k, i) => !!k && i < shown && state.soundOn && (mix ? !mixMuted[k] : i === state.selected));
   const volumes = keys.map((k) => (k && mix ? tileVolumes[k] ?? settings.masterVolume : settings.masterVolume));
   useAudioMix(handleList, audible, volumes);
+  // 데이터 절약: 선택한 칸만 재생 (선택한 방송이 없으면 그대로), 나머지는 멈추고 낮은 화질
+  const saving = useDataSaver(settings.dataSaver) && state.selected !== null && isStream(state.slots[state.selected]);
   usePlaybackPolicy(
     handleList,
-    keys.map((_, i) => settings.hiddenSlotPlayback === 'pause' && i >= shown),
-    keys.map((_, i) => settings.lowQualityOthers && i !== state.selected),
+    keys.map((_, i) => (settings.hiddenSlotPlayback === 'pause' && i >= shown) || (saving && i !== state.selected)),
+    keys.map((_, i) => (settings.lowQualityOthers || saving) && i !== state.selected),
   );
+  // 화면 꺼짐 방지: 보이는 방송이 있는 동안
+  useWakeLock(settings.keepScreenOn && keys.some((k, i) => !!k && i < shown && isStream(state.slots[i])));
 
   const selectedItem = state.selected !== null ? state.slots[state.selected] ?? null : null;
   const selectedCreator = isStream(selectedItem) ? selectedItem : null;
@@ -586,6 +612,29 @@ export function App(props: Props) {
   // 미니 모드: 선택한 방송(없으면 보이는 첫 방송) 하나만, 상단 메뉴 없이. 설치형은 앱 창도 작게·항상 위로
   const [mini, setMini] = useState(false);
   const miniRef = useRef(false);
+  // 웹 미니 모드: 문서 PIP를 지원하면(PC 크롬·엣지) 늘 위에 떠 있는 작은 창에 방송을 띄우고, 메인 소리는 끈다 (닫으면 되돌린다)
+  const pipRef = useRef<Window | null>(null);
+  const openMini = () => {
+    const slot = isStream(state.slots[state.selected ?? -1]) ? state.selected! : state.slots.findIndex((s, i) => isStream(s) && i < visibleCount(state));
+    const c = slot >= 0 ? state.slots[slot] : null;
+    if (desktop || !isStream(c) || !canDocumentPip(window)) {
+      enterMini();
+      return;
+    }
+    pipRef.current?.close();
+    const soundWas = stateRef.current.soundOn;
+    void openPipWindow(c, host, () => {
+      pipRef.current = null;
+      if (soundWas && !stateRef.current.soundOn) dispatch({ type: 'toggleSound' });
+    }).then((pw) => {
+      if (!pw) {
+        enterMini();
+        return;
+      }
+      pipRef.current = pw;
+      if (stateRef.current.soundOn) dispatch({ type: 'toggleSound' });
+    });
+  };
   const enterMini = () => {
     const slot = isStream(state.slots[state.selected ?? -1]) ? state.selected! : state.slots.findIndex((s, i) => isStream(s) && i < visibleCount(state));
     if (slot < 0) return;
@@ -607,7 +656,11 @@ export function App(props: Props) {
   }, [desktop]);
   useEffect(() => {
     if (focused === null) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !lockedRef.current && exitFullscreen(); // 화면 잠금 중에는 Esc도 막는다
+    const onKey = (e: KeyboardEvent) => {
+      if (lockedRef.current) return; // 화면 잠금 중에는 Esc·화살표도 막는다
+      if (e.key === 'Escape') exitFullscreen();
+      else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !miniRef.current) focusStepRef.current(e.key === 'ArrowRight' ? 1 : -1);
+    };
     // 브라우저 전체 화면을 Esc로 빠져나오면 keydown 대신 fullscreenchange만 온다
     const onChange = () => !document.fullscreenElement && setFocused(null);
     window.addEventListener('keydown', onKey);
@@ -619,6 +672,25 @@ export function App(props: Props) {
   }, [focused, exitFullscreen]);
   const focusedCreator = focused !== null && focused < visibleCount(state) ? state.slots[focused] ?? null : null; // 방송 또는 페이지
   const focusedStream = isStream(focusedCreator) ? focusedCreator : null;
+  const focusStreams = visibleSlots(state).flatMap((s, i) => (isStream(s) ? [i] : []));
+  focusStepRef.current = (dir) => {
+    if (focused === null || focusStreams.length < 2) return;
+    const at = focusStreams.indexOf(focused);
+    const next = focusStreams[(at + dir + focusStreams.length) % focusStreams.length];
+    dispatch({ type: 'select', slot: next });
+    setFocused(next);
+  };
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  tapActions.current = (slot) => {
+    const now = Date.now();
+    const prev = lastTap.current;
+    lastTap.current = { slot, at: now };
+    dispatch({ type: 'select', slot });
+    const k = keys[slot];
+    if (!prev || prev.slot !== slot || now - prev.at > 350 || !k || !isStream(state.slots[slot])) return;
+    lastTap.current = null;
+    if (mix) setMixMuted(Object.fromEntries(keys.filter((x): x is string => !!x).map((x) => [x, x !== k])));
+  };
   useEffect(() => {
     if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
@@ -1035,11 +1107,30 @@ export function App(props: Props) {
   useEffect(() => {
     const started = startedLive(quickPrev.current, quickLiveMap);
     quickPrev.current = { ...quickPrev.current, ...quickLiveMap };
-    if (started.length)
-      setQuickStarted((prev) => [...prev.filter((c) => !started.includes(c.key)), ...started.map((k) => quickLiveCreator(quickAll.find((c) => c.key === k)!))]);
+    if (started.length) {
+      const list = started.map((k) => quickLiveCreator(quickAll.find((c) => c.key === k)!));
+      setQuickStarted((prev) => [...prev.filter((c) => !started.includes(c.key)), ...list]);
+      // 설정: 방송 시작 알림 — 휴대폰·PC 알림 (투네이션 로그인 없이도, 퀵패널의 즐겨찾기·최근 본 크리에이터)
+      if (settings.liveNotify) list.forEach((c) => showLiveNotification(c));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickLiveSig]);
   const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
+  // 방송 시작 알림을 누르면(서비스 워커가 알려 준다) 그 방송을 칸에 넣는다
+  const openLiveRef = useRef<(key: string) => void>(() => {});
+  openLiveRef.current = (key: string) => {
+    const c = [...quickStarted, ...quickAll.map(quickLiveCreator), ...toonation.state.creators].find((x) => x.key === key);
+    if (c) askSlot(c);
+  };
+  useEffect(() => {
+    const sw = (navigator as Navigator & { serviceWorker?: ServiceWorkerContainer }).serviceWorker;
+    if (!sw?.addEventListener) return;
+    const on = (e: MessageEvent) => {
+      if (e.data?.type === 'mv-open-live' && typeof e.data.key === 'string') openLiveRef.current(e.data.key);
+    };
+    sw.addEventListener('message', on);
+    return () => sw.removeEventListener('message', on);
+  }, []);
   // 퀵패널 맨 위 '추천 라이브 탐색' (쇼츠처럼 한 개씩)
   const [shortsOpen, setShortsOpen] = useState(false);
   const phone = usePhone(); // 휴대폰 폭: 세로로 쌓는 배치
@@ -1265,6 +1356,27 @@ export function App(props: Props) {
   };
   return (
     <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
+      {focusedStream && !mini && !(locked && focused !== null) && focusStreams.length > 1 && (
+        // 손가락으로 좌우로 밀어 다른 방송 (마우스는 통과: app.css). 아래쪽 플레이어 조작 줄은 비워 둔다
+        <div
+          className="focus-swipe"
+          aria-hidden="true"
+          onPointerDown={(e) => (swipeStart.current = { x: e.clientX, y: e.clientY })}
+          onPointerUp={(e) => {
+            const st = swipeStart.current;
+            swipeStart.current = null;
+            if (!st) return;
+            const dx = e.clientX - st.x;
+            const dy = e.clientY - st.y;
+            if (Math.abs(dx) >= 60 && Math.abs(dy) < 60) focusStepRef.current(dx < 0 ? 1 : -1);
+          }}
+          onPointerCancel={() => (swipeStart.current = null)}
+        >
+          <span className="focus-swipe__count">
+            {focusStreams.indexOf(focused!) + 1} / {focusStreams.length}
+          </span>
+        </div>
+      )}
       {locked && focused !== null && (
         <div className="screen-lock" role="dialog" aria-label="화면 잠금" onPointerDown={showLockHint} onContextMenu={(e) => e.preventDefault()}>
           <button
@@ -1313,8 +1425,9 @@ export function App(props: Props) {
           if (hasActivity) refreshActivity();
         }}
         onPresets={() => setPresetsOpen(true)}
+        onShare={() => setShareOpen(true)}
         sound={{ on: state.soundOn, onToggle: () => dispatch({ type: 'toggleSound' }) }}
-        onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
+        onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? openMini : undefined}
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
       <div className="app__body">
@@ -1819,6 +1932,7 @@ export function App(props: Props) {
           </div>
         </div>
       )}
+      {shareOpen && <ShareDialog url={shareUrl(win.location.href, withDetachedItems(state, detached))} onClose={() => setShareOpen(false)} />}
       {presetsOpen && (
         <PresetsDialog
           kv={kv}
