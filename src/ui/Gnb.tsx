@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
@@ -37,13 +38,29 @@ interface Props {
   mode?: { value: RemoteMode; onChange(m: RemoteMode): void }; // 상단 스위치: 크리에이터 리모컨 ↔ 후원 리모컨
 }
 
-export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props) {
+export function Gnb(props: Props) {
+  const [sheet, setSheet] = useState(false);
+  return (
+    <>
+      <GnbBar {...props} onMenu={() => setSheet(true)} />
+      {sheet && <PhoneSheet {...props} onClose={() => setSheet(false)} />}
+    </>
+  );
+}
+
+function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
       <span className="gnb__logo">
         <img className="gnb__logo-img" src={logoUrl} alt="투네이션 후원 브라우저" />
       </span>
+      {/* 휴대폰: 레이아웃·도구·설정을 담은 시트를 여는 메뉴 버튼 (넓은 화면에서는 숨김) */}
+      <button type="button" className="gnb__more" aria-label="메뉴" onClick={onMenu}>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
       {mode && (
         <div className="gnb__mode" role="radiogroup" aria-label="리모컨 전환">
           {(
@@ -161,5 +178,73 @@ export function Gnb({ layout, onLayout, canDonate, onDonate, onSettings, onHelp,
         </>
       )}
     </header>
+  );
+}
+
+/** 휴대폰 '메뉴' 시트: 상단 바에 다 들어가지 않는 레이아웃·도구·설정·로그인·리모컨 전환 (고르면 닫힌다) */
+function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, account, onMini, sound, onLive, onReloadAll, mode, onClose }: Props & { onClose(): void }) {
+  const creator = mode?.value === 'creator';
+  const run = (fn?: () => void) => () => {
+    onClose();
+    fn?.();
+  };
+  const row = (label: string, icon: React.ReactNode, fn?: () => void, extra?: { pressed?: boolean; disabled?: boolean }) =>
+    fn && (
+      <button type="button" className="phone-sheet__row" aria-label={label} aria-pressed={extra?.pressed} disabled={extra?.disabled} onClick={run(fn)}>
+        <span className="phone-sheet__icon" aria-hidden="true">
+          {icon}
+        </span>
+        {label}
+      </button>
+    );
+  return (
+    <div className="modal-backdrop phone-sheet__backdrop" onClick={onClose}>
+      <div className="phone-sheet" role="dialog" aria-label="메뉴" onClick={(e) => e.stopPropagation()}>
+        <span className="phone-sheet__grip" aria-hidden="true" />
+        {mode && (
+          <div className="phone-sheet__mode">
+            {(
+              [
+                ['donor', '후원 리모컨'],
+                ['creator', '크리에이터 리모컨'],
+              ] as const
+            ).map(([k, label]) => (
+              <button key={k} type="button" aria-label={label} aria-pressed={mode.value === k} className="phone-sheet__mode-btn" onClick={run(() => mode.onChange(k))}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {!creator && (
+          <>
+            <p className="phone-sheet__title">화면 모양</p>
+            <div className="phone-sheet__layouts">
+              {LAYOUTS.map((l) => (
+                <button key={l} type="button" aria-label={LAYOUT_LABEL[l]} aria-pressed={layout === l} className="phone-sheet__layout" onClick={run(() => onLayout(l))}>
+                  <span className={`layout-icon layout-icon--${l}`} aria-hidden="true">
+                    {ICON_CELLS[l].map((c) => (
+                      <i key={c} />
+                    ))}
+                  </span>
+                  <span>{LAYOUT_LABEL[l]}</span>
+                </button>
+              ))}
+            </div>
+            <div className="phone-sheet__list">
+              {row('추천 라이브', <IconLive />, onLive)}
+              {row('전체 새로고침', <IconReload />, onReloadAll)}
+              {sound && row(sound.on ? '전체 음소거' : '음소거 해제', sound.on ? <IconVolume /> : <IconMute />, sound.onToggle, { pressed: !sound.on })}
+              {row('미니 모드', <IconMini />, onMini)}
+              {row('화면 구성', <IconPresets />, onPresets)}
+              {row('스킨', <IconPalette />, onSkin && (() => onSkin(Math.round(window.innerWidth / 2) - 90, Math.round(window.innerHeight / 3))))}
+              {row('도움말', <IconHelp />, onHelp)}
+              {row('설정', <IconSettings />, onSettings)}
+              {!account && onLogin && row(loggingIn ? '로그인 중…' : '로그인', <IconUser />, onLogin, { disabled: loggingIn })}
+              {account && row(account.cash === null ? '내 후원 내역' : `내 후원 내역 · 캐시 ${account.cash.toLocaleString('ko-KR')}`, <IconCoin />, account.onHistory)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

@@ -45,6 +45,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
   const showLogin = tab === 'fav' && !!login && !login.loggedIn;
   const enter = () => {
     clearTimeout(leaveTimer.current);
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches) return; // 휴대폰: 하단 바는 넓히지 않는다
     setExpanded(true);
   };
   const leave = () => {

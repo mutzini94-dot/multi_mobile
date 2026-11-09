@@ -28,6 +28,8 @@ function rectOf(selector: string): Rect | null {
   const el = document.querySelector(selector);
   if (!el) return null;
   const r = el.getBoundingClientRect();
+  // 숨겨졌거나 화면 밖(휴대폰에서 '메뉴' 시트로 옮긴 메뉴)이면 강조 없이 카드만
+  if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= (window.innerWidth || Infinity) || r.top >= (window.innerHeight || Infinity) || getComputedStyle(el).display === 'none') return { left: 0, top: 0, width: 0, height: 0 };
   return { left: r.left, top: r.top, width: r.width, height: r.height };
 }
 

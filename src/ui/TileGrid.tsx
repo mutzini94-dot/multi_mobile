@@ -1,15 +1,30 @@
 import type { ReactNode } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import type { ViewState } from '../domain/types';
+import { visibleCount } from '../layout/layouts';
 
 interface Props {
   state: ViewState;
   renderTile(slot: number): ReactNode;
   onSizes(group: string, sizes: number[]): void;
   onDragging?(dragging: boolean): void;
+  phone?: boolean; // 휴대폰: 나누기 손잡이 없이 세로로 쌓는다 (app.css .tile-grid--phone)
 }
 
-export function TileGrid({ state, renderTile, onSizes, onDragging }: Props) {
+export function TileGrid({ state, renderTile, onSizes, onDragging, phone = false }: Props) {
+  if (phone) {
+    // 휴대폰: 레이아웃별 CSS 격자 (큰 화면+1 = 위 방송 16:9 · 아래 후원 페이지, 1+2 = 위 큰 칸 · 아래 두 칸, 4칸 이상 = 2열)
+    const count = visibleCount(state);
+    return (
+      <div className={`tile-grid tile-grid--phone tile-grid--${state.layout} tile-grid--n${Math.min(count, 4)}`} key={`phone-${state.layout}`}>
+        {Array.from({ length: count }, (_, slot) => (
+          <div key={slot} className="phone-cell">
+            <div className="panel-inner">{renderTile(slot)}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
   // 칸 크기 비율은 레이아웃별로 기억한다 (예: 'quad:root')
   const sizeKey = (id: string) => `${state.layout}:${id}`;
   const size = (group: string, i: number, count: number, defaults?: number[]) => state.sizes[sizeKey(group)]?.[i] ?? defaults?.[i] ?? 100 / count;

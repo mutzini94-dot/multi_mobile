@@ -20,6 +20,7 @@ import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY } from '../quick/shortsSize';
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
+import { usePhone } from '../ui/usePhone';
 import { forgetWatch, newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
@@ -870,6 +871,7 @@ export function App(props: Props) {
   const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
   // 퀵패널 맨 위 '추천 라이브 탐색' (쇼츠처럼 한 개씩)
   const [shortsOpen, setShortsOpen] = useState(false);
+  const phone = usePhone(); // 휴대폰 폭: 세로로 쌓는 배치
   const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
   const growTo = growLayouts(state.layout);
@@ -1027,7 +1029,7 @@ export function App(props: Props) {
     setGuideOpen(false);
   };
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${creatorMode ? ' app--creator' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${creatorMode ? ' app--creator' : ''}${phone ? ' app--phone' : ''}`}>
 
       <Gnb
         layout={state.layout}
@@ -1068,6 +1070,7 @@ export function App(props: Props) {
           <TileGrid
             state={state}
             onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
+            phone={phone}
             onDragging={setDragging}
             renderTile={(slot) => {
               const item = state.slots[slot] ?? null;
