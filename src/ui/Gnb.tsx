@@ -257,6 +257,7 @@ function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, log
             </div>
           </>
         )}
+        <p className="phone-sheet__version">버전 {__APP_BUILD__}</p>
       </div>
     </div>
   );

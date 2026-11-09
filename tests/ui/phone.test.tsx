@@ -56,3 +56,9 @@ test('휴대폰 상단 메뉴: 메뉴 버튼이 도구·설정을 담은 시트�
   fireEvent.click(within(screen.getByRole('dialog', { name: '메뉴' })).getByRole('button', { name: '크리에이터 리모컨' }));
   expect(onMode).toHaveBeenCalledWith('creator');
 });
+
+test('휴대폰 메뉴 맨 아래에 빌드 버전 (배포가 반영됐는지 확인용)', () => {
+  render(<Gnb layout="wideSide" onLayout={() => {}} canDonate onDonate={() => {}} onSettings={() => {}} />);
+  fireEvent.click(screen.getByRole('button', { name: '메뉴' }));
+  expect(within(screen.getByRole('dialog', { name: '메뉴' })).getByText(/^버전 \S+ · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeInTheDocument();
+});

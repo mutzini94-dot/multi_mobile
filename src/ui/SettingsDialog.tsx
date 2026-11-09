@@ -408,6 +408,7 @@ export function SettingsDialog(p: Props) {
             </button>
           </div>
           {backupMessage && <p className="form-error">{backupMessage}</p>}
+          <p className="muted settings__version">버전 {__APP_BUILD__}</p>
         </Section>
 
       </div>
