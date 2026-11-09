@@ -85,7 +85,18 @@ export function Tile(props: Props) {
       {filled && <div className="tile__player" ref={playerSlotRef} />}
       {/* 빈 칸: 점선 영역 안에 불러오기 · 최근 본 크리에이터 바로 넣기 · 끌어 놓기 안내 */}
       {!filled && !props.detached && (
-        <div className="tile__empty">
+        <div
+          className={`tile__empty${dnd?.canDrag ? ' tile__empty--grab' : ''}`}
+          // 빈 칸도 빈 곳을 눌러 끌면 자리를 옮긴다 (버튼은 버튼으로)
+          onPointerDown={
+            dnd?.canDrag
+              ? (e) => {
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  dnd.onPress(e);
+                }
+              : undefined
+          }
+        >
           {props.slotNumber !== undefined && (
             <span className="tile__num tile__num--corner" aria-label={`${props.slotNumber}번 화면`} title={`${props.slotNumber}번 화면`}>
               {props.slotNumber}

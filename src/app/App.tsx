@@ -1178,11 +1178,11 @@ export function App(props: Props) {
                   }
                   dnd={{
                     slot,
-                    canDrag: !!item,
+                    canDrag: true, // 빈 칸도 끌어서 자리를 옮긴다
                     canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot,
                     over: tileDrag.drag?.over === slot,
                     source: tileDrag.drag?.from === slot,
-                    onPress: (e) => tileDrag.start(slot, e, { canDrag: !!item }),
+                    onPress: (e) => tileDrag.start(slot, e),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
                   acceptCard={!markId}

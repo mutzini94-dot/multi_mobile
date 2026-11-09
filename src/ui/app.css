@@ -1119,6 +1119,8 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 [data-skin="pure"] .quick-panel--expanded .quick-panel__card--live { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--live); }
 [data-skin="breeze"] .quick-panel--expanded .quick-panel__card { border-radius: 18px; }
 
+.tile__empty--grab { cursor: grab; }
+.app--dragging .tile__empty--grab { cursor: grabbing; }
 /* 창 사이 끌어 놓기: 칸을 메인 창 밖으로 끄는 중 · 분리 창 위쪽 바를 끄는 중 */
 .drag-out-hint { position: fixed; top: 10px; left: 50%; z-index: 90; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); pointer-events: none; white-space: nowrap; }
 .solo__bar { cursor: grab; }

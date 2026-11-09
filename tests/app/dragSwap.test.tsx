@@ -229,3 +229,22 @@ describe('끄는 동안 작은 창 효과', () => {
     drop();
   });
 });
+
+test('빈 칸도 끌어서 자리를 옮긴다 (빈 칸의 빈 곳을 눌러 끌기)', () => {
+  setup();
+  pick(1, 'B');
+  fireEvent.pointerDown(tile(0).querySelector('.tile__empty')!, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+  moveOver(1);
+  expect(tile(0)).toHaveClass('tile--drag-source');
+  drop();
+  expect(tile(0).querySelector('.tile__name')?.textContent).toBe('B');
+  expect(tile(1)).toHaveClass('tile--empty');
+});
+
+test('빈 칸의 불러오기 버튼을 누르는 것은 끌기가 아니다', () => {
+  setup();
+  fireEvent.pointerDown(within(tile(0)).getByRole('button', { name: '불러오기' }), { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+  moveOver(1);
+  expect(tile(0)).not.toHaveClass('tile--drag-source');
+  drop();
+});
