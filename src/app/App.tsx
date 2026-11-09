@@ -4,7 +4,6 @@ import { desktopDetachHost, webDetachHost, type DetachHost } from '../detach/cha
 import { canFrameDonate, chatUrl, donatePageUrl, followDonateCreator, isPage, makeChatPage, makeDonatePage, isPinnable, isStream, pageTarget, withSidePage } from '../domain/pages';
 import { PinDialog } from '../ui/PinDialog';
 import { hasCreatorDrag, readCreatorDrag } from './creatorDrag';
-import { CREATOR_REMOTE_URL, MODE_KEY, REMOTE_PARTITION, readMode, type RemoteMode } from './remoteMode';
 import { fetchLiveList, fetchPopularLive, type LivePage, type LiveQuery, type PopularLive } from '../toonation/liveList';
 import { PageView, type PageHandle } from '../ui/PageView';
 import { ActivityPageTab, ChatPageTab, DonatePageTab, SignaturePageTab, WebPageTab } from '../ui/PageTabs';
@@ -92,6 +91,8 @@ const SHEET_PAGES = { donate: makeDonatePage(), chat: makeChatPage() };
 const VERTICAL_KEY = 'mv.vertical.v1';
 /** 자동으로 알아낸 세로 여부 (크리에이터 키 → 세로): 다음에 불러올 때 영상 ID를 알기 전부터 세로로 */
 const VERTICAL_SEEN_KEY = 'mv.vertical.seen.v1';
+/** 화면 잠금을 풀려면 이만큼 길게 누른다 */
+const UNLOCK_HOLD_MS = 800;
 /** 휴대폰에서 만들 수 있는 창 수 */
 const PHONE_MAX_WINDOWS = 6;
 /** 후원 페이지를 창 안에 띄워도 되는 이 앱 주소 (투네이션이 허용한 뒤 Vercel 환경 변수로) */
@@ -138,15 +139,6 @@ export function App(props: Props) {
   const [helpOpen, setHelpOpen] = useState(false); // 도움말
   const [keysOpen, setKeysOpen] = useState(false); // 단축키 안내 (? 키)
   const [historyOpen, setHistoryOpen] = useState(false);
-  // 상단 스위치: 후원 리모컨(멀티뷰) ↔ 크리에이터 리모컨. 크리에이터 리모컨은 처음 바꿀 때 띄우고, 상태를 지키려고 그 뒤로는 숨겨 둔다
-  const [mode, setModeState] = useState<RemoteMode>(() => readMode(kv));
-  const [remoteLoaded, setRemoteLoaded] = useState(() => readMode(kv) === 'creator');
-  const setMode = (m: RemoteMode) => {
-    setModeState(m);
-    kv.set(MODE_KEY, m);
-    if (m === 'creator') setRemoteLoaded(true);
-  };
-  const creatorMode = mode === 'creator';
   // 상단 '추천 라이브': 고른 방송을 넣을 칸을 묻는다
   const [liveOpen, setLiveOpen] = useState(false);
   const [livePick, setLivePick] = useState<Creator | null>(null);
@@ -233,6 +225,28 @@ export function App(props: Props) {
   );
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
+  // 전체 화면 화면 잠금: 화면 전체를 덮어 터치를 막는다. 풀 때는 자물쇠를 길게 누른다 (전체 화면이 끝나면 함께 풀린다)
+  const [locked, setLocked] = useState(false);
+  const lockedRef = useRef(false);
+  lockedRef.current = locked && focused !== null;
+  useEffect(() => {
+    if (focused === null) setLocked(false);
+  }, [focused]);
+  const [lockHint, setLockHint] = useState(false);
+  const lockTimers = useRef<{ hold?: ReturnType<typeof setTimeout>; hint?: ReturnType<typeof setTimeout> }>({});
+  const showLockHint = () => {
+    setLockHint(true);
+    clearTimeout(lockTimers.current.hint);
+    lockTimers.current.hint = setTimeout(() => setLockHint(false), 2000);
+  };
+  const holdUnlock = (on: boolean) => {
+    clearTimeout(lockTimers.current.hold);
+    if (on) lockTimers.current.hold = setTimeout(() => setLocked(false), UNLOCK_HOLD_MS);
+  };
+  useEffect(() => () => {
+    clearTimeout(lockTimers.current.hold);
+    clearTimeout(lockTimers.current.hint);
+  }, []);
   const focusEl = useRef<HTMLDivElement>(null);
 
   // 플레이어 핸들: 플레이어 키(방송 기준, layouts.playerKeys)로 보관해 칸 자리를 바꿔도 그대로 쓴다
@@ -593,7 +607,7 @@ export function App(props: Props) {
   }, [desktop]);
   useEffect(() => {
     if (focused === null) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && exitFullscreen();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !lockedRef.current && exitFullscreen(); // 화면 잠금 중에는 Esc도 막는다
     // 브라우저 전체 화면을 Esc로 빠져나오면 keydown 대신 fullscreenchange만 온다
     const onChange = () => !document.fullscreenElement && setFocused(null);
     window.addEventListener('keydown', onKey);
@@ -631,8 +645,38 @@ export function App(props: Props) {
   }, []);
   const onStreamStatus = (key: string, s: StreamStatus) => {
     setStreamStatus((m) => (m[key] === s ? m : { ...m, [key]: s }));
+    if (s === 'unavailable') recoverActions.current(key);
     // 바꿔 넣을 라이브 방송을 찾을 수 있게 투네이션 즐겨찾기 라이브 상태를 새로 가져온다
     if (s !== 'live' && toonStatus !== 'waiting-login' && toonStatus !== 'checking' && toonStatus !== 'loading') refreshToonation();
+  };
+  /**
+   * 유튜브 채널 라이브 임베드(영상 ID 없이 채널로)는 방송 중이어도 '볼 수 없음'이 되는 채널이 있다.
+   * 즐겨찾기·최근 본·마지막 화면에는 영상 ID를 저장하지 않으므로, 재생되지 않으면 투네이션 라이브 목록에서
+   * 그 채널의 라이브 영상 ID를 찾아 영상으로 다시 띄운다 (크리에이터마다 한 번만).
+   */
+  const recoverTried = useRef<Set<string>>(new Set());
+  const recoverActions = useRef<(key: string) => void>(() => {});
+  recoverActions.current = (key: string) => {
+    const slot = keys.findIndex((k) => k === key);
+    const c = slot >= 0 ? stateRef.current.slots[slot] : null;
+    if (!isStream(c) || c.platform !== 'youtube' || c.videoId || recoverTried.current.has(c.key)) return;
+    recoverTried.current.add(c.key);
+    liveSource({ page: 1, size: 10, q: c.name, order: 'VIEWERS', platform: 'youtube' })
+      .then((r) => {
+        const videoId = r.items.find((i) => i.creator.key === c.key)?.creator.videoId;
+        if (!videoId) return;
+        const at = stateRef.current.slots.findIndex((x) => isStream(x) && x.key === c.key);
+        const cur = at >= 0 ? stateRef.current.slots[at] : null;
+        if (!isStream(cur)) return;
+        dispatch({ type: 'restore', slot: at, item: { ...cur, videoId } });
+        setStreamStatus((m) => {
+          const next = { ...m };
+          delete next[key];
+          return next;
+        });
+        setTileSeq((t) => ({ ...t, [key]: (t[key] ?? 0) + 1 })); // 그 칸 플레이어만 새로
+      })
+      .catch(() => {});
   };
   /** 끝난 방송 대신 넣을 방송: 투네이션 즐겨찾기 중 라이브이면서 아직 칸에 없는 첫 방송 */
   const liveReplacement = (): Creator | null =>
@@ -691,7 +735,7 @@ export function App(props: Props) {
             라이브로 바꾸기 · {c.name}
           </button>
         ) : (
-          <span className="muted">라이브 중인 투네이션 즐겨찾기가 없습니다</span>
+          <span className="muted">{s === 'ended' ? '라이브 중인 투네이션 즐겨찾기가 없습니다' : '지금 방송 중이 아니거나 다른 사이트에서 볼 수 없는 방송입니다'}</span>
         )}
       </div>
     );
@@ -1220,7 +1264,30 @@ export function App(props: Props) {
     setGuideOpen(false);
   };
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${creatorMode ? ' app--creator' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
+      {locked && focused !== null && (
+        <div className="screen-lock" role="dialog" aria-label="화면 잠금" onPointerDown={showLockHint} onContextMenu={(e) => e.preventDefault()}>
+          <button
+            type="button"
+            className={`screen-lock__unlock${lockHint ? ' screen-lock__unlock--hint' : ''}`}
+            aria-label="길게 눌러 잠금 해제"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              showLockHint();
+              holdUnlock(true);
+            }}
+            onPointerUp={() => holdUnlock(false)}
+            onPointerLeave={() => holdUnlock(false)}
+            onPointerCancel={() => holdUnlock(false)}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+            <span className="screen-lock__text">길게 눌러 잠금 해제</span>
+          </button>
+        </div>
+      )}
       {tileDrag.drag?.outside && canDetach(state.slots[tileDrag.drag.from]) && (
         <div className="drag-out-hint" role="status" aria-label="창 밖으로 끌기">
           ⧉ {state.slots[tileDrag.drag.from]!.name} · 놓으면 새 창으로 분리
@@ -1249,20 +1316,8 @@ export function App(props: Props) {
         sound={{ on: state.soundOn, onToggle: () => dispatch({ type: 'toggleSound' }) }}
         onMini={state.slots.some((s, i) => isStream(s) && i < visibleCount(state)) ? enterMini : undefined}
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
-        mode={{ value: mode, onChange: setMode }}
       />
-      {remoteLoaded && (
-        <div className="creator-remote" hidden={!creatorMode}>
-          {/* 설치형은 webview: 앱이 실시간 후원·위젯 분리·압정·자석·단축키(window.toona)를 넣어 준다 */}
-          {desktop ? (
-            <webview className="creator-remote__frame" title="크리에이터 리모컨" src={CREATOR_REMOTE_URL} partition={REMOTE_PARTITION} />
-          ) : (
-            <iframe className="creator-remote__frame" title="크리에이터 리모컨" src={CREATOR_REMOTE_URL} allow="autoplay; clipboard-write; fullscreen" />
-          )}
-        </div>
-      )}
-      {/* 크리에이터 리모컨일 때도 칸은 그대로 두고 숨긴다 (돌아오면 바로 이어서) */}
-      <div className="app__body" hidden={creatorMode}>
+      <div className="app__body">
         {settings.quickPanel === 'left' && quickPanel}
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
           <TileGrid
@@ -1381,6 +1436,14 @@ export function App(props: Props) {
                     </button>
                   </>
                 )}
+                {!mini && (
+                  <button type="button" className="sound focus-view__lock" aria-label="화면 잠금" title="화면 잠금 (터치 막기)" onClick={() => setLocked(true)}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="5" y="11" width="14" height="9" rx="2" />
+                      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                    </svg>
+                  </button>
+                )}
                 {mini ? (
                   <button type="button" className="btn btn--ghost" aria-label="미니 모드 끝" title="미니 모드 끝 (Esc)" onClick={exitFullscreen}>
                     ✕
@@ -1462,7 +1525,7 @@ export function App(props: Props) {
         </div>
         {settings.quickPanel === 'right' && quickPanel}
       </div>
-      {!creatorMode && (
+      {(
       <DonationBar popupCreator={popupClosed || desktopDonate ? null : popupCreator} warning={warning} message={message}>
         {desktopDonate && donateMode === 'pip' && (
           <span className="pip-status" role="status" aria-label="PIP 후원창">

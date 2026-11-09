@@ -11,7 +11,6 @@ export const TOUR_STEPS: { target: string; title: string; body: string }[] = [
   { target: '.quick-panel__add', title: '창 추가 · 삭제', body: '+ 로 원하는 자리에 창을 하나 더 만듭니다. 빈 칸 오른쪽 위 ✕ 로 빈 창을 지울 수 있어요.' },
   { target: '.gnb__donate', title: '선택하고 후원하기', body: '칸을 누르면(또는 숫자 키 1~9) 그 방송 소리만 나오고 후원 대상이 됩니다. "후원하기"로 투네이션 후원창을 엽니다.' },
   { target: '.gnb__tools', title: '도구 · 도움말', body: '전체 새로고침·음소거·미니 모드·화면 구성 저장·설정이 모여 있습니다. ? 도움말에서 자주 묻는 질문과 단축키를 볼 수 있어요.' },
-  { target: '.gnb__mode', title: '크리에이터 리모컨', body: '방송하는 크리에이터라면 이 스위치로 크리에이터 리모컨으로 바꿉니다. 실시간 후원 목록과 알림·위젯을 다룹니다.' },
 ];
 
 interface Rect {

@@ -101,7 +101,7 @@ test('첫 실행 둘러보기: 실제 메뉴를 하나씩 비추며 안내하고
   setup(kv);
   const guide = screen.getByRole('region', { name: '처음 사용 안내' });
   const n = TOUR_STEPS.length;
-  expect(n).toBeGreaterThanOrEqual(7);
+  expect(n).toBeGreaterThanOrEqual(6);
   expect(within(guide).getByText(`1 / ${n}`)).toBeInTheDocument();
   expect(within(guide).getByText(TOUR_STEPS[0].title)).toBeInTheDocument();
   // 비추는 메뉴가 화면에 있으면 그 자리를 강조한다
@@ -109,9 +109,10 @@ test('첫 실행 둘러보기: 실제 메뉴를 하나씩 비추며 안내하고
   expect(document.querySelector('.tour__spot')).not.toBeNull();
   fireEvent.click(within(guide).getByRole('button', { name: '다음' }));
   expect(within(guide).getByText(`2 / ${n}`)).toBeInTheDocument();
-  // 새 기능(퀵패널·창 추가·크리에이터 리모컨·도움말)을 안내한다
+  // 새 기능(퀵패널·창 추가·도움말)을 안내한다 (크리에이터 리모컨은 없앴다)
   const titles = TOUR_STEPS.map((t) => t.title).join(' ');
-  for (const w of ['퀵패널', '창 추가', '크리에이터 리모컨', '도움말']) expect(titles).toMatch(w);
+  for (const w of ['퀵패널', '창 추가', '도움말']) expect(titles).toMatch(w);
+  expect(titles).not.toMatch('크리에이터 리모컨');
   for (let i = 2; i < n; i++) fireEvent.click(within(guide).getByRole('button', { name: '다음' }));
   expect(within(guide).getByRole('button', { name: '시작하기' })).toBeInTheDocument();
   fireEvent.click(within(guide).getByRole('button', { name: '이전' }));

@@ -1138,6 +1138,14 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 .page-sheet__body { position: relative; flex: 1; min-height: 0; margin: 0 -12px; border-top: 1px solid var(--line); }
 .page-sheet__body > * { position: absolute; inset: 0; }
 .gnb__chat { gap: 6px; height: 36px; padding: 0 12px; }
+/* 전체 화면 화면 잠금: 화면 전체를 덮어 터치를 막고, 자물쇠를 길게 눌러 푼다 */
+.screen-lock { position: fixed; inset: 0; z-index: 80; background: transparent; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.screen-lock__unlock { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-size: 13px; font-weight: 600; opacity: 0.35; transition: opacity 0.2s ease, background 0.8s linear; touch-action: none; }
+.screen-lock__text { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width 0.2s ease; }
+.screen-lock__unlock--hint { opacity: 1; }
+.screen-lock__unlock--hint .screen-lock__text { max-width: 160px; }
+.screen-lock__unlock:active { background: var(--primary); opacity: 1; }
+.app--locked .focus-view__bar, .app--locked .player-pause { display: none !important; }
 /* ================= 휴대폰 (폭 640px 이하) =================
    상단 바 = 로고 · 메뉴 · 후원하기, 칸은 세로로 쌓기, 퀵패널은 하단 바, 창은 아래에서 올라오는 시트 */
 .gnb__more { display: none; }
