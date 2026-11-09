@@ -225,19 +225,6 @@ function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, log
         )}
         {!creator && (
           <>
-            <p className="phone-sheet__title">화면 모양</p>
-            <div className="phone-sheet__layouts">
-              {LAYOUTS.map((l) => (
-                <button key={l} type="button" aria-label={LAYOUT_LABEL[l]} aria-pressed={layout === l} className="phone-sheet__layout" onClick={run(() => onLayout(l))}>
-                  <span className={`layout-icon layout-icon--${l}`} aria-hidden="true">
-                    {ICON_CELLS[l].map((c) => (
-                      <i key={c} />
-                    ))}
-                  </span>
-                  <span>{LAYOUT_LABEL[l]}</span>
-                </button>
-              ))}
-            </div>
             <div className="phone-sheet__list">
               {row('추천 라이브', <IconLive />, onLive)}
               {row('전체 새로고침', <IconReload />, onReloadAll)}

@@ -22,7 +22,7 @@ test('휴대폰: 세로 방송 칸은 다른 칸의 2배 높이', () => {
   expect((container.querySelector('.tile-grid') as HTMLElement).style.gridTemplateRows).toBe('minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)');
 });
 
-test('휴대폰 상단 메뉴: 메뉴 버튼이 레이아웃·도구·설정을 담은 시트를 열고, 고르면 닫힌다', () => {
+test('휴대폰 상단 메뉴: 메뉴 버튼이 도구·설정을 담은 시트를 열고(화면 모양 없음), 고르면 닫힌다', () => {
   const onLayout = vi.fn();
   const onSettings = vi.fn();
   const onReloadAll = vi.fn();
@@ -43,10 +43,11 @@ test('휴대폰 상단 메뉴: 메뉴 버튼이 레이아웃·도구·설정을 
   );
   fireEvent.click(screen.getByRole('button', { name: '메뉴' }));
   const sheet = screen.getByRole('dialog', { name: '메뉴' });
-  expect(within(sheet).getByRole('button', { name: '큰 화면+1' })).toHaveAttribute('aria-pressed', 'true');
+  expect(within(sheet).queryByRole('button', { name: '큰 화면+1' })).toBeNull(); // 화면 모양은 고르지 않는다 (휴대폰은 세로 한 줄)
+  expect(within(sheet).queryByText('화면 모양')).toBeNull();
   for (const n of ['추천 라이브', '전체 새로고침', '전체 음소거', '도움말', '설정', '크리에이터 리모컨']) expect(within(sheet).getByRole('button', { name: n })).toBeInTheDocument();
-  fireEvent.click(within(sheet).getByRole('button', { name: '4분할' }));
-  expect(onLayout).toHaveBeenCalledWith('quad');
+  fireEvent.click(within(sheet).getByRole('button', { name: '전체 새로고침' }));
+  expect(onReloadAll).toHaveBeenCalled();
   expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '메뉴' }));
   fireEvent.click(within(screen.getByRole('dialog', { name: '메뉴' })).getByRole('button', { name: '설정' }));

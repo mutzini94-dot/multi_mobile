@@ -141,3 +141,23 @@ test('휴대폰: 채팅을 열면 그 방송이 맨 위 칸으로 올라가고 �
   fireEvent.click(within(sheet).getByRole('button', { name: '닫기' }));
   expect(document.querySelector('.app')).not.toHaveClass('app--chat-dock');
 });
+
+test('휴대폰: 퀵패널에서 고른 방송은 칸을 묻지 않고 빈 칸에, 빈 칸이 없으면 맨 위에 창을 더해 넣는다', () => {
+  mockPhone(true);
+  setup();
+  const card = (name: string) => within(document.querySelector('.quick-panel') as HTMLElement).getByRole('button', { name });
+  fireEvent.click(card('A'));
+  expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
+  expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('A'); // 첫 빈 칸
+  expect(tiles()).toHaveLength(2);
+  // 빈 칸이 없으면 (두 번째 칸은 후원 페이지) 맨 위에 새 창
+  fireEvent.click(card('B'));
+  expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
+  expect(tiles()).toHaveLength(3);
+  expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('B');
+  expect(tiles()[0]).toHaveClass('tile--selected');
+  // 이미 보이는 방송이면 그 칸을 고르기만
+  fireEvent.click(card('A'));
+  expect(tiles()).toHaveLength(3);
+  expect(tiles()[1]).toHaveClass('tile--selected');
+});

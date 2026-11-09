@@ -1035,6 +1035,27 @@ export function App(props: Props) {
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
   // 휴대폰: 창은 최대 6개, 자리를 묻지 않고 맨 위에 빈 창을 더한다
   const growTo = growLayouts(state.layout).filter((l) => !phone || SLOT_COUNT[l] <= PHONE_MAX_WINDOWS);
+  /**
+   * 방송을 칸에 넣기: 넓은 화면은 넣을 칸을 묻고, 휴대폰은 묻지 않는다
+   * (이미 보이면 그 칸 선택 → 첫 빈 칸 → 맨 위에 새 창 → 선택한 칸(없으면 첫 칸)을 바꾼다)
+   */
+  const askSlot = (c: Creator) => {
+    if (!phone) {
+      setLivePick(c);
+      return;
+    }
+    const vis = visibleSlots(stateRef.current);
+    const shown = vis.findIndex((x) => isStream(x) && x.key === c.key);
+    const empty = vis.findIndex((x) => !x);
+    if (shown >= 0) dispatch({ type: 'select', slot: shown });
+    else if (empty >= 0) dispatch({ type: 'assign', slot: empty, creator: c });
+    else if (growTo.length) {
+      dispatch({ type: 'addWindow', layout: growTo.find((l) => l !== 'oneThree' && l !== 'oneFive') ?? growTo[0], at: 0 });
+      dispatch({ type: 'assign', slot: 0, creator: c });
+    } else dispatch({ type: 'assign', slot: stateRef.current.selected ?? 0, creator: c });
+    setLiveOpen(false);
+    setShortsOpen(false);
+  };
   const addNewWindow = () => {
     if (!growTo.length) return;
     if (!phone) {
@@ -1074,7 +1095,7 @@ export function App(props: Props) {
       started={quickStarted}
       onPick={(c) => {
         dismissQuick(c.key);
-        setLivePick(c);
+        askSlot(c);
       }}
       onDismiss={dismissQuick}
       onAddWindow={growTo.length ? addNewWindow : null}
@@ -1091,7 +1112,7 @@ export function App(props: Props) {
           if (s.height === null) kv.set(SHORTS_HEIGHT_KEY, ''); // 비우면 기본
           else kv.set(SHORTS_HEIGHT_KEY, String(s.height));
         },
-        content: <ShortsFeed load={liveSource} onAdd={(c) => setLivePick(c)} onDonate={(c) => donateTo(c)} onClose={() => setShortsOpen(false)} />,
+        content: <ShortsFeed load={liveSource} onAdd={(c) => askSlot(c)} onDonate={(c) => donateTo(c)} onClose={() => setShortsOpen(false)} />,
       }}
     />
   ) : null;
@@ -1531,7 +1552,7 @@ export function App(props: Props) {
             load={liveSource}
             favoriteTags={loggedIn ? favoriteTags : undefined}
             onToggleFavorite={loggedIn ? toggleToonFavorite : undefined}
-            onPick={setLivePick}
+            onPick={askSlot}
           />
         </RecommendLiveDialog>
       )}
