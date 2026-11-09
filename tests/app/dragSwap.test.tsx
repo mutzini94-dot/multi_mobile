@@ -298,6 +298,29 @@ describe('터치 (휴대폰): 길게 눌러야 끌기', () => {
     expect(tile(0).querySelector('.tile__name')?.textContent).toBe('B');
   });
 
+  test('길게 누르기 전에 화면을 넘기면(브라우저가 스크롤로 가져가 pointercancel) 끌기도 선택도 아니다', () => {
+    setup();
+    pick(0, 'A');
+    pick(1, 'B');
+    fireEvent.click(tile(0).querySelector('.tile__bar')!); // A 선택
+    touchDown(tile(1).querySelector('.tile__bar')!);
+    fireEvent.pointerCancel(window, { pointerId: 7, pointerType: 'touch' });
+    act(() => vi.advanceTimersByTime(400));
+    expect(tile(1)).not.toHaveClass('tile--selected');
+    expect(tile(1)).not.toHaveClass('tile--drag-source');
+  });
+
+  test('길게 눌러 칸이 들린 뒤에는 화면이 스크롤되지 않게 막고, 그 전에는 막지 않는다', () => {
+    setup();
+    pick(0, 'A');
+    touchDown(tile(0).querySelector('.tile__bar')!);
+    expect(fireEvent.touchMove(window, { touches: [{ clientX: 10, clientY: 30 }] })).toBe(true); // 스크롤 허용
+    act(() => vi.advanceTimersByTime(320));
+    expect(fireEvent.touchMove(window, { touches: [{ clientX: 10, clientY: 60 }] })).toBe(false); // 끌기 중: 스크롤 막기
+    fireEvent.pointerUp(window, { pointerId: 7, pointerType: 'touch', clientX: 10, clientY: 10 });
+    expect(fireEvent.touchMove(window, { touches: [{ clientX: 10, clientY: 60 }] })).toBe(true);
+  });
+
   test('짧게 탭하면 그 칸 선택', () => {
     setup();
     pick(0, 'A');

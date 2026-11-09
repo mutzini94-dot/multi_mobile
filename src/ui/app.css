@@ -305,7 +305,7 @@ button:disabled { cursor: not-allowed; }
 
 /* 칸 어디를 잡아도 끌기: 위쪽 바, 영상 위 투명한 잡는 층(아래쪽 플레이어 조작 영역 56px는 비움) */
 .tile__bar--grab { cursor: grab; }
-.player-layer__grab { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; z-index: 1; cursor: grab; touch-action: none; }
+.player-layer__grab { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; z-index: 1; cursor: grab; touch-action: pan-y; } /* 손가락: 위아래로 넘기기는 허용 (끌기는 길게 눌러서) */
 
 /* ---------- 끄는 동안 작은 창 효과 ---------- */
 /* 끄는 방송: 작은 창으로 줄어(크기만 부드럽게) 커서를 따라간다 */
@@ -1121,8 +1121,8 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 
 .tile__empty--grab { cursor: grab; }
 .app--dragging .tile__empty--grab { cursor: grabbing; }
-/* 손가락: 칸 위쪽 바·빈 칸을 끄는 동안 브라우저가 스크롤로 가져가지 않게, 길게 눌러도 글자 선택·메뉴가 뜨지 않게 */
-.tile__bar--grab, .tile__empty--grab { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* 손가락: 칸 위쪽 바·빈 칸에서도 위아래로 넘길 수 있게(pan-y, 끌기는 길게 눌러 칸이 들린 뒤 useTileDrag가 스크롤을 막는다), 길게 눌러도 글자 선택·메뉴가 뜨지 않게 */
+.tile__bar--grab, .tile__empty--grab { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* 창 사이 끌어 놓기: 칸을 메인 창 밖으로 끄는 중 · 분리 창 위쪽 바를 끄는 중 */
 .drag-out-hint { position: fixed; top: 10px; left: 50%; z-index: 90; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; box-shadow: var(--elev-1); pointer-events: none; white-space: nowrap; }
 .solo__bar { cursor: grab; }
@@ -1229,4 +1229,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .stage { flex: 1 0 auto; }
   .tile-grid--phone { flex: 1 0 auto; }
   .quick-panel { position: sticky; bottom: 0; z-index: 6; }
+  /* 스크롤할 때마다 다시 계산되는 흐림 효과는 끈다 (영상 위 버튼은 단색 반투명) */
+  .chip, .sound, .ended-notice, .shorts__action, .focus-view__bar .btn--ghost { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .tile:not(.tile--page):not(.tile--empty) .tile__bar .sound:not(.sound--on) { background: rgba(0, 0, 0, 0.42); }
 }

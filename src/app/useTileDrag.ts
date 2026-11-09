@@ -100,7 +100,19 @@ export function useTileDrag(
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    // 브라우저가 터치를 스크롤로 가져가면(pointercancel) 끌기도 탭도 아니다
+    const cancel = () => {
+      const p = pressRef.current;
+      if (p?.started) cb.current.onCancel?.(p.from);
+      setPress(null);
+    };
+    window.addEventListener('pointercancel', cancel);
+    // 손가락: 칸 위에서도 위아래로 넘길 수 있게(touch-action: pan-y) 두고, 길게 눌러 칸이 들린 뒤에만 스크롤을 막는다
+    const blockScroll = (e: TouchEvent) => {
+      const p = pressRef.current;
+      if (p?.touch && (p.armed || p.started) && e.cancelable !== false) e.preventDefault();
+    };
+    window.addEventListener('touchmove', blockScroll, { passive: false });
     // 손가락으로 길게 누르면 뜨는 메뉴(contextmenu)는 끌기 중에는 막는다
     const menu = (e: Event) => {
       if (!pressRef.current?.touch) return;
@@ -121,7 +133,8 @@ export function useTileDrag(
       window.removeEventListener('contextmenu', menu, true);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('pointercancel', cancel);
+      window.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('keydown', key);
     };
   }, [pressing]);
