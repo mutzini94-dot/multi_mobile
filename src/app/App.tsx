@@ -21,6 +21,7 @@ import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY 
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone } from '../ui/usePhone';
+import { detectVertical } from '../players/verticalThumb';
 import { lockLandscape, unlockOrientation } from '../ui/orientation';
 import { forgetWatch, newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
@@ -87,6 +88,8 @@ interface Detached {
 
 /** 휴대폰 후원·채팅 시트에 띄우는 페이지 (렌더마다 새로 만들지 않는다) */
 const SHEET_PAGES = { donate: makeDonatePage(), chat: makeChatPage() };
+/** 세로로 보기 (크리에이터 키 → 세로) */
+const VERTICAL_KEY = 'mv.vertical.v1';
 /** 휴대폰에서 만들 수 있는 창 수 */
 const PHONE_MAX_WINDOWS = 6;
 /** 후원 페이지를 창 안에 띄워도 되는 이 앱 주소 (투네이션이 허용한 뒤 Vercel 환경 변수로) */
@@ -275,9 +278,51 @@ export function App(props: Props) {
   // 채팅 칸: 유튜브는 라이브 영상 ID로만 채팅을 열 수 있다. 라이브 목록에서 고른 방송은 이미 알고,
   // 채널로 넣은 방송은 플레이어가 재생을 시작한 뒤 알려 주므로 채팅 칸이 있는 동안 잠깐씩 물어본다
   const [ytLive, setYtLive] = useState<Record<string, string>>({});
+  // 세로 방송: 직접 고른 것(크리에이터별 저장)이 우선, 아니면 유튜브 썸네일 방향으로 알아낸 것
+  const [verticalPick, setVerticalPick] = useState<Record<string, boolean>>(() => {
+    try {
+      const v = JSON.parse(kv.get(VERTICAL_KEY) ?? '{}');
+      return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [verticalAuto, setVerticalAuto] = useState<Record<string, boolean>>({}); // 유튜브 영상 ID → 세로
+  const verticalAutoRef = useRef<Record<string, boolean>>({});
+  const ytVideoOfRef = useRef<(c: Creator, slot: number) => string | null>(() => null);
   // 페이지 칸(후원 페이지·채팅·시그니처)이 보여 줄 방송: 고정한 방송 > 선택한 방송
   const targetOf = (page: PageSlot) => pageTarget(page, donateFor);
   const videoIdOf = (c: Creator | null) => (c?.platform === 'youtube' ? (c.videoId ?? ytLive[c.key] ?? null) : null);
+  const ytVideoOf = (c: Creator, slot: number) => videoIdOf(c) ?? (keys[slot] ? handles[keys[slot]!]?.videoId?.() ?? null : null);
+  const isVertical = (c: Creator, slot: number) => {
+    if (c.key in verticalPick) return verticalPick[c.key];
+    const id = c.platform === 'youtube' ? ytVideoOf(c, slot) : null;
+    return !!id && !!verticalAuto[id];
+  };
+  ytVideoOfRef.current = ytVideoOf;
+  const verticalKeys = new Set(state.slots.flatMap((s, i) => (isStream(s) && isVertical(s, i) ? [s.key] : [])));
+  const toggleVertical = (c: Creator, slot: number) =>
+    setVerticalPick((m) => {
+      const next = { ...m, [c.key]: !isVertical(c, slot) };
+      kv.set(VERTICAL_KEY, JSON.stringify(next));
+      return next;
+    });
+  // 유튜브 세로 방송 알아내기: 보이는 유튜브 칸의 영상 ID(재생되면 알게 된다)로 썸네일 방향을 본다
+  const ytVisibleSig = state.slots.map((s, i) => (isStream(s) && s.platform === 'youtube' && i < visibleCount(state) ? s.key : '')).join(',');
+  useEffect(() => {
+    const check = () => {
+      stateRef.current.slots.forEach((s, i) => {
+        if (!isStream(s) || s.platform !== 'youtube' || i >= visibleCount(stateRef.current)) return;
+        const id = ytVideoOfRef.current(s, i);
+        if (!id || id in verticalAutoRef.current) return;
+        verticalAutoRef.current[id] = false; // 묻는 중
+        detectVertical(id).then((v) => v !== null && setVerticalAuto((m) => ({ ...m, [id]: v }))); // 한 번만 묻는다 (효과가 다시 돌아도 결과는 반영)
+      });
+    };
+    check();
+    const t = setInterval(check, 3000);
+    return () => clearInterval(t);
+  }, [ytVisibleSig, handles]);
   const chatTargets = [...state.slots, ...detached.map((d) => d.item)]
     .filter((s): s is PageSlot => isPage(s) && s.kind === 'chat')
     .map(targetOf)
@@ -1252,6 +1297,7 @@ export function App(props: Props) {
                     onPress: (e) => tileDrag.start(slot, e),
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
+                  vertical={creator ? { on: isVertical(creator, slot), onToggle: () => toggleVertical(creator, slot) } : undefined}
                   acceptCard={!markId}
                   cardOver={cardOverSlot === slot || extHover === slot}
                   onDetach={creator || (page && page.kind !== 'activity' && page.kind !== 'signature') ? () => detachSlot(slot) : undefined}
@@ -1304,6 +1350,7 @@ export function App(props: Props) {
           )}
           <PlayerLayer
             state={state}
+            verticalKeys={verticalKeys}
             focused={focusedCreator ? focused : null}
             focusEl={focusEl}
             onSelectSlot={(slot) => dispatch({ type: 'select', slot })}

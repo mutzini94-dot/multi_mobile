@@ -35,7 +35,8 @@ interface Props {
   renderOverlay?(slot: number, playerKey: string): ReactNode; // 플레이어 위 안내 (방송 종료 등)
   renderControls?(slot: number, playerKey: string): ReactNode; // 잡는 층 위의 버튼 (트위치 일시정지)
   reloadSeq?: number; // 전체 새로고침: 바뀌면 모든 플레이어·페이지를 다시 띄운다
-  tileSeq?: Record<string, number>; // 칸 하나만 다시 띄우기 (플레이어 키별)
+  tileSeq?: Record<string, number>;
+  verticalKeys?: ReadonlySet<string>; // 세로로 보는 방송 (크리에이터 키): 높이는 그대로, 폭만 9:16 // 칸 하나만 다시 띄우기 (플레이어 키별)
 }
 
 /** 끄는 동안 작은 창의 폭 (높이는 원래 칸 비율, 모르면 16:9) */
@@ -54,7 +55,13 @@ const sameRects = (a: Record<number, Rect>, b: Record<number, Rect>) => {
  * 플레이어를 칸 번호 key로 한 번만 마운트하고, 레이아웃이 정한 칸 자리에 절대 위치로 덮는다.
  * 레이아웃을 바꿔도 iframe이 DOM에서 옮겨지지 않으므로 방송이 다시 로딩되지 않는다.
  */
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, onItemMenu, renderOverlay, renderControls, reloadSeq = 0, tileSeq }: Props) {
+/** 세로 방송 자리: 칸 높이는 그대로 두고 폭만 9:16로 줄여 가운데에 (칸이 이미 좁으면 그대로) */
+export function fitVertical(r: { left: number; top: number; width: number; height: number }) {
+  const width = Math.round(Math.min(r.width, (r.height * 9) / 16));
+  return { left: Math.round(r.left + (r.width - width) / 2), top: r.top, width, height: r.height };
+}
+
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, onItemMenu, renderOverlay, renderControls, reloadSeq = 0, tileSeq, verticalKeys }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
   const onSelectRef = useRef(onSelectSlot);
   onSelectRef.current = onSelectSlot;
@@ -116,6 +123,8 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         const offscreen = slot >= visibleCount(state);
         let r = (!offscreen && rects[slot]) || { left: 0, top: 0, width: 0, height: 0 };
         const isFloating = floating?.slot === slot;
+        const vertical = isStream(creator) && !!verticalKeys?.has(creator.key);
+        if (vertical && !isFloating) r = fitVertical(r);
         if (isFloating && floating) {
           const stage = stageRef.current?.getBoundingClientRect();
           const width = FLOAT_WIDTH;
@@ -125,7 +134,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         return (
           <div
             key={`${key}#${reloadSeq}.${tileSeq?.[key] ?? 0}`}
-            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}${starting?.has(key) ? ' player-layer__item--starting' : ''}`}
+            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}${starting?.has(key) ? ' player-layer__item--starting' : ''}${vertical ? ' player-layer__item--vertical' : ''}`}
             data-slot={slot}
             data-kind={isStream(creator) ? 'stream' : 'page'}
             onContextMenu={

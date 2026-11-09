@@ -10,6 +10,7 @@ interface Props {
   onToggleSound(): void;
   playerSlotRef?(el: HTMLDivElement | null): void; // 플레이어 레이어(PlayerLayer)가 덮을 자리
   onFullscreen?(): void;
+  vertical?: { on: boolean; onToggle(): void }; // 세로로 보기 (방송)
   onRemove?(): void; // 불러온 방송을 칸에서 지운다
   slotNumber?: number; // 칸 번호 (1부터): 불러오기 앞(빈 칸은 왼쪽 위)에 작게
   quickPicks?: { creator: Creator; live: boolean | null }[]; // 빈 칸: 최근 본 크리에이터 바로 넣기 (최대 3)
@@ -271,6 +272,23 @@ export function Tile(props: Props) {
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => props.volume!.onChange(Number(e.target.value))}
               />
+            )}
+            {props.vertical && (
+              <button
+                type="button"
+                className={`sound tile__vertical${props.vertical.on ? ' sound--on' : ''}`}
+                aria-label={props.vertical.on ? '가로로 보기' : '세로로 보기'}
+                aria-pressed={props.vertical.on}
+                title={props.vertical.on ? '가로로 보기' : '세로로 보기 (세로 방송)'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.vertical!.onToggle();
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+                  {props.vertical.on ? <rect x="3.5" y="7" width="17" height="10" rx="2" /> : <rect x="7" y="3.5" width="10" height="17" rx="2" />}
+                </svg>
+              </button>
             )}
             {barButton('새 창으로 분리', '⧉', props.onDetach)}
             {onFullscreen && (
