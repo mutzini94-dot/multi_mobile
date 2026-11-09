@@ -13,7 +13,7 @@ interface Props {
 
 export function TileGrid({ state, renderTile, onSizes, onDragging, phone = false }: Props) {
   if (phone) {
-    // 휴대폰: 레이아웃별 CSS 격자 (큰 화면+1 = 위 방송 16:9 · 아래 후원 페이지, 1+2 = 위 큰 칸 · 아래 두 칸, 4칸 이상 = 2열)
+    // 휴대폰: 모든 창을 같은 크기로 세로 한 줄 (app.css .tile-grid--phone)
     const count = visibleCount(state);
     return (
       <div className={`tile-grid tile-grid--phone tile-grid--${state.layout} tile-grid--n${Math.min(count, 4)}`} key={`phone-${state.layout}`}>
