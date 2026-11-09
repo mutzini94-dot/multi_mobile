@@ -286,7 +286,7 @@ export function Tile(props: Props) {
                 }}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-                  {props.vertical.on ? <rect x="3.5" y="7" width="17" height="10" rx="2" /> : <rect x="7" y="3.5" width="10" height="17" rx="2" />}
+                  <rect x="7" y="3.5" width="10" height="17" rx="2" />
                 </svg>
               </button>
             )}

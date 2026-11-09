@@ -90,6 +90,8 @@ interface Detached {
 const SHEET_PAGES = { donate: makeDonatePage(), chat: makeChatPage() };
 /** 세로로 보기 (크리에이터 키 → 세로) */
 const VERTICAL_KEY = 'mv.vertical.v1';
+/** 자동으로 알아낸 세로 여부 (크리에이터 키 → 세로): 다음에 불러올 때 영상 ID를 알기 전부터 세로로 */
+const VERTICAL_SEEN_KEY = 'mv.vertical.seen.v1';
 /** 휴대폰에서 만들 수 있는 창 수 */
 const PHONE_MAX_WINDOWS = 6;
 /** 후원 페이지를 창 안에 띄워도 되는 이 앱 주소 (투네이션이 허용한 뒤 Vercel 환경 변수로) */
@@ -288,6 +290,14 @@ export function App(props: Props) {
     }
   });
   const [verticalAuto, setVerticalAuto] = useState<Record<string, boolean>>({}); // 유튜브 영상 ID → 세로
+  const [verticalSeen, setVerticalSeen] = useState<Record<string, boolean>>(() => {
+    try {
+      const v = JSON.parse(kv.get(VERTICAL_SEEN_KEY) ?? '{}');
+      return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
   const verticalAutoRef = useRef<Record<string, boolean>>({});
   const ytVideoOfRef = useRef<(c: Creator, slot: number) => string | null>(() => null);
   // 페이지 칸(후원 페이지·채팅·시그니처)이 보여 줄 방송: 고정한 방송 > 선택한 방송
@@ -297,7 +307,8 @@ export function App(props: Props) {
   const isVertical = (c: Creator, slot: number) => {
     if (c.key in verticalPick) return verticalPick[c.key];
     const id = c.platform === 'youtube' ? ytVideoOf(c, slot) : null;
-    return !!id && !!verticalAuto[id];
+    if (id && id in verticalAuto) return verticalAuto[id];
+    return !!verticalSeen[c.key]; // 지난번에 알아낸 방향 (이번 영상을 확인하기 전까지)
   };
   ytVideoOfRef.current = ytVideoOf;
   const verticalKeys = new Set(state.slots.flatMap((s, i) => (isStream(s) && isVertical(s, i) ? [s.key] : [])));
@@ -316,11 +327,22 @@ export function App(props: Props) {
         const id = ytVideoOfRef.current(s, i);
         if (!id || id in verticalAutoRef.current) return;
         verticalAutoRef.current[id] = false; // 묻는 중
-        detectVertical(id).then((v) => v !== null && setVerticalAuto((m) => ({ ...m, [id]: v }))); // 한 번만 묻는다 (효과가 다시 돌아도 결과는 반영)
+        const key = s.key;
+        // 한 번만 묻는다 (효과가 다시 돌아도 결과는 반영). 알아낸 방향은 크리에이터별로 기억한다
+        detectVertical(id).then((v) => {
+          if (v === null) return;
+          setVerticalAuto((m) => ({ ...m, [id]: v }));
+          setVerticalSeen((m) => {
+            if (m[key] === v) return m;
+            const next = { ...m, [key]: v };
+            kv.set(VERTICAL_SEEN_KEY, JSON.stringify(next));
+            return next;
+          });
+        });
       });
     };
     check();
-    const t = setInterval(check, 3000);
+    const t = setInterval(check, 1500);
     return () => clearInterval(t);
   }, [ytVisibleSig, handles]);
   const chatTargets = [...state.slots, ...detached.map((d) => d.item)]

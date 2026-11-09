@@ -98,3 +98,16 @@ test('넓은 화면: 세로 방송은 칸 안에서 폭을 9:16로 줄인다', (
   fireEvent.click(within(tiles()[0]).getByRole('button', { name: '세로로 보기' }));
   expect(item(0)).toHaveClass('player-layer__item--fit');
 });
+
+test('한 번 세로로 알아낸 크리에이터는 다음부터 처음부터 세로 (영상 ID를 알기 전에도)', async () => {
+  const { kv, unmount } = setup();
+  pick(0, 'Y');
+  await act(async () => {});
+  expect(item(0)).toHaveClass('player-layer__item--vertical');
+  unmount();
+  detect.mockImplementation(() => new Promise(() => {})); // 이번에는 판별이 끝나지 않아도
+  setup(kv);
+  const vertical = item(0).classList.contains('player-layer__item--vertical');
+  detect.mockImplementation((id: string) => Promise.resolve(id === 'VERTICAL_01' ? true : id === 'LANDSCAPE01' ? false : null));
+  expect(vertical).toBe(true);
+});

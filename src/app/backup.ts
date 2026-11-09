@@ -2,7 +2,7 @@ import type { Result } from '../domain/creatorInput';
 import type { KV } from '../storage/safeStorage';
 
 /** JSON 값으로 저장하는 키: 설정(후원 메시지·금액 포함) · 직접 추가한 즐겨찾기 · 즐겨찾기 그룹 · 화면 구성 · 마지막 화면 · 최근 본 방송 */
-const JSON_KEYS = ['mv.settings.v1', 'mv.favorites.v1', 'mv.groups.v1', 'mv.presets.v1', 'mv.lastView.v1', 'mv.watchLog.v1'];
+const JSON_KEYS = ['mv.settings.v1', 'mv.favorites.v1', 'mv.groups.v1', 'mv.presets.v1', 'mv.lastView.v1', 'mv.watchLog.v1', 'mv.vertical.v1', 'mv.vertical.seen.v1'];
 /** 글자 값으로 저장하는 키와 모양: 리모컨 모드 · 추천 라이브 창 크기 */
 const TEXT_KEYS: Record<string, RegExp> = {
   'mv.mode.v1': /^(donor|creator)$/,
