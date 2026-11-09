@@ -25,6 +25,7 @@ interface Props {
   canDonate: boolean;
   onDonate(): void;
   onChat?(): void; // 휴대폰: 선택한 방송의 채팅 시트
+  overview?: { on: boolean; onToggle(): void }; // 휴대폰: 모든 창을 작은 타일로 모아 보기
   canChat?: boolean;
   onSettings?(): void;
   onHelp?(): void; // 도움말 (자주 묻는 질문·단축키·둘러보기)
@@ -51,13 +52,23 @@ export function Gnb(props: Props) {
   );
 }
 
-function GnbBar({ onMenu,  layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
+function GnbBar({ onMenu, overview, layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
   const creator = mode?.value === 'creator';
   return (
     <header className="gnb">
       <span className="gnb__logo">
         <img className="gnb__logo-img" src={logoUrl} alt="투네이션 후원 브라우저" />
       </span>
+      {overview && (
+        <button type="button" className="gnb__overview" aria-label="전체보기" title="전체보기" aria-pressed={overview.on} onClick={overview.onToggle}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+            <rect x="3.5" y="4.5" width="7.5" height="6.5" rx="1.6" />
+            <rect x="13" y="4.5" width="7.5" height="6.5" rx="1.6" />
+            <rect x="3.5" y="13" width="7.5" height="6.5" rx="1.6" />
+            <rect x="13" y="13" width="7.5" height="6.5" rx="1.6" />
+          </svg>
+        </button>
+      )}
       {/* 휴대폰: 레이아웃·도구·설정을 담은 시트를 여는 메뉴 버튼 (넓은 화면에서는 숨김) */}
       <button type="button" className="gnb__more" aria-label="메뉴" onClick={onMenu}>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

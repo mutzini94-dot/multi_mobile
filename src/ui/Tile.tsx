@@ -17,6 +17,7 @@ interface Props {
   onQuickPick?(c: Creator): void;
   starting?: boolean; // 트위치가 자동 재생을 시작하는 중: 영상 위 바를 잠깐 숨긴다 (겹치면 트위치가 재생을 막는다)
   onDeleteWindow?(): void;
+  overviewHit?: { label: string; onClick(): void }; // 휴대폰 전체보기: 칸 전체를 덮는 '이 화면 보기' (빈 칸)
   onStreamMenu?(x: number, y: number): void; // 방송 칸 오른쪽 클릭 (소리·전체 화면·새 창·창 닫기 메뉴)
   onEmptyMenu?(x: number, y: number): void; // 빈 칸 오른쪽 클릭 (창 추가·창 닫기 메뉴) // 빈 창 삭제 (칸을 빼고 한 단계 작은 레이아웃으로)
   audible?: boolean; // 지금 이 칸 소리가 나는지 (없으면 selected && soundOn)
@@ -134,6 +135,9 @@ export function Tile(props: Props) {
             여기에 놓기
           </span>
         </div>
+      )}
+      {props.overviewHit && (
+        <button type="button" className="overview-hit" aria-label={props.overviewHit.label} onClick={props.overviewHit.onClick} />
       )}
       {!filled && !props.detached && props.onDeleteWindow && (
         <button

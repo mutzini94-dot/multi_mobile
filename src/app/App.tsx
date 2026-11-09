@@ -1152,6 +1152,30 @@ export function App(props: Props) {
     if (document.scrollingElement) document.scrollingElement.scrollTop = 0; // 맨 위 방송이 보이게
   };
   const chatDock = phone && pageSheet?.kind === 'chat';
+  // 휴대폰 전체보기: 모든 창을 작은 타일(2열)로 모아 본다. 영상은 그대로 재생되며, 타일을 누르면 그 창으로 이동
+  const [overviewOn, setOverview] = useState(false);
+  const overview = phone && overviewOn;
+  const [scrollToSlot, setScrollToSlot] = useState<number | null>(null);
+  const overviewHit = (slot: number): { label: string; onClick(): void } | null => {
+    if (!overview || slot >= visibleCount(state)) return null;
+    const item = state.slots[slot];
+    return {
+      label: isStream(item) ? `${item.name} 보기` : `${slot + 1}번 화면 보기`,
+      onClick: () => {
+        setOverview(false);
+        if (isStream(item)) dispatch({ type: 'select', slot });
+        setScrollToSlot(slot);
+      },
+    };
+  };
+  useEffect(() => {
+    if (scrollToSlot === null) return;
+    // 타일 배치가 원래대로 돌아온 다음 프레임에 (부드럽게 넘기면 칸 자리 다시 재기에 끊긴다)
+    const go = () => document.querySelectorAll('.tile-grid--phone .phone-cell')[scrollToSlot]?.scrollIntoView?.({ block: 'start' });
+    go();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
+    setScrollToSlot(null);
+  }, [scrollToSlot]);
   const [dockTop, setDockTop] = useState<number | null>(null);
   useEffect(() => {
     if (!chatDock) return;
@@ -1355,7 +1379,7 @@ export function App(props: Props) {
     setGuideOpen(false);
   };
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${overview ? ' app--overview' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
       {focusedStream && !mini && !(locked && focused !== null) && focusStreams.length > 1 && (
         // 손가락으로 좌우로 밀어 다른 방송 (마우스는 통과: app.css). 아래쪽 플레이어 조작 줄은 비워 둔다
         <div
@@ -1411,6 +1435,17 @@ export function App(props: Props) {
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
         canDonate={phone ? !!sheetTarget : !!donateTarget}
         onChat={phone ? openChat : undefined}
+        overview={
+          phone
+            ? {
+                on: overview,
+                onToggle: () => {
+                  setPageSheet(null);
+                  setOverview((o) => !o);
+                },
+              }
+            : undefined
+        }
         canChat={!!sheetTarget}
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
@@ -1511,6 +1546,7 @@ export function App(props: Props) {
                   }}
                   onFullscreen={creator || page ? () => enterFullscreen(slot) : undefined}
                   vertical={creator ? { on: isVertical(creator, slot), onToggle: () => toggleVertical(creator, slot) } : undefined}
+                  overviewHit={!item ? overviewHit(slot) ?? undefined : undefined}
                   acceptCard={!markId}
                   cardOver={cardOverSlot === slot || extHover === slot}
                   onDetach={creator || (page && page.kind !== 'activity' && page.kind !== 'signature') ? () => detachSlot(slot) : undefined}
@@ -1603,7 +1639,12 @@ export function App(props: Props) {
             onStarting={onStreamStarting}
             onItemMenu={openVideoMenu}
             starting={startingKeys}
-            renderOverlay={endedOverlay}
+            renderOverlay={(slot) => (
+              <>
+                {endedOverlay(slot)}
+                {overview && overviewHit(slot) && <button type="button" className="overview-hit" aria-label={overviewHit(slot)!.label} onClick={overviewHit(slot)!.onClick} />}
+              </>
+            )}
             renderControls={pauseControl}
             reloadSeq={reloadSeq}
             tileSeq={tileSeq}

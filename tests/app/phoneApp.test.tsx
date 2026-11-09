@@ -161,3 +161,42 @@ test('휴대폰: 퀵패널에서 고른 방송은 칸을 묻지 않고 빈 칸�
   expect(tiles()).toHaveLength(3);
   expect(tiles()[1]).toHaveClass('tile--selected');
 });
+
+test('휴대폰 전체보기: 상단 아이콘을 누르면 모든 창을 작은 타일로 모아 보고, 타일을 누르면 그 방송으로 이동', () => {
+  mockPhone(true);
+  const scrolled: Element[] = [];
+  const prev = Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView = function (this: Element) {
+    scrolled.push(this);
+  };
+  try {
+    setup();
+    pickInto(0, 'A');
+    const add = () => fireEvent.click(screen.getByRole('button', { name: '창 추가' }));
+    add(); // 맨 위에 빈 창
+    pickInto(0, 'B'); // B 선택
+    const btn = screen.getByRole('button', { name: '전체보기' });
+    fireEvent.click(btn);
+    expect(btn).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelector('.app')).toHaveClass('app--overview');
+    // 방송 A로 이동
+    fireEvent.click(screen.getByRole('button', { name: 'A 보기' }));
+    expect(document.querySelector('.app')).not.toHaveClass('app--overview');
+    const aTile = tiles().find((t) => t.querySelector('.tile__name')?.textContent === 'A')!;
+    expect(aTile).toHaveClass('tile--selected');
+    expect(scrolled.some((e) => e.contains(aTile))).toBe(true);
+    // 빈 창·페이지도 고를 수 있다
+    fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
+    expect(screen.getByRole('button', { name: '3번 화면 보기' })).toBeInTheDocument(); // 후원 페이지 칸
+    fireEvent.click(screen.getByRole('button', { name: '전체보기' })); // 다시 누르면 닫힌다
+    expect(document.querySelector('.app')).not.toHaveClass('app--overview');
+  } finally {
+    Element.prototype.scrollIntoView = prev;
+  }
+});
+
+test('넓은 화면에는 전체보기 아이콘이 없다', () => {
+  mockPhone(false);
+  setup();
+  expect(screen.queryByRole('button', { name: '전체보기' })).toBeNull();
+});
