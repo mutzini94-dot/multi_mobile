@@ -20,11 +20,12 @@ interface Props {
   onHandle?(h: PageHandle | null): void;
   onOpenWindow?(): void; // 웹의 후원 페이지 칸: 새 창(팝업)으로 열기
   emptyText?: string; // 주소가 없을 때 안내
+  frameDonate?: boolean; // 웹: 이 주소에서는 후원 페이지를 iframe으로 띄울 수 있다 (domain/pages canFrameDonate)
 }
 
 type WebviewEl = HTMLElement & { goBack?(): void; canGoBack?(): boolean; reload?(): void };
 
-export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText = '후원할 방송 칸을 선택하세요' }: Props) {
+export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText = '후원할 방송 칸을 선택하세요', frameDonate = false }: Props) {
   const ref = useRef<HTMLElement | null>(null);
   const onHandleRef = useRef(onHandle);
   onHandleRef.current = onHandle;
@@ -67,7 +68,7 @@ export function PageView({ page, url, embed, onHandle, onOpenWindow, emptyText =
     if (page.kind === 'donate') return <MobileFitWebview url={url} popups={popups} webviewRef={ref} />;
     return <webview ref={ref} className="page-view" src={url} partition={WEB_PARTITION} {...popups} />;
   }
-  if (page.kind === 'donate') {
+  if (page.kind === 'donate' && !frameDonate) {
     // 투네이션 후원 페이지는 다른 페이지 안에 띄우는 것을 막아 두었다 (설치형은 칸 안에 표시)
     return (
       <div className="page-view page-view--empty">

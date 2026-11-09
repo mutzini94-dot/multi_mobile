@@ -93,6 +93,15 @@ export function chatUrl(c: Creator, videoId: string | null | undefined, embed: '
     : `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${encodeURIComponent(host)}`;
 }
 
+/**
+ * 투네이션 후원 페이지는 frame-ancestors로 허용한 곳(투네이션·localhost 등)에서만 iframe 안에 뜬다.
+ * 투네이션이 이 앱 주소를 허용하면 VITE_DONATE_FRAME_HOSTS(쉼표로 구분)에 넣어 창 안에 띄운다.
+ */
+export function canFrameDonate(host: string, extra = ''): boolean {
+  const allowed = ['localhost', '127.0.0.1', ...extra.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)];
+  return allowed.includes(host.toLowerCase());
+}
+
 export function donatePageUrl(c: Creator): string {
   return `https://toon.at/donate/${encodeURIComponent(c.donateId)}`;
 }

@@ -1205,4 +1205,13 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .fav-item { min-width: 0; overflow: hidden; }
   .fav-item .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .onboarding.tour__card:not(.tour__card--anchored) { left: 12px; right: 12px; bottom: 84px; width: auto; }
+  /* 채팅: 맨 위 방송(16:9) 아래에 채팅을 붙인다. 나머지 칸은 채팅 뒤로 접는다 (소리·재생은 그대로) */
+  .app--chat-dock .tile-grid--phone { grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: auto !important; grid-auto-rows: 0 !important; row-gap: 0; }
+  .app--chat-dock .tile-grid--phone .phone-cell:first-child { grid-column: 1 / -1; aspect-ratio: 16 / 9; }
+  .app--chat-dock .tile-grid--phone .phone-cell:not(:first-child) { overflow: hidden; }
+  .page-sheet__backdrop--dock { top: 45vh; background: transparent; }
+  .modal.page-sheet--dock { height: 100%; max-height: none; border-radius: 18px 18px 0 0 !important; box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.12); }
+  /* 후원하기: 위에 뜨는 창 (방송 소리·재생은 그대로) */
+  .donate-modal__backdrop { align-items: flex-start; padding: 64px 10px 10px; }
+  .modal.donate-modal { height: min(78vh, 680px); border-radius: 18px !important; }
 }

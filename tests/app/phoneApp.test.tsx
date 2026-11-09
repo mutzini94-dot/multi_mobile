@@ -20,6 +20,7 @@ function setup() {
   kv.set(ONBOARDED_KEY, '1');
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
+  favorites.add(mkCreator(2, { name: 'B' }));
   const noBridge: ToonationBridge = { request: vi.fn(() => Promise.reject(new Error('NO_EXTENSION'))) as ToonationBridge['request'] };
   const win = { open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
   render(<App favorites={favorites} kv={kv} win={win} bridge={noBridge} desktop={null} />);
@@ -41,21 +42,24 @@ test('넓은 화면이면 지금처럼 나누기 손잡이가 있는 배치', ()
 });
 
 const tiles = () => [...document.querySelectorAll<HTMLElement>('.tile')];
-const pickA = () => {
-  fireEvent.click(within(tiles()[0]).getByRole('button', { name: '불러오기' }));
-  fireEvent.click(within(screen.getByRole('dialog', { name: '불러오기' })).getByRole('button', { name: /^A ·/ }));
+const pickInto = (slot: number, name: string) => {
+  fireEvent.click(within(tiles()[slot]).getByRole('button', { name: '불러오기' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '불러오기' })).getByRole('button', { name: new RegExp(`^${name} ·`) }));
 };
+const pickA = () => pickInto(0, 'A');
 
-test('휴대폰: 후원하기는 아래에서 올라오는 시트로', () => {
+test('휴대폰: 후원하기는 위에 뜨는 창으로 (소리 유지)', () => {
   mockPhone(true);
   const { win } = setup();
   pickA();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
   const sheet = screen.getByRole('dialog', { name: 'A 후원하기' });
-  // 투네이션 후원 페이지는 다른 사이트 안에 띄우는 것을 막아 두어(frame-ancestors) 시트 안에서 새 창으로 연다
+  expect(sheet).toHaveClass('donate-modal'); // 아래 시트가 아니라 위에 뜨는 창
+  expect(document.querySelector('.page-sheet__backdrop')).toHaveClass('donate-modal__backdrop');
+  expect(document.querySelector('.tile--selected')).not.toBeNull(); // 선택(소리)은 그대로
+  // 투네이션이 허용한 주소(테스트의 localhost)에서는 창 안에 후원 페이지, 아니면 '새 창으로 후원 페이지 열기' (domain/pages canFrameDonate)
+  expect(sheet.querySelector('iframe')!.getAttribute('src')).toBe('https://toon.at/donate/don1');
   expect(win.open).not.toHaveBeenCalled();
-  fireEvent.click(within(sheet).getByRole('button', { name: '새 창으로 후원 페이지 열기' }));
-  expect(win.open).toHaveBeenCalled();
   fireEvent.click(within(sheet).getByRole('button', { name: '닫기' }));
   expect(screen.queryByRole('dialog', { name: 'A 후원하기' })).toBeNull();
 });
@@ -103,4 +107,37 @@ test('휴대폰: 전체 화면이면 가로 화면으로 돌리고, 나오면 �
   expect(lock).toHaveBeenCalledWith('landscape');
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(unlock).toHaveBeenCalled();
+});
+
+test('휴대폰: 창 추가는 자리를 묻지 않고 맨 위에 빈 창, 최대 6개', () => {
+  mockPhone(true);
+  setup();
+  pickA();
+  expect(tiles()).toHaveLength(2);
+  const add = () => fireEvent.click(screen.getByRole('button', { name: '창 추가' }));
+  add();
+  expect(screen.queryByRole('dialog', { name: '창 추가' })).toBeNull();
+  expect(tiles()).toHaveLength(3);
+  expect(tiles()[0]).toHaveClass('tile--empty');
+  expect(tiles()[1].querySelector('.tile__name')?.textContent).toBe('A');
+  add();
+  expect(tiles()).toHaveLength(4);
+  add();
+  expect(tiles()).toHaveLength(6);
+  expect(screen.getByRole('button', { name: '창 추가' })).toBeDisabled();
+});
+
+test('휴대폰: 채팅을 열면 그 방송이 맨 위 칸으로 올라가고 채팅은 아래에 (방송을 가리지 않음)', () => {
+  mockPhone(true);
+  setup();
+  pickInto(0, 'A');
+  pickInto(1, 'B'); // B 선택
+  fireEvent.click(screen.getByRole('button', { name: '채팅' }));
+  expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('B');
+  expect(tiles()[0]).toHaveClass('tile--selected');
+  const sheet = screen.getByRole('dialog', { name: 'B 채팅' });
+  expect(sheet).toHaveClass('page-sheet--dock');
+  expect(document.querySelector('.app')).toHaveClass('app--chat-dock');
+  fireEvent.click(within(sheet).getByRole('button', { name: '닫기' }));
+  expect(document.querySelector('.app')).not.toHaveClass('app--chat-dock');
 });

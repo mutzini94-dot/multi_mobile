@@ -120,3 +120,13 @@ test('고정한 방송도 마지막 화면으로 저장·복원된다', async ()
   saveLastView(kv, { ...initialViewState, slots });
   expect(loadLastView(kv)?.slots[3]).toMatchObject({ kind: 'signature', pin: { name: '다섯', donateId: 'five', channel: 'chan_5', platform: 'twitch' } });
 });
+
+test('후원 페이지를 창 안에 띄울 수 있는 주소: 투네이션이 허용한 곳(localhost)과 설정으로 더한 주소만', async () => {
+  const { canFrameDonate } = await import('../../src/domain/pages');
+  expect(canFrameDonate('localhost')).toBe(true);
+  expect(canFrameDonate('127.0.0.1')).toBe(true);
+  expect(canFrameDonate('multi-mobile.vercel.app')).toBe(false);
+  expect(canFrameDonate('multi-mobile.vercel.app', 'multi-mobile.vercel.app, mv.toon.at')).toBe(true);
+  expect(canFrameDonate('mv.toon.at', 'multi-mobile.vercel.app, mv.toon.at')).toBe(true);
+  expect(canFrameDonate('evil.vercel.app', 'multi-mobile.vercel.app')).toBe(false);
+});
