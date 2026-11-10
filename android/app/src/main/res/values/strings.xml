@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TOO 멀티뷰</string>
+    <string name="title_activity_main">TOO 멀티뷰</string>
+    <string name="package_name">at.toon.multiview</string>
+    <string name="custom_url_scheme">at.toon.multiview</string>
+</resources>
