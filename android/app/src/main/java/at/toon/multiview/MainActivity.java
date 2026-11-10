@@ -18,6 +18,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(ToonationPlugin.class); // 투네이션 연동 (로그인·요청)
         super.onCreate(savedInstanceState);
         WebView web = getBridge().getWebView();
         WebSettings settings = web.getSettings();

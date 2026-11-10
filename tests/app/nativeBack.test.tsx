@@ -10,7 +10,7 @@ vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data
 // 안드로이드 앱(Capacitor)인 것처럼: 휴대폰 뒤로가기 리스너를 붙잡아 직접 부른다
 const back: { fn: (() => void) | null } = { fn: null };
 const minimizeApp = vi.fn(async () => {});
-vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }));
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true }, registerPlugin: () => ({}) }));
 vi.mock('@capacitor/app', () => ({
   App: {
     addListener: (_e: string, fn: () => void) => {
@@ -60,4 +60,19 @@ test('앱에서 휴대폰 뒤로가기: 전체 화면 → 원래 화면, 채팅 
   expect(document.querySelector('.app')).not.toHaveClass('app--overview');
   press();
   expect(minimizeApp).toHaveBeenCalledTimes(1);
+});
+
+test('영상 플레이어 자체 전체 화면(유튜브 ⛶)에서 뒤로가기: 앱을 끄지 않고 전체 화면만 나간다', () => {
+  setup();
+  minimizeApp.mockClear();
+  const exitFullscreen = vi.fn(() => Promise.resolve());
+  Object.defineProperty(document, 'fullscreenElement', { value: document.querySelector('.player-layer__item'), configurable: true });
+  Object.defineProperty(document, 'exitFullscreen', { value: exitFullscreen, configurable: true });
+  try {
+    press();
+    expect(exitFullscreen).toHaveBeenCalled();
+    expect(minimizeApp).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+  }
 });

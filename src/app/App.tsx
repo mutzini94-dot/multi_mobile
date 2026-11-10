@@ -21,6 +21,8 @@ import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone } from '../ui/usePhone';
 import { onNativeBack } from '../native/backButton';
+import { nativeToonationBridge } from '../native/toonation/nativeBridge';
+import { Capacitor } from '@capacitor/core';
 import { findSharedCreator, parseSharedLink } from './sharedLink';
 import { barsHidden, floatingBox, type Box } from '../ui/phoneScroll';
 import { haptic } from '../ui/haptic';
@@ -131,7 +133,8 @@ export function App(props: Props) {
   const favorites = useMemo(() => props.favorites ?? localFavorites(kv), [props.favorites, kv]);
   const desktop = useMemo(() => (props.desktop !== undefined ? props.desktop : getDesktopApi(window)), [props.desktop]);
   const bridge = useMemo(
-    () => props.bridge ?? (desktop ? desktopBridge(desktop) : createBridge(window)),
+    // 투네이션 연동: 설치형(Electron) · 안드로이드 앱(앱이 대신 요청) · 웹(연동 확장 프로그램)
+    () => props.bridge ?? (desktop ? desktopBridge(desktop) : Capacitor.isNativePlatform() ? nativeToonationBridge() : createBridge(window)),
     [props.bridge, desktop],
   );
   const toonation = useToonation(bridge);
@@ -1581,6 +1584,12 @@ export function App(props: Props) {
   const nativeBack = useRef<() => boolean>(() => false);
   nativeBack.current = () => {
     if (locked && focused !== null) return true; // 화면 잠금 중에는 뒤로가기도 막는다
+    // 영상 플레이어 자체 전체 화면(유튜브·트위치의 ⛶ 버튼)·앱 전체 화면: 뒤로가기는 앱을 끄지 않고 전체 화면만 나간다
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => {});
+      if (focused !== null) exitFullscreen();
+      return true;
+    }
     if (videoMenu || emptyMenu) {
       setVideoMenu(null);
       setEmptyMenu(null);
