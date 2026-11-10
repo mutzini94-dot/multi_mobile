@@ -1,5 +1,6 @@
 package at.toon.multiview;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
@@ -23,5 +24,7 @@ public class MainActivity extends BridgeActivity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // 상태 표시줄·내비게이션 바 자리(앱이 비워 두는 여백)의 바탕: 흰색 (아이콘은 어둡게 — capacitor.config SystemBars)
+        getWindow().getDecorView().setBackgroundColor(Color.WHITE);
     }
 }
