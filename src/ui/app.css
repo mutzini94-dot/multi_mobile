@@ -1358,7 +1358,9 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .tile:has(.tile__info) .tile__bar [aria-label='전체 화면'], .tile:has(.tile__info) .tile__bar [aria-label='방송 삭제'] { display: none !important; }
   .tile:has(.tile__info) { background: var(--canvas); }
   .app--overview .tile__info { display: none; }
-  .app--overview .tile:has(.tile__info) .tile__player { bottom: 0; }
+  /* 정보 줄 자리를 비우는 규칙(.tile:not(.tile--page):not(.tile--empty):has(.tile__info) .tile__player)보다 구체적으로: 전체보기에서는 영상이 타일을 꽉 채운다 */
+  .app--overview .tile:not(.tile--page):not(.tile--empty):has(.tile__info) .tile__player { bottom: 0; }
+  .app--overview .tile:not(.tile--page):not(.tile--empty):has(.tile__info) { background: var(--video); }
   .app--chat-dock .tile-grid--phone .phone-cell:first-child { aspect-ratio: auto; height: calc(100vw * 9 / 16 + var(--phone-info)); }
   /* ===== 시안 C · 와이드 피드: 영상을 화면 끝까지, 칸 사이는 회색 띠, 큰 제목, 아래 탭 막대 ===== */
   .app--phone { --band: var(--surface); }
