@@ -1310,11 +1310,30 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .focus-view__chat { position: absolute; top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 45%; z-index: 2; background: var(--canvas); border-radius: 16px 16px 0 0; overflow: hidden; }
   .focus-view__chat > * { position: absolute; inset: 0; }
   .app--focus-chat .focus-swipe { bottom: calc(45% + 8px); }
+  /* 영상 아래 정보 줄 (유튜브처럼): 방송 제목 · 채널 · ⋮ 메뉴. 영상 자리는 그만큼 위로 */
+  :root { --phone-info: 52px; --phone-row: calc((100vw - 16px) * 9 / 16 + var(--phone-info)); }
+  .tile:not(.tile--page):not(.tile--empty):has(.tile__info) .tile__player { bottom: var(--phone-info); }
+  .tile__info { position: absolute; left: 0; right: 0; bottom: 0; height: var(--phone-info); display: flex; align-items: center; gap: 10px; padding: 0 2px 0 10px; background: var(--canvas); color: var(--ink); z-index: 2; }
+  .tile__info-avatar { flex: none; width: 34px; height: 34px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--surface); color: var(--ink-sub); font-size: 14px; font-weight: 700; }
+  .tile__info-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .tile__info-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .tile__info-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; line-height: 1.25; }
+  .tile__info-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-mute); font-size: 12px; }
+  .tile__info-more { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--ink-sub); display: inline-flex; align-items: center; justify-content: center; }
+  .tile__info-more:active { background: var(--surface); }
+  /* 영상 위 바에는 번호·불러오기·소리만 (이름·전체 화면·세로·삭제는 아래 줄과 ⋮ 메뉴로) */
+  .tile:has(.tile__info) .tile__bar .tile__name, .tile:has(.tile__info) .tile__bar .tile__platform, .tile:has(.tile__info) .tile__bar .tile__vertical,
+  .tile:has(.tile__info) .tile__bar [aria-label='전체 화면'], .tile:has(.tile__info) .tile__bar [aria-label='방송 삭제'] { display: none !important; }
+  .tile:has(.tile__info) { background: var(--canvas); }
+  .app--overview .tile__info { display: none; }
+  .app--overview .tile:has(.tile__info) .tile__player { bottom: 0; }
+  .app--chat-dock .tile-grid--phone .phone-cell:first-child { aspect-ratio: auto; height: calc((100vw - 16px) * 9 / 16 + var(--phone-info)); }
 }
 
 /* 휴대폰을 가로로: 2열, 상단 바를 낮게, 채팅은 방송 오른쪽에 */
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-  :root { --phone-row: calc((50vw - 12px) * 9 / 16); }
+  :root { --phone-row: calc((50vw - 12px) * 9 / 16 + var(--phone-info)); }
+  .app--chat-dock .tile-grid--phone .phone-cell:first-child { height: auto; }
   .tile-grid--phone { grid-template-columns: 1fr 1fr; }
   .gnb { height: 44px; }
   .app--chat-dock .tile-grid--phone { grid-template-columns: 1fr 1fr !important; }

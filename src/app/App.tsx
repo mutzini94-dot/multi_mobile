@@ -1769,6 +1769,21 @@ export function App(props: Props) {
               return (
                 <Tile
                   liveInfo={creator && tileLive[creator.key] ? liveLine(tileLive[creator.key]) : undefined}
+                  phoneInfo={
+                    creator && phone
+                      ? {
+                          // 유튜브처럼: 위 줄은 방송 제목(모르면 채널 이름), 아래 줄은 채널 · 시청자 · 방송한 시간
+                          title: tileLive[creator.key]?.title || creator.name,
+                          sub: [
+                            tileLive[creator.key]?.title ? creator.name : creator.platform === 'youtube' ? 'YouTube' : 'Twitch',
+                            ...(tileLive[creator.key] ? [liveLine({ ...tileLive[creator.key], title: '' })] : []),
+                          ]
+                            .filter(Boolean)
+                            .join(' · '),
+                          onMore: () => holdActions.current(slot),
+                        }
+                      : undefined
+                  }
                   creator={creator}
                   selected={state.selected === slot}
                   starting={!!keys[slot] && startingKeys.has(keys[slot]!)}
@@ -2138,6 +2153,7 @@ export function App(props: Props) {
               },
               { label: '전체 화면', icon: '⛶', onSelect: () => enterFullscreen(slot) },
               ...(phone ? [{ label: '채팅 보기', icon: '💬', onSelect: () => openStreamChat(slot) }] : []),
+              ...(phone ? [{ label: '다른 방송 불러오기', icon: '▶', onSelect: () => setPickerSlot(slot) }] : []),
               { label: '후원하기', icon: '♡', onSelect: () => donateTo(state.slots[slot] as Creator) },
               (() => {
                 const c = state.slots[slot] as Creator;

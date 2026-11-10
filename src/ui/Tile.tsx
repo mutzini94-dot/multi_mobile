@@ -27,6 +27,7 @@ interface Props {
   page?: { label: string; onBack?(): void; onReload?(): void; onOpenWindow?(): void; pin?: { name: string | null; onClick(): void } }; // pin: 📌 방송에 고정 (name = 고정한 방송)
   onDetach?(): void; // 이 칸을 새 창으로 분리
   liveInfo?: string; // 방송 정보 한 줄 (시청자 수 · 방송한 시간 · 제목)
+  phoneInfo?: { title: string; sub: string; onMore(): void }; // 휴대폰: 유튜브처럼 영상 아래에 제목·채널 줄과 ⋮ 메뉴
   // 새 창으로 분리한 칸: "{이름} · 새 창으로 분리됨"과 되돌리기 · 불러오기(다른 방송 넣기)
   detached?: { name: string; onReturn(): void };
   // 끌어서 자리 옮기기 (포인터 드래그, App의 useTileDrag). 상단 바 어디든(버튼 제외)·⠿를 눌러 끈다
@@ -85,6 +86,33 @@ export function Tile(props: Props) {
       }
     >
       {filled && <div className="tile__player" ref={playerSlotRef} />}
+      {creator && props.phoneInfo && (
+        <div className="tile__info">
+          <span className="tile__info-avatar" aria-hidden="true">
+            {creator.profile ? <img src={creator.profile} alt="" referrerPolicy="no-referrer" draggable={false} /> : creator.name.slice(0, 1)}
+          </span>
+          <span className="tile__info-text">
+            <strong className="tile__info-title">{props.phoneInfo.title}</strong>
+            <span className="tile__info-sub">{props.phoneInfo.sub}</span>
+          </span>
+          <button
+            type="button"
+            className="tile__info-more"
+            aria-label={`${creator.name} 메뉴`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              props.phoneInfo!.onMore();
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+              <circle cx="12" cy="5.5" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="12" cy="18.5" r="1.8" />
+            </svg>
+          </button>
+        </div>
+      )}
       {/* 빈 칸: 점선 영역 안에 불러오기 · 최근 본 크리에이터 바로 넣기 · 끌어 놓기 안내 */}
       {!filled && !props.detached && (
         <div

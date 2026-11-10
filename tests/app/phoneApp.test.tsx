@@ -206,3 +206,26 @@ test('넓은 화면에는 전체보기 아이콘이 없다', () => {
   setup();
   expect(screen.queryByRole('button', { name: '전체보기' })).toBeNull();
 });
+
+test('휴대폰: 유튜브처럼 영상 아래에 방송 제목·채널 줄과 ⋮ 메뉴 (PC 오른쪽 클릭 메뉴와 같은 항목)', () => {
+  mockPhone(true);
+  setup();
+  pickA();
+  const tile = tiles()[0];
+  const info = tile.querySelector('.tile__info')!;
+  expect(info).not.toBeNull();
+  expect(info.querySelector('.tile__info-title')?.textContent).toBe('A'); // 방송 제목을 모르면 채널 이름
+  expect(info.querySelector('.tile__info-sub')?.textContent).toBe('Twitch');
+  fireEvent.click(within(info as HTMLElement).getByRole('button', { name: 'A 메뉴' }));
+  const menu = screen.getByRole('menu', { name: '영상 메뉴' });
+  for (const n of ['소리 끄기', '전체 화면', '채팅 보기', '후원하기', '다른 방송 불러오기', '창 닫기']) expect(within(menu).getByRole('menuitem', { name: n })).toBeInTheDocument();
+  fireEvent.click(within(menu).getByRole('menuitem', { name: '다른 방송 불러오기' }));
+  expect(screen.getByRole('dialog', { name: '불러오기' })).toBeInTheDocument();
+});
+
+test('넓은 화면에는 영상 아래 줄이 없다', () => {
+  mockPhone(false);
+  setup();
+  pickA();
+  expect(tiles()[0].querySelector('.tile__info')).toBeNull();
+});
