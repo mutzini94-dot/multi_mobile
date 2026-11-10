@@ -43,14 +43,14 @@ const openPicker = (slot: number) => {
 const addActivity = (slot: number) => {
   const dlg = openPicker(slot);
   fireEvent.click(within(dlg).getByRole('tab', { name: '활동 위젯' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '활동 위젯 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '활동 위젯 창 넣기' }));
 };
 const pickFav = (slot: number, name: string) => {
   fireEvent.click(within(openPicker(slot)).getByRole('button', { name: new RegExp(`^${name} ·`) }));
 };
 const timeline = () => screen.getByRole('list', { name: '최근 활동' });
 
-test('불러오기의 활동 위젯 탭에서 칸을 넣는다', () => {
+test('불러오기의 활동 위젯 탭에서 창을 넣는다', () => {
   setup();
   addActivity(3);
   expect(screen.getByText('최근 활동')).toBeInTheDocument();
@@ -73,7 +73,7 @@ test('설정을 바꾸면 변경 기록이 타임라인에 생긴다', () => {
   expect(within(timeline()).getByText('라이브 자동 갱신: 끔 → 3분마다')).toBeInTheDocument();
 });
 
-test('타임라인의 방송을 누르면 첫 번째 칸에 뜨고 선택된다', () => {
+test('타임라인의 방송을 누르면 첫 번째 창에 뜨고 선택된다', () => {
   setup();
   addActivity(3);
   pickFav(1, 'A');
@@ -83,13 +83,13 @@ test('타임라인의 방송을 누르면 첫 번째 칸에 뜨고 선택된다'
   expect(tiles()[0].className).toMatch(/selected/);
 });
 
-test('활동 위젯 칸에는 새 창 분리 버튼이 없다', () => {
+test('활동 위젯 창에는 새 창 분리 버튼이 없다', () => {
   setup();
   addActivity(3);
   expect(within(tiles()[3]).queryByRole('button', { name: /새 창/ })).toBeNull();
 });
 
-test('방송을 고른 뒤에도 활동 위젯 칸에는 새 창 열기·뒤로 버튼이 없고 새로고침은 있다', () => {
+test('방송을 고른 뒤에도 활동 위젯 창에는 새 창 열기·뒤로 버튼이 없고 새로고침은 있다', () => {
   setup();
   addActivity(3);
   pickFav(0, 'A');

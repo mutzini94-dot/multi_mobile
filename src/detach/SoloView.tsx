@@ -27,7 +27,7 @@ function readStorage(): Storage | undefined {
 }
 
 /**
- * 분리 창: 칸 하나(방송·후원 페이지·웹페이지)를 창 전체에 보여 준다.
+ * 분리 창: 창 하나(방송·후원 페이지·웹페이지)를 창 전체에 보여 준다.
  * 되돌리기·후원하기는 메인 화면에 알리고, 후원 페이지는 메인 화면에서 고른 크리에이터를 따라간다.
  */
 export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
@@ -36,11 +36,11 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
   const { item } = payload;
   const [soundOn, setSoundOn] = useState(payload.sound);
   const [donateFor, setDonateFor] = useState<Creator | null>(payload.donateFor ?? null);
-  const [videoId, setVideoId] = useState<string | null>(payload.videoId ?? null); // 채팅 칸: 유튜브 라이브 영상 ID
+  const [videoId, setVideoId] = useState<string | null>(payload.videoId ?? null); // 채팅 창: 유튜브 라이브 영상 ID
   const [onTop, setOnTop] = useState(false);
   const [player, setPlayer] = useState<PlayerHandle | null>(null);
   const page = useRef<PageHandle | null>(null);
-  // 위쪽 바를 끌어 창 밖(메인 창의 칸)에 놓기 (설치형). 버튼을 누른 것은 끌기가 아니다
+  // 위쪽 바를 끌어 창 밖(메인 창의 창)에 놓기 (설치형). 버튼을 누른 것은 끌기가 아니다
   const [drag, setDrag] = useState<{ x0: number; y0: number; started: boolean; out: boolean } | null>(null);
   const dragRef = useRef(drag);
   dragRef.current = drag;
@@ -124,10 +124,10 @@ export function SoloView({ payload, link, desktop, kv: kvProp }: Props) {
     <div className={`solo${drag?.started ? ' solo--dragging' : ''}`}>
       {drag?.started && drag.out && (
         <div className="solo__drag-hint" role="status" aria-label="창 끌기">
-          메인 창의 칸에 놓으면 그 칸으로 돌아갑니다
+          메인 창의 창에 놓으면 그 창으로 돌아갑니다
         </div>
       )}
-      <div className="tile__bar solo__bar" onPointerDown={startDrag} title={desktop?.dragEnd ? '끌어서 메인 창의 칸에 놓기' : undefined}>
+      <div className="tile__bar solo__bar" onPointerDown={startDrag} title={desktop?.dragEnd ? '끌어서 메인 창의 창에 놓기' : undefined}>
         <span className="tile__name">{title}</span>
         <span className="tile__bar-gap" />
         {isStream(item) && barButton(soundOn ? '소리 끄기' : '소리 켜기', soundOn ? '🔊' : '🔇', () => setSoundOn((v) => !v), soundOn)}

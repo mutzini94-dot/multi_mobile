@@ -84,7 +84,13 @@ button:disabled { cursor: not-allowed; }
 .gnb { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 20px; background: var(--canvas); border-bottom: 1px solid var(--line); }
 .gnb__logo { margin-right: auto; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
 .gnb__logo-img { display: block; height: 26px; width: auto; }
+.gnb__logo--home { padding: 4px 6px; margin-left: -6px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
+.gnb__logo--home:active { background: var(--surface); }
 .gnb__layouts { display: flex; gap: 2px; padding: 3px; background: var(--surface); border-radius: var(--r-pill); }
+.gnb__layouts:not(.gnb__layouts--open) .layout-icon:not([aria-pressed='true']) { display: none; }
+.gnb__layouts:not(.gnb__layouts--open) { position: relative; padding-right: 16px; }
+.gnb__layouts:not(.gnb__layouts--open)::after { content: '▾'; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--ink-mute); pointer-events: none; }
+.gnb__tool--text { width: auto !important; padding: 0 10px; gap: 6px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .gnb__tools { display: flex; align-items: center; gap: 2px; padding: 3px; background: var(--surface); border-radius: var(--r-pill); }
 .gnb__tool { position: relative; width: 36px; height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink-sub); cursor: pointer; transition: background 0.12s, color 0.12s, box-shadow 0.12s; }
 .gnb__tool:hover, .gnb__tool:focus-visible { background: var(--canvas); color: var(--ink); box-shadow: var(--elev-2); }
@@ -289,6 +295,32 @@ button:disabled { cursor: not-allowed; }
 
 /* 직접 추가 폼 (Textinput: 8px, #DEE5EC) */
 .fav-form { display: flex; flex-direction: column; gap: 10px; }
+.phone-dock__bubble { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); padding: 10px 14px; border: 0; border-radius: 12px; background: #1f2329; color: #fff; font: inherit; font-size: 13px; font-weight: 600; text-align: left; box-shadow: var(--elev-2); animation: mv-menu-in 0.15s ease-out; }
+.phone-dock__bubble::after { content: ''; position: absolute; left: calc(30% - 6px); bottom: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: #1f2329; }
+.app-welcome { max-width: 360px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.app-welcome h2 { margin: 0; font-size: 19px; }
+.app-welcome p { margin: 0 0 6px; color: var(--ink-sub); font-size: 14px; line-height: 1.5; }
+.app-welcome__login, .app-welcome__later { height: 46px; width: 100%; }
+.ended-notice__actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.ended-notice__btn { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.phone-sheet__login { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 10px; padding: 14px 16px; border: 0; border-radius: 14px; background: var(--ink); color: var(--canvas); font: inherit; text-align: left; cursor: pointer; }
+.phone-sheet__login svg { width: 24px; height: 24px; flex: none; }
+.phone-sheet__login span { display: flex; flex-direction: column; gap: 2px; }
+.phone-sheet__login strong { font-size: 15px; }
+.phone-sheet__login small { font-size: 12px; opacity: 0.75; }
+.undo-toast { position: fixed; left: 50%; bottom: calc(24px + var(--sab, 0px)); z-index: 76; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; max-width: calc(100% - 24px); padding: 10px 10px 10px 16px; border-radius: 12px; background: #1f2329; color: #fff; font-size: 14px; box-shadow: var(--elev-2); animation: mv-menu-in 0.15s ease-out; }
+.undo-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undo-toast button { flex: none; height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #8ab8ff; font: inherit; font-weight: 700; cursor: pointer; }
+.link-add { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; padding: 14px; border-radius: 14px; background: var(--surface); }
+.link-add__label { font-size: 14px; font-weight: 700; color: var(--ink); }
+.link-add__row { display: flex; gap: 8px; }
+.link-add__row input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--canvas); color: var(--ink); font: inherit; font-size: 15px; }
+.link-add__row input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(81, 156, 255, 0.18); }
+.link-add__row .btn { height: 44px; padding: 0 18px; flex: none; }
+.link-add__msg { margin: 0; font-size: 13px; color: var(--ink-sub); }
+.fav-form__open { width: 100%; height: 44px; margin-top: 14px; }
+.tile__golive { height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: var(--r-pill); background: var(--canvas); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+.tile__golive b { padding: 1px 5px; border-radius: 4px; background: #cc0000; color: #fff; font-size: 10px; font-weight: 800; }
 .fav-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-sub); }
 .fav-form input, .fav-form select { height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--canvas); color: var(--ink); font: inherit; font-size: 14px; }
 .fav-form input:focus, .fav-form select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(81, 156, 255, 0.18); }
@@ -1385,6 +1417,19 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .phone-list__text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
   .phone-list__text span { font-size: 13px; color: var(--ink-mute); }
   .phone-list__live { flex: none; height: 20px; padding: 0 6px; border-radius: 4px; background: #cc0000; color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; }
+  /* 손가락 크기: 누르는 것은 40~44px */
+  .app--phone .tile__bar .sound { width: 40px; height: 40px; line-height: 40px; font-size: 16px; }
+  .app--phone .tile__delete { width: 40px; height: 40px; top: 6px; right: 6px; }
+  .app--phone .gnb__more { width: 44px; height: 44px; }
+  .app--phone .gnb__chat, .app--phone .gnb__donate { height: 40px; }
+  .app--phone .undo-toast { bottom: calc(76px + var(--sab)); }
+  /* 전체보기: 와이드 피드의 띠·끝까지 붙이기를 풀고 여백 있는 2열 타일로 */
+  .app--phone.app--overview .app__body { padding: 8px 8px 0; }
+  .app--overview .tile-grid--phone .phone-cell + .phone-cell { border-top: 0; }
+  .app--overview .tile-grid--phone .phone-cell--hidden { display: block; }
+  .app--phone.app--overview .tile, .app--phone.app--overview .tile__player, .app--phone.app--overview .player-layer__item { border-radius: 10px !important; }
+  .app--phone.app--overview .tile { box-shadow: 0 0 0 1px var(--border-soft); }
+  .app--phone.app--overview .tile--page .tile__bar { padding: 4px 6px; }
 }
 
 /* 휴대폰을 가로로: 2열, 상단 바를 낮게, 채팅은 방송 오른쪽에 */

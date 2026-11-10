@@ -44,7 +44,7 @@ test('깨진 저장값이면 빈 기록', () => {
   expect(readWatchLog(kv)).toEqual([]);
 });
 
-test('newlyPlaced: 새로 들어온 방송만 (자리 바꿈·페이지 칸은 제외)', () => {
+test('newlyPlaced: 새로 들어온 방송만 (자리 바꿈·페이지 창은 제외)', () => {
   const a = mkCreator(1);
   const b = mkCreator(2);
   expect(newlyPlaced([a, null], [a, b])).toEqual([b]);

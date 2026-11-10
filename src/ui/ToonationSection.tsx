@@ -9,12 +9,13 @@ interface Props {
   onPick(c: Creator): void;
   filter?(c: Creator): boolean; // 그룹으로 거르기
   rowExtra?(c: Creator): ReactNode; // 그룹 편집 중 줄마다 그룹 고르기
+  phone?: boolean; // 휴대폰 브라우저: 확장을 설치할 수 없다
 }
 
 const PLATFORM_LABEL = { youtube: 'YouTube', twitch: 'Twitch' } as const;
 
 /** 불러오기 창 맨 위: 연동 확장·설치형 앱을 통한 투네이션 즐겨찾기 (라이브 중인 크리에이터가 위) */
-export function ToonationSection({ state, onLogin, onRefresh, onPick, filter, rowExtra }: Props) {
+export function ToonationSection({ state, onLogin, onRefresh, onPick, filter, rowExtra, phone = false }: Props) {
   const busy = state.status === 'idle' || state.status === 'checking' || state.status === 'loading';
   const showList = state.creators.length > 0 && (state.status === 'ready' || busy);
   const liveCount = state.creators.filter((c) => c.live).length;
@@ -32,7 +33,11 @@ export function ToonationSection({ state, onLogin, onRefresh, onPick, filter, ro
       </div>
       {busy && !showList && <p className="muted">불러오는 중…</p>}
       {state.status === 'no-extension' && (
-        <p className="muted">연동 확장을 설치하면 투네이션 즐겨찾기를 불러올 수 있습니다. 확장 없이도 아래에서 직접 추가할 수 있습니다.</p>
+        <p className="muted">
+          {phone
+            ? '휴대폰 브라우저에서는 투네이션 즐겨찾기를 불러올 수 없습니다. 위에 방송 주소를 붙여넣거나 투네이션 라이브 탭에서 고르세요.'
+            : '연동 확장을 설치하면 투네이션 즐겨찾기를 불러올 수 있습니다. 확장 없이도 아래에서 직접 추가할 수 있습니다.'}
+        </p>
       )}
       {state.status === 'logged-out' && (
         <div className="toon-section__login">

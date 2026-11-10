@@ -30,7 +30,7 @@ afterEach(() => {
   delete document.documentElement.dataset.theme;
 });
 
-test('방송: 전체 창에 플레이어, 처음 소리(분리 전 소리 나던 칸)와 기본 볼륨 적용', () => {
+test('방송: 전체 창에 플레이어, 처음 소리(분리 전 소리 나던 창)와 기본 볼륨 적용', () => {
   const kv = safeStorage(undefined);
   kv.set(SETTINGS_KEY, JSON.stringify({ masterVolume: 40, theme: 'dark' }));
   const { link } = fakeLink();
@@ -78,7 +78,7 @@ test('웹페이지 (웹은 iframe), 이상한 크리에이터 메시지는 무�
   expect(document.querySelector('iframe')!.getAttribute('src')).toBe('https://naver.com/');
 });
 
-test('설치형: 위쪽 바를 끌어 창 밖에 놓으면 앱에 알린다 (메인 창 칸 위면 그 칸으로 돌아간다)', () => {
+test('설치형: 위쪽 바를 끌어 창 밖에 놓으면 앱에 알린다 (메인 창 창 위면 그 창으로 돌아간다)', () => {
   const { link } = fakeLink();
   const api = { soloSetAlwaysOnTop: vi.fn(), dragMove: vi.fn(), dragEnd: vi.fn() } as unknown as DesktopApi;
   render(<SoloView payload={{ id: 'd1', item: mkCreator(1, { name: 'A' }), sound: false }} link={link} desktop={api} kv={safeStorage(undefined)} />);
@@ -91,7 +91,7 @@ test('설치형: 위쪽 바를 끌어 창 밖에 놓으면 앱에 알린다 (메
   // 창 밖으로
   fireEvent.pointerDown(bar, { button: 0, pointerId: 1, clientX: 100, clientY: 10 });
   fireEvent.pointerMove(window, { pointerId: 1, clientX: -300, clientY: 50 });
-  expect(screen.getByRole('status', { name: '창 끌기' })).toHaveTextContent('메인 창의 칸에 놓으면');
+  expect(screen.getByRole('status', { name: '창 끌기' })).toHaveTextContent('메인 창의 창에 놓으면');
   expect(api.dragMove).toHaveBeenLastCalledWith(-300, 50);
   fireEvent.pointerUp(window, { pointerId: 1, clientX: -300, clientY: 50 });
   expect(api.dragEnd).toHaveBeenCalledWith(-300, 50);

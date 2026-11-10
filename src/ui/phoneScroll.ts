@@ -7,12 +7,12 @@ export interface Box {
   height: number;
 }
 
-/** 위·아래로 이만큼 가려지면 칸이 '안 보인다'고 본다 (상단 바 52px · 하단 퀵패널 약 64px) */
+/** 위·아래로 이만큼 가려지면 창이 '안 보인다'고 본다 (상단 바 52px · 하단 퀵패널 약 64px) */
 const TOP_BAR = 56;
 const BOTTOM_BAR = 70;
 
 /**
- * 선택한 방송 칸이 화면 밖으로 넘어갔으면 오른쪽 아래(하단 바 위)에 떠 있는 작은 창 자리 (화면 기준 좌표, position: fixed), 아니면 null.
+ * 선택한 방송 창이 화면 밖으로 넘어갔으면 오른쪽 아래(하단 바 위)에 떠 있는 작은 창 자리 (화면 기준 좌표, position: fixed), 아니면 null.
  * 세로 방송은 세로로 길게.
  */
 export function floatingBox(cell: Box, viewport: { width: number; height: number }, vertical = false): Box | null {

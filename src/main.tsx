@@ -10,7 +10,7 @@ import { restoreIfNewer, startMirror } from './storage/webStoreSync';
 import './ui/app.css';
 import { registerServiceWorker } from './pwa/registerSW';
 
-// #solo=… 로 열리면 칸 하나만 보여 주는 분리 창
+// #solo=… 로 열리면 창 하나만 보여 주는 분리 창
 const solo = decodeSolo(window.location.hash);
 const desktop = getDesktopApi(window);
 const root = createRoot(document.getElementById('root')!);

@@ -36,7 +36,7 @@ const pick = (slot: number, name: string) => {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name} ·`) }));
 };
 
-/** 포인터 드래그: 칸의 잡는 곳(⠿)을 눌러 끌고 다른 칸 위에서 놓는다 (jsdom은 레이아웃이 없어 커서 아래 칸을 흉내) */
+/** 포인터 드래그: 창의 잡는 곳(⠿)을 눌러 끌고 다른 창 위에서 놓는다 (jsdom은 레이아웃이 없어 커서 아래 창을 흉내) */
 let under: Element | null = null;
 beforeEach(() => {
   under = null;
@@ -59,7 +59,7 @@ function drag(from: number, to: number) {
   drop();
 }
 
-test('칸을 끌어 다른 칸에 놓으면 두 방송이 자리를 바꾼다', () => {
+test('창을 끌어 다른 창에 놓으면 두 방송이 자리를 바꾼다', () => {
   setup();
   pick(0, 'A');
   pick(1, 'B');
@@ -82,7 +82,7 @@ test('자리를 바꿔도 플레이어를 다시 불러오지 않고, 문서 안
   expect(itemA.dataset.slot).toBe('1');
 });
 
-test('빈 칸에 놓으면 그 칸으로 옮겨 간다', () => {
+test('빈 창에 놓으면 그 창으로 옮겨 간다', () => {
   setup();
   pick(0, 'A');
   drag(0, 3);
@@ -90,7 +90,7 @@ test('빈 칸에 놓으면 그 칸으로 옮겨 간다', () => {
   expect(within(tile(3)).getByText('A')).toBeInTheDocument();
 });
 
-test('끄는 동안 놓을 칸을 강조하고, 영상이 드래그를 가로채지 않게 플레이어 레이어를 잠근다', () => {
+test('끄는 동안 놓을 창을 강조하고, 영상이 드래그를 가로채지 않게 플레이어 레이어를 잠근다', () => {
   setup();
   pick(0, 'A');
   startDrag(0);
@@ -117,7 +117,7 @@ test('Esc로 끌기를 취소한다', () => {
   expect(document.querySelector('.player-layer__item--floating')).toBeNull();
 });
 
-describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
+describe('창 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
   const bar = (i: number) => tile(i).querySelector('.tile__bar') as HTMLElement;
   const grab = (slot: number) => document.querySelector(`.player-layer__item[data-slot="${slot}"] .player-layer__grab`) as HTMLElement;
   const pressAt = (el: HTMLElement) => fireEvent.pointerDown(el, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
@@ -145,10 +145,10 @@ describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
     expect(within(tile(1)).getByText('A')).toBeInTheDocument();
   });
 
-  test('움직이지 않고 짧게 누르면 끌기가 아니라 그 칸 선택 (그 칸만 소리)', () => {
+  test('움직이지 않고 짧게 누르면 끌기가 아니라 그 창 선택 (그 창만 소리)', () => {
     setup();
     pick(0, 'A');
-    pick(1, 'B'); // 1번 칸이 선택된 상태
+    pick(1, 'B'); // 1번 창이 선택된 상태
     pressAt(grab(0));
     nudge(3); // 기준(6px)보다 작은 흔들림
     under = tile(1);
@@ -159,15 +159,15 @@ describe('칸 어디를 잡아도 끌기 (위쪽 바·영상)', () => {
     expect(document.querySelector('.player-layer')).not.toHaveClass('player-layer--dragging');
   });
 
-  test('선택된 칸은 잡는 층이 없어 클릭이 플레이어로 간다 (재생 버튼 등) — 끌기는 위쪽 바로', () => {
+  test('선택된 창은 잡는 층이 없어 클릭이 플레이어로 간다 (재생 버튼 등) — 끌기는 위쪽 바로', () => {
     setup();
     pick(0, 'A');
-    pick(1, 'B'); // 1번 칸이 선택된 상태
+    pick(1, 'B'); // 1번 창이 선택된 상태
     expect(grab(1)).toBeNull();
     expect(grab(0)).not.toBeNull();
-    pressAt(grab(0)); // 0번 칸을 짧게 눌러 선택하면
+    pressAt(grab(0)); // 0번 창을 짧게 눌러 선택하면
     drop();
-    expect(grab(0)).toBeNull(); // 이제 0번 칸 영상은 플레이어가 직접 받는다
+    expect(grab(0)).toBeNull(); // 이제 0번 창 영상은 플레이어가 직접 받는다
     expect(grab(1)).not.toBeNull();
   });
 
@@ -230,7 +230,7 @@ describe('끄는 동안 작은 창 효과', () => {
   });
 });
 
-test('빈 칸도 끌어서 자리를 옮긴다 (빈 칸의 빈 곳을 눌러 끌기)', () => {
+test('빈 창도 끌어서 자리를 옮긴다 (빈 창의 빈 곳을 눌러 끌기)', () => {
   setup();
   pick(1, 'B');
   fireEvent.pointerDown(tile(0).querySelector('.tile__empty')!, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
@@ -241,7 +241,7 @@ test('빈 칸도 끌어서 자리를 옮긴다 (빈 칸의 빈 곳을 눌러 끌
   expect(tile(1)).toHaveClass('tile--empty');
 });
 
-test('빈 칸의 불러오기 버튼을 누르는 것은 끌기가 아니다', () => {
+test('빈 창의 불러오기 버튼을 누르는 것은 끌기가 아니다', () => {
   setup();
   fireEvent.pointerDown(within(tile(0)).getByRole('button', { name: '불러오기' }), { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
   moveOver(1);
@@ -269,7 +269,7 @@ describe('터치 (휴대폰): 길게 눌러야 끌기', () => {
     expect(tile(0).querySelector('.tile__name')?.textContent).toBe('A');
   });
 
-  test('0.3초 길게 누른 뒤 끌면 자리 바꾸기, 누르는 동안 칸이 들려 보이고 길게 누름 메뉴는 뜨지 않는다', () => {
+  test('0.3초 길게 누른 뒤 끌면 자리 바꾸기, 누르는 동안 창이 들려 보이고 길게 누름 메뉴는 뜨지 않는다', () => {
     const vibrate = vi.fn();
     Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true });
     setup();
@@ -288,7 +288,7 @@ describe('터치 (휴대폰): 길게 눌러야 끌기', () => {
     expect(tile(1).querySelector('.tile__name')?.textContent).toBe('A');
   });
 
-  test('빈 칸도 길게 눌러 끈다', () => {
+  test('빈 창도 길게 눌러 끈다', () => {
     setup();
     pick(1, 'B');
     touchDown(tile(0).querySelector('.tile__empty')!);
@@ -310,7 +310,7 @@ describe('터치 (휴대폰): 길게 눌러야 끌기', () => {
     expect(tile(1)).not.toHaveClass('tile--drag-source');
   });
 
-  test('길게 눌러 칸이 들린 뒤에는 화면이 스크롤되지 않게 막고, 그 전에는 막지 않는다', () => {
+  test('길게 눌러 창이 들린 뒤에는 화면이 스크롤되지 않게 막고, 그 전에는 막지 않는다', () => {
     setup();
     pick(0, 'A');
     touchDown(tile(0).querySelector('.tile__bar')!);
@@ -321,7 +321,7 @@ describe('터치 (휴대폰): 길게 눌러야 끌기', () => {
     expect(fireEvent.touchMove(window, { touches: [{ clientX: 10, clientY: 60 }] })).toBe(true);
   });
 
-  test('짧게 탭하면 그 칸 선택', () => {
+  test('짧게 탭하면 그 창 선택', () => {
     setup();
     pick(0, 'A');
     pick(1, 'B');

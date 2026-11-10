@@ -6,9 +6,9 @@ import type { PageSlot } from '../domain/types';
 export function ActivityPageTab({ onPick }: { onPick(p: PageSlot): void }) {
   return (
     <div className="page-tab">
-      <p>즐겨찾기했거나 후원한 적 있는 크리에이터 중 지금 방송 중인 사람과, 내가 본 방송·후원·설정 변경 기록을 이 칸에 모아 보여 줍니다. 방송을 누르면 첫 번째 칸에 뜹니다.</p>
+      <p>즐겨찾기했거나 후원한 적 있는 크리에이터 중 지금 방송 중인 사람과, 내가 본 방송·후원·설정 변경 기록을 이 창에 모아 보여 줍니다. 방송을 누르면 첫 번째 창에 뜹니다.</p>
       <button type="button" className="btn btn--donate" onClick={() => onPick(makeActivityPage())}>
-        활동 위젯 칸 넣기
+        활동 위젯 창 넣기
       </button>
     </div>
   );
@@ -18,9 +18,9 @@ export function ActivityPageTab({ onPick }: { onPick(p: PageSlot): void }) {
 export function SignaturePageTab({ onPick }: { onPick(p: PageSlot): void }) {
   return (
     <div className="page-tab">
-      <p>선택한 방송 크리에이터의 투네이션 시그니처 목록(이름·금액·사용 횟수)을 이 칸에 띄웁니다. 이름·금액으로 찾고 인기순·금액순·이름순으로 정렬할 수 있습니다. 다른 방송 칸을 선택하면 그 크리에이터의 시그니처로 바뀝니다.</p>
+      <p>선택한 방송 크리에이터의 투네이션 시그니처 목록(이름·금액·사용 횟수)을 이 창에 띄웁니다. 이름·금액으로 찾고 인기순·금액순·이름순으로 정렬할 수 있습니다. 다른 방송 창을 선택하면 그 크리에이터의 시그니처로 바뀝니다.</p>
       <button type="button" className="btn btn--donate" onClick={() => onPick(makeSignaturePage())}>
-        시그니처 칸 넣기
+        시그니처 창 넣기
       </button>
     </div>
   );
@@ -30,10 +30,10 @@ export function SignaturePageTab({ onPick }: { onPick(p: PageSlot): void }) {
 export function DonatePageTab({ onPick, desktop }: { onPick(p: PageSlot): void; desktop: boolean }) {
   return (
     <div className="page-tab">
-      <p>선택한 방송 크리에이터의 투네이션 후원 페이지를 이 칸에 띄웁니다. 다른 방송 칸을 선택하면 그 크리에이터의 후원 페이지로 바뀝니다.</p>
-      {!desktop && <p className="muted">웹에서는 후원 페이지를 칸 안에 띄울 수 없어 칸에서 새 창으로 엽니다. 설치형은 칸 안에 바로 표시됩니다.</p>}
+      <p>선택한 방송 크리에이터의 투네이션 후원 페이지를 이 창에 띄웁니다. 다른 방송 창을 선택하면 그 크리에이터의 후원 페이지로 바뀝니다.</p>
+      {!desktop && <p className="muted">웹에서는 후원 페이지를 창 안에 띄울 수 없어 창에서 새 창으로 엽니다. 설치형은 창 안에 바로 표시됩니다.</p>}
       <button type="button" className="btn btn--donate" onClick={() => onPick(makeDonatePage())}>
-        후원 페이지 칸 넣기
+        후원 페이지 창 넣기
       </button>
     </div>
   );
@@ -43,14 +43,14 @@ export function DonatePageTab({ onPick, desktop }: { onPick(p: PageSlot): void; 
 export function ChatPageTab({ onPick, desktop }: { onPick(p: PageSlot): void; desktop: boolean }) {
   return (
     <div className="page-tab">
-      <p>선택한 방송의 트위치·유튜브 라이브 채팅을 이 칸에 띄웁니다. 다른 방송 칸을 선택하면 그 방송의 채팅으로 바뀝니다.</p>
+      <p>선택한 방송의 트위치·유튜브 라이브 채팅을 이 창에 띄웁니다. 다른 방송 창을 선택하면 그 방송의 채팅으로 바뀝니다.</p>
       <p className="muted">
         {desktop
-          ? '채팅을 쓰려면 채팅 칸에서 트위치·유튜브에 로그인하세요 (한 번 로그인하면 유지됩니다).'
+          ? '채팅을 쓰려면 채팅 창에서 트위치·유튜브에 로그인하세요 (한 번 로그인하면 유지됩니다).'
           : '웹에서는 채팅 보기만 됩니다. 채팅 입력은 설치형에서 로그인해 쓸 수 있습니다.'}
       </p>
       <button type="button" className="btn btn--donate" onClick={() => onPick(makeChatPage())}>
-        채팅 칸 넣기
+        채팅 창 넣기
       </button>
     </div>
   );
@@ -92,7 +92,7 @@ export function WebPageTab({ onPick, desktop }: { onPick(p: PageSlot): void; des
           </button>
         ))}
       </div>
-      {!desktop && <p className="muted">사이트에 따라 칸 안에 표시되지 않을 수 있습니다. 그때는 칸의 ↗ 버튼으로 새 창에서 여세요. 설치형은 모든 사이트가 표시됩니다.</p>}
+      {!desktop && <p className="muted">사이트에 따라 창 안에 표시되지 않을 수 있습니다. 그때는 창의 ↗ 버튼으로 새 창에서 여세요. 설치형은 모든 사이트가 표시됩니다.</p>}
     </div>
   );
 }

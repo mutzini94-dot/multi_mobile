@@ -7,7 +7,7 @@ import { fitVertical } from '../../src/ui/PlayerLayer';
 import { mkCreator } from '../helpers/fixtures';
 import { quadKv } from '../helpers/quadKv';
 
-// 유튜브 칸은 재생되면 플레이어가 라이브 영상 ID를 알려 준다
+// 유튜브 창은 재생되면 플레이어가 라이브 영상 ID를 알려 준다
 vi.mock('../../src/players/StreamPlayer', async () => {
   const { useEffect } = await import('react');
   return {
@@ -46,7 +46,7 @@ const item = (slot: number) => document.querySelector(`.player-layer__item[data-
 
 beforeEach(() => detect.mockClear());
 
-test('세로로 보기: 누르면 그 방송 칸을 세로(9:16)로, 크리에이터별로 기억', () => {
+test('세로로 보기: 누르면 그 방송 창을 세로(9:16)로, 크리에이터별로 기억', () => {
   const { kv, unmount } = setup();
   pick(0, 'A');
   expect(item(0)).not.toHaveClass('player-layer__item--vertical');
@@ -72,13 +72,13 @@ test('유튜브 세로 방송은 키 없이 썸네일 방향으로 알아내 자
   expect(item(0)).not.toHaveClass('player-layer__item--vertical');
 });
 
-test('세로 칸 자리: 높이는 그대로, 폭만 9:16로 줄여 가운데', () => {
+test('세로 창 자리: 높이는 그대로, 폭만 9:16로 줄여 가운데', () => {
   expect(fitVertical({ left: 0, top: 10, width: 360, height: 224 })).toEqual({ left: 117, top: 10, width: 126, height: 224 });
-  // 칸이 이미 좁고 길면 그대로
+  // 창이 이미 좁고 길면 그대로
   expect(fitVertical({ left: 5, top: 0, width: 100, height: 400 })).toEqual({ left: 5, top: 0, width: 100, height: 400 });
 });
 
-test('휴대폰: 세로 방송은 칸 폭을 줄이지 않고 칸 높이를 2배로', () => {
+test('휴대폰: 세로 방송은 창 폭을 줄이지 않고 창 높이를 2배로', () => {
   window.matchMedia = ((q: string) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
   try {
     setup();
@@ -92,7 +92,7 @@ test('휴대폰: 세로 방송은 칸 폭을 줄이지 않고 칸 높이를 2배
   }
 });
 
-test('넓은 화면: 세로 방송은 칸 안에서 폭을 9:16로 줄인다', () => {
+test('넓은 화면: 세로 방송은 창 안에서 폭을 9:16로 줄인다', () => {
   setup();
   pick(0, 'A');
   fireEvent.click(within(tiles()[0]).getByRole('button', { name: '세로로 보기' }));

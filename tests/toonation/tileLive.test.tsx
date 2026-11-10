@@ -20,7 +20,7 @@ test('formatElapsed', () => {
   expect(formatElapsed(20_000)).toBe('방금 시작');
 });
 
-test('useTileLiveInfo: 칸의 방송을 투네이션 라이브 목록에서 이름으로 찾아 제목·시청자·시작 시각', async () => {
+test('useTileLiveInfo: 창의 방송을 투네이션 라이브 목록에서 이름으로 찾아 제목·시청자·시작 시각', async () => {
   const load = vi.fn(async (q: LiveQuery) =>
     page(q.q === 'A' ? [{ creator: { ...a, live: { title: '오늘 방송', viewers: 1234, startedAt: 1000 } }, thumbnail: '', category: '' }] : []),
   );
@@ -39,7 +39,7 @@ test('useTileLiveInfo: 투네이션 즐겨찾기에 이미 있는 라이브 정�
   await waitFor(() => expect(result.current[a.key]).toMatchObject({ title: '즐겨찾기 정보', viewers: 7 }));
 });
 
-test('칸 위쪽 바에 방송 정보 (설정으로 끌 수 있다)', async () => {
+test('창 위쪽 바에 방송 정보 (설정으로 끌 수 있다)', async () => {
   const kv = safeStorage(undefined);
   kv.set(ONBOARDED_KEY, '1');
   const favorites = localFavorites(kv);
@@ -54,7 +54,7 @@ test('칸 위쪽 바에 방송 정보 (설정으로 끌 수 있다)', async () =
   const info = await within(tile()).findByLabelText('방송 정보');
   expect(info.textContent).toBe('1,234명 · 1시간 5분 · 오늘 방송');
   fireEvent.click(screen.getByRole('button', { name: '설정' }));
-  fireEvent.click(within(screen.getByRole('dialog', { name: '설정' })).getByLabelText('칸에 방송 정보 표시'));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '설정' })).getByLabelText('창에 방송 정보 표시'));
   expect(within(tile()).queryByLabelText('방송 정보')).toBeNull();
   expect(JSON.parse(kv.get(SETTINGS_KEY)!).showLiveInfo).toBe(false);
 });

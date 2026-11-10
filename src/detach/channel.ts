@@ -3,7 +3,7 @@ import type { DesktopApi } from '../desktop/desktopApi';
 import { soloUrl, type SoloPayload } from './soloLink';
 
 /** 메인 화면 → 분리 창 */
-export type HostToSolo = { type: 'donateFor'; creator: Creator | null; videoId?: string | null }; // 후원 페이지·채팅 칸이 따라갈 방송
+export type HostToSolo = { type: 'donateFor'; creator: Creator | null; videoId?: string | null }; // 후원 페이지·채팅 창이 따라갈 방송
 /** 분리 창 → 메인 화면 */
 export type SoloToHost = { type: 'return' } | { type: 'donate' }; // 되돌리기 · 후원하기(방송)
 

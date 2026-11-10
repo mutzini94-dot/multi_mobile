@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Creator } from '../domain/types';
 import type { LivePage, LiveQuery } from './liveList';
 
-/** 칸에 보여 줄 방송 정보 */
+/** 창에 보여 줄 방송 정보 */
 export interface TileLiveInfo {
   title: string;
   viewers: number;
@@ -20,14 +20,14 @@ export function formatElapsed(ms: number): string {
 }
 
 interface Options {
-  streams: Creator[]; // 지금 칸에 있는 방송
+  streams: Creator[]; // 지금 창에 있는 방송
   known: Creator[]; // 이미 라이브 정보를 아는 방송 (투네이션 즐겨찾기)
   load(q: LiveQuery): Promise<LivePage>; // 투네이션 라이브 목록
-  enabled: boolean; // 설정: 칸에 방송 정보 표시
+  enabled: boolean; // 설정: 창에 방송 정보 표시
 }
 
 /**
- * 칸의 방송마다 제목·시청자 수·시작 시각. 투네이션 즐겨찾기에 있으면 그 정보를,
+ * 창의 방송마다 제목·시청자 수·시작 시각. 투네이션 즐겨찾기에 있으면 그 정보를,
  * 아니면 투네이션 라이브 목록에서 이름으로 찾는다 (3분마다, 투네이션에 등록된 크리에이터만).
  */
 export function useTileLiveInfo({ streams, known, load, enabled }: Options): Record<string, TileLiveInfo> {

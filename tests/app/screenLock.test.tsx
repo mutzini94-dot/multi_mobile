@@ -20,7 +20,7 @@ function setup() {
   fireEvent.click(within(document.querySelectorAll<HTMLElement>('.tile')[0]).getByRole('button', { name: '전체 화면' }));
 }
 
-// (0,0)은 jsdom에서 칸 나누기 손잡이(react-resizable-panels) 위로 잡혀 누름을 가로챈다
+// (0,0)은 jsdom에서 창 나누기 손잡이(react-resizable-panels) 위로 잡혀 누름을 가로챈다
 const AT = { pointerId: 1, clientX: 600, clientY: 400 };
 
 beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));

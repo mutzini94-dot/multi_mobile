@@ -131,7 +131,7 @@ test('설치형: 후원창이 열린 채 다른 방송을 고르면 대상 불�
   modeFromApp('pip');
   fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '불러오기' }));
   fireEvent.click(await screen.findByRole('button', { name: /^투네A · Twitch/ }));
-  // 같은 크리에이터를 두 칸에 띄운 경우는 경고 없음 → 직접 추가한 다른 방송으로 확인
+  // 같은 크리에이터를 두 창에 띄운 경우는 경고 없음 → 직접 추가한 다른 방송으로 확인
   fireEvent.click(within(tiles()[0] as HTMLElement).getByText('투네A'));
   expect(screen.queryByRole('alert')).toBeNull();
 });

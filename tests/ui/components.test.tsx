@@ -33,7 +33,9 @@ describe('Gnb', () => {
     const noop2 = () => {};
     render(<Gnb {...gnbProps} onLive={noop2} onReloadAll={noop2} sound={{ on: true, onToggle: noop2 }} onMini={noop2} onPresets={noop2} onSettings={noop2} account={{ cash: 51200, onHistory: noop2 }} />);
     const tools = screen.getByRole('toolbar', { name: '도구' });
-    const names = ['추천 라이브', '전체 새로고침', '전체 음소거', '미니 모드', '화면 구성', '설정'];
+    // 추천 라이브는 자주 쓰여 글자를 붙였다
+    expect(within(tools).getByRole('button', { name: '추천 라이브' }).textContent).toBe('추천 라이브');
+    const names = ['전체 새로고침', '전체 음소거', '미니 모드', '화면 구성', '설정'];
     for (const n of names) {
       const b = within(tools).getByRole('button', { name: n });
       expect(b.querySelector('svg')).not.toBeNull();
@@ -52,7 +54,7 @@ describe('Gnb', () => {
 });
 
 describe('Tile', () => {
-  test('빈 칸은 불러오기만', () => {
+  test('빈 창은 불러오기만', () => {
     render(<Tile {...tileProps} />);
     expect(screen.getByRole('button', { name: '불러오기' })).toBeInTheDocument();
     expect(screen.queryByTestId('player')).toBeNull();
@@ -62,31 +64,31 @@ describe('Tile', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} starting />);
     expect(container.querySelector('.tile')!.className).toMatch(/tile--starting/);
   });
-  test('빈 칸: 점선 영역에 불러오기 버튼과 최근 본 크리에이터 바로 넣기 (방송 중이면 표시), 더보기는 불러오기', async () => {
+  test('빈 창: 점선 영역에 불러오기 버튼과 최근 본 크리에이터 바로 넣기 (방송 중이면 표시), 더보기는 불러오기', async () => {
     const onLoad = vi.fn();
     const onQuickPick = vi.fn();
     const a = mkCreator(1, { name: '하나' });
     render(<Tile {...tileProps} onLoad={onLoad} quickPicks={[{ creator: a, live: true }, { creator: mkCreator(2, { name: '둘' }), live: false }]} onQuickPick={onQuickPick} />);
     expect(document.querySelector('.tile__empty')).not.toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: '하나 · 방송 중 · 이 칸에 넣기' }));
+    await userEvent.click(screen.getByRole('button', { name: '하나 · 방송 중 · 이 창에 넣기' }));
     expect(onQuickPick).toHaveBeenCalledWith(a);
     await userEvent.click(screen.getByRole('button', { name: '더보기' }));
     await userEvent.click(screen.getByRole('button', { name: '불러오기' }));
     expect(onLoad).toHaveBeenCalledTimes(2);
     expect(screen.getByText('카드를 끌어 놓아도 돼요')).toBeInTheDocument();
   });
-  test('빈 칸: 최근 본 크리에이터가 없으면 불러오기와 안내만', () => {
+  test('빈 창: 최근 본 크리에이터가 없으면 불러오기와 안내만', () => {
     render(<Tile {...tileProps} />);
     expect(screen.queryByRole('button', { name: '더보기' })).toBeNull();
     expect(screen.getAllByRole('button', { name: '불러오기' })).toHaveLength(1);
   });
-  test('칸 번호: 방송 칸은 불러오기 앞에, 빈 칸은 왼쪽 위에 작게', () => {
+  test('창 번호: 방송 창은 불러오기 앞에, 빈 창은 왼쪽 위에 작게', () => {
     const { rerender } = render(<Tile {...tileProps} creator={mkCreator(1)} slotNumber={3} />);
-    const badge = screen.getByLabelText('3번 화면');
+    const badge = screen.getByLabelText('3번 창');
     expect(badge).toHaveTextContent('3');
     expect(badge.nextElementSibling).toHaveTextContent('불러오기');
     rerender(<Tile {...tileProps} slotNumber={5} />);
-    expect(screen.getByLabelText('5번 화면')).toHaveTextContent('5');
+    expect(screen.getByLabelText('5번 창')).toHaveTextContent('5');
   });
   test('선택되면 tile--selected', () => {
     const { container } = render(<Tile {...tileProps} creator={mkCreator(1)} selected />);
@@ -100,7 +102,7 @@ describe('Tile', () => {
     rerender(<Tile {...tileProps} creator={mkCreator(1)} selected={false} soundOn />);
     expect(screen.getByRole('button', { name: '소리 켜기' })).toBeInTheDocument();
   });
-  test('칸 클릭 시 onSelect, 사운드 버튼 클릭 시 onToggleSound만', async () => {
+  test('창 클릭 시 onSelect, 사운드 버튼 클릭 시 onToggleSound만', async () => {
     const onSelect = vi.fn();
     const onToggleSound = vi.fn();
     render(<Tile {...tileProps} creator={mkCreator(1)} selected onSelect={onSelect} onToggleSound={onToggleSound} />);
@@ -119,7 +121,7 @@ describe('TileGrid', () => {
     const slotCol = (i: number) => container.querySelector(`[data-slot="${i}"]`)!.closest('[data-col]')!.getAttribute('data-col');
     expect([slotCol(0), slotCol(1), slotCol(2)]).toEqual(['left', 'left', 'right']);
   });
-  test.each([['single', 1], ['split2', 2], ['quad', 4]] as const)('%s는 칸 %i개', (layout, n) => {
+  test.each([['single', 1], ['split2', 2], ['quad', 4]] as const)('%s는 창 %i개', (layout, n) => {
     const { container } = render(
       <TileGrid state={applyLayout(initialViewState, layout)} renderTile={(i) => <span data-slot={i} />} onSizes={noop} />,
     );
@@ -193,7 +195,7 @@ describe('PlayerLayer', () => {
 });
 
 describe('선택 강조', () => {
-  test('선택된 칸의 플레이어에만 강조 표시가 붙는다 (영상 위에 그려 가려지지 않게)', async () => {
+  test('선택된 창의 플레이어에만 강조 표시가 붙는다 (영상 위에 그려 가려지지 않게)', async () => {
     const { PlayerLayer } = await import('../../src/ui/PlayerLayer');
     const state = { ...applyLayout(initialViewState, 'split2'), slots: [mkCreator(1), mkCreator(2)], selected: 1 };
     const { container, rerender } = render(<PlayerLayer state={state} stageRef={{ current: null }} slotEls={{ current: [] }} onReady={noop} />);

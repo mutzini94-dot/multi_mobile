@@ -1,3 +1,7 @@
+import { saveLastView } from '../../src/app/lastView';
+import { initialViewState } from '../../src/app/viewState';
+import { withSidePage } from '../../src/domain/pages';
+import { applyLayout } from '../../src/layout/layouts';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { mkCreator } from '../helpers/fixtures';
 import { App } from '../../src/app/App';
@@ -21,13 +25,15 @@ function setup() {
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));
+  // 예전 시작 화면(방송 + 후원 페이지 2창)으로: 휴대폰 첫 화면은 빈 창 하나지만 이 테스트들은 2창을 기준으로 한다
+  saveLastView(kv, withSidePage(applyLayout(initialViewState, 'wideSide')));
   const noBridge: ToonationBridge = { request: vi.fn(() => Promise.reject(new Error('NO_EXTENSION'))) as ToonationBridge['request'] };
   const win = { open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
   render(<App favorites={favorites} kv={kv} win={win} bridge={noBridge} desktop={null} />);
   return { win };
 }
 
-test('휴대폰 폭이면 칸을 세로로 쌓는 배치, 앱에 phone 표시', () => {
+test('휴대폰 폭이면 창을 세로로 쌓는 배치, 앱에 phone 표시', () => {
   mockPhone(true);
   setup();
   expect(document.querySelector('.tile-grid')!.className).toMatch(/tile-grid--phone/);
@@ -74,7 +80,7 @@ test('휴대폰: 채팅 버튼은 선택한 방송의 채팅을 시트로', () =
   expect(sheet.querySelector('iframe')!.getAttribute('src')).toContain('twitch.tv/embed/chan_1/chat');
 });
 
-test('휴대폰: 방송을 고르지 않아도 후원 페이지 칸이 따라가는 크리에이터가 있으면 그 크리에이터로', () => {
+test('휴대폰: 방송을 고르지 않아도 후원 페이지 창이 따라가는 크리에이터가 있으면 그 크리에이터로', () => {
   mockPhone(true);
   setup();
   pickA();
@@ -127,7 +133,7 @@ test('휴대폰: 창 추가는 자리를 묻지 않고 맨 위에 빈 창, 최�
   expect(screen.getByRole('button', { name: '창 추가' })).toBeDisabled();
 });
 
-test('휴대폰: 채팅을 열면 그 방송이 맨 위 칸으로 올라가고 채팅은 아래에 (방송을 가리지 않음)', () => {
+test('휴대폰: 채팅을 열면 그 방송이 맨 위 창으로 올라가고 채팅은 아래에 (방송을 가리지 않음)', () => {
   mockPhone(true);
   setup();
   pickInto(0, 'A');
@@ -142,7 +148,7 @@ test('휴대폰: 채팅을 열면 그 방송이 맨 위 칸으로 올라가고 �
   expect(document.querySelector('.app')).not.toHaveClass('app--chat-dock');
 });
 
-test('휴대폰: 아래 탭 즐겨찾기에서 고른 방송은 칸을 묻지 않고 빈 칸에, 빈 칸이 없으면 맨 위에 창을 더해 넣는다', () => {
+test('휴대폰: 아래 탭 즐겨찾기에서 고른 방송은 창을 묻지 않고 빈 창에, 빈 창이 없으면 맨 위에 창을 더해 넣는다', () => {
   mockPhone(true);
   setup();
   // 아래 탭의 즐겨찾기 목록에서 고른다
@@ -151,16 +157,16 @@ test('휴대폰: 아래 탭 즐겨찾기에서 고른 방송은 칸을 묻지 �
     return within(screen.getByRole('dialog', { name: '즐겨찾기' })).getByRole('button', { name });
   };
   fireEvent.click(card('A'));
-  expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
-  expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('A'); // 첫 빈 칸
+  expect(screen.queryByRole('dialog', { name: '넣을 창 고르기' })).toBeNull();
+  expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('A'); // 첫 빈 창
   expect(tiles()).toHaveLength(2);
-  // 빈 칸이 없으면 (두 번째 칸은 후원 페이지) 맨 위에 새 창
+  // 빈 창이 없으면 (두 번째 창은 후원 페이지) 맨 위에 새 창
   fireEvent.click(card('B'));
-  expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
+  expect(screen.queryByRole('dialog', { name: '넣을 창 고르기' })).toBeNull();
   expect(tiles()).toHaveLength(3);
   expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('B');
   expect(tiles()[0]).toHaveClass('tile--selected');
-  // 이미 보이는 방송이면 그 칸을 고르기만
+  // 이미 보이는 방송이면 그 창을 고르기만
   fireEvent.click(card('A'));
   expect(tiles()).toHaveLength(3);
   expect(tiles()[1]).toHaveClass('tile--selected');
@@ -183,7 +189,7 @@ test('휴대폰 전체보기: 상단 아이콘을 누르면 모든 창을 작은
     fireEvent.click(btn);
     expect(btn).toHaveAttribute('aria-pressed', 'true');
     expect(document.querySelector('.app')).toHaveClass('app--overview');
-    // 방송 A를 누르면: A가 맨 위 칸으로 올라가고 그 아래에 A 채팅
+    // 방송 A를 누르면: A가 맨 위 창으로 올라가고 그 아래에 A 채팅
     fireEvent.click(screen.getByRole('button', { name: 'A 보기' }));
     expect(document.querySelector('.app')).not.toHaveClass('app--overview');
     expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('A');
@@ -193,11 +199,11 @@ test('휴대폰 전체보기: 상단 아이콘을 누르면 모든 창을 작은
     // 빈 창·페이지도 고를 수 있다 (그 자리로 이동만)
     fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
     expect(screen.queryByRole('dialog', { name: 'A 채팅' })).toBeNull(); // 전체보기를 열면 채팅은 닫힌다
-    fireEvent.click(screen.getByRole('button', { name: '3번 화면 보기' })); // 후원 페이지 칸
+    fireEvent.click(screen.getByRole('button', { name: '3번 창 보기' })); // 후원 페이지 창
     expect(scrolled.length).toBeGreaterThan(0);
     expect(screen.queryByRole('dialog', { name: /채팅$/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
-    expect(screen.getByRole('button', { name: '3번 화면 보기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3번 창 보기' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '전체보기' })); // 다시 누르면 닫힌다
     expect(document.querySelector('.app')).not.toHaveClass('app--overview');
   } finally {

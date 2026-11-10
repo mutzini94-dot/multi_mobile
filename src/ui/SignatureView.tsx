@@ -8,7 +8,7 @@ interface Props {
   onPick?(s: Signature): void; // 누르면 그 시그니처로 후원하기
 }
 
-/** 시그니처 칸: 선택한 방송 크리에이터의 시그니처 목록 (검색·정렬) */
+/** 시그니처 창: 선택한 방송 크리에이터의 시그니처 목록 (검색·정렬) */
 export function SignatureView({ creator, load, onPick }: Props) {
   const tag = creator?.donateId ?? '';
   const [list, setList] = useState<Signature[] | null>(null);
@@ -34,7 +34,7 @@ export function SignatureView({ creator, load, onPick }: Props) {
     return fetchList();
   }, [fetchList]);
 
-  if (!creator) return <div className="page-view page-view--empty">시그니처를 볼 방송 칸을 선택하세요</div>;
+  if (!creator) return <div className="page-view page-view--empty">시그니처를 볼 방송 창을 선택하세요</div>;
   const shown = list ? sortSignatures(filterSignatures(list, query), sort) : [];
   return (
     <div className="signature">

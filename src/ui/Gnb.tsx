@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePhone } from './usePhone';
 import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
@@ -25,6 +26,7 @@ interface Props {
   canDonate: boolean;
   onDonate(): void;
   onChat?(): void; // 휴대폰: 선택한 방송의 채팅 시트
+  onHome?(): void; // 로고: 첫 화면으로 (전체보기·시트를 닫고 맨 위로)
   overview?: { on: boolean; onToggle(): void }; // 휴대폰: 모든 창을 작은 타일로 모아 보기
   sleep?: { remainingMin: number | null; onOpen(): void }; // 휴대폰 메뉴: 취침 타이머
   canChat?: boolean;
@@ -39,12 +41,17 @@ interface Props {
   onMini?(): void; // 미니 모드 (방송이 있을 때만)
   sound?: { on: boolean; onToggle(): void }; // 전체 음소거·해제 (단축키 M과 같은 상태)
   onLive?(): void; // 추천 라이브 (투네이션 라이브 목록)
-  onReloadAll?(): void; // 전체 새로고침 (모든 칸)
+  onReloadAll?(): void; // 전체 새로고침 (모든 창)
   mode?: { value: RemoteMode; onChange(m: RemoteMode): void }; // 상단 스위치: 크리에이터 리모컨 ↔ 후원 리모컨
 }
 
 export function Gnb(props: Props) {
   const [sheet, setSheet] = useState(false);
+  const phone = usePhone();
+  // 휴대폰 메뉴는 휴대폰 폭에서만: 창을 넓히면 닫는다
+  useEffect(() => {
+    if (!phone) setSheet(false);
+  }, [phone]);
   return (
     <>
       <GnbBar {...props} onMenu={() => setSheet(true)} />
@@ -53,13 +60,27 @@ export function Gnb(props: Props) {
   );
 }
 
-function GnbBar({ onMenu, overview, layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
+function GnbBar({ onMenu, onHome, overview, layout, onLayout, canDonate, onDonate, onChat, canChat, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode }: Props & { onMenu(): void }) {
   const creator = mode?.value === 'creator';
+  // 화면 모양: 평소에는 지금 모양 하나만 보이고, 누르면 9가지가 펼쳐진다
+  const [layoutsOpen, setLayoutsOpen] = useState(false);
+  useEffect(() => {
+    if (!layoutsOpen) return;
+    const close = (e: Event) => !(e.target as HTMLElement)?.closest?.('.gnb__layouts') && setLayoutsOpen(false);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [layoutsOpen]);
   return (
     <header className="gnb">
-      <span className="gnb__logo">
-        <img className="gnb__logo-img" src={logoUrl} alt="투네이션 후원 브라우저" />
-      </span>
+      {onHome ? (
+        <button type="button" className="gnb__logo gnb__logo--home" aria-label="첫 화면으로" title="첫 화면으로" onClick={onHome}>
+          <img className="gnb__logo-img" src={logoUrl} alt="" />
+        </button>
+      ) : (
+        <span className="gnb__logo">
+          <img className="gnb__logo-img" src={logoUrl} alt="투네이션 후원 브라우저" />
+        </span>
+      )}
       {overview && (
         <button type="button" className="gnb__overview" aria-label="전체보기" title="전체보기" aria-pressed={overview.on} onClick={overview.onToggle}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
@@ -93,16 +114,21 @@ function GnbBar({ onMenu, overview, layout, onLayout, canDonate, onDonate, onCha
       {/* 크리에이터 리모컨일 때는 리모컨이 자기 메뉴를 가진다 */}
       {!creator && (
         <>
-          <div className="gnb__layouts">
+          <div className={`gnb__layouts${layoutsOpen ? ' gnb__layouts--open' : ''}`} role="group" aria-label="화면 모양">
             {LAYOUTS.map((l) => (
               <button
                 key={l}
                 type="button"
                 aria-label={LAYOUT_LABEL[l]}
-                data-tip={LAYOUT_LABEL[l]}
+                data-tip={layoutsOpen ? LAYOUT_LABEL[l] : `화면 모양: ${LAYOUT_LABEL[l]} (눌러서 바꾸기)`}
                 aria-pressed={layout === l}
+                aria-expanded={layout === l ? layoutsOpen : undefined}
                 className={`layout-icon layout-icon--${l}`}
-                onClick={() => onLayout(l)}
+                onClick={() => {
+                  if (layout === l && !layoutsOpen) return setLayoutsOpen(true);
+                  setLayoutsOpen(false);
+                  onLayout(l);
+                }}
               >
                 {ICON_CELLS[l].map((c) => (
                   <i key={c} />
@@ -112,8 +138,9 @@ function GnbBar({ onMenu, overview, layout, onLayout, canDonate, onDonate, onCha
           </div>
           <div className="gnb__tools" role="toolbar" aria-label="도구">
             {onLive && (
-              <button type="button" className="gnb__tool gnb__tool--live" aria-label="추천 라이브" data-tip="추천 라이브" onClick={onLive}>
+              <button type="button" className="gnb__tool gnb__tool--live gnb__tool--text" aria-label="추천 라이브" onClick={onLive}>
                 <IconLive />
+                <span>추천 라이브</span>
               </button>
             )}
             {onReloadAll && (
@@ -241,10 +268,20 @@ function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, log
             ))}
           </div>
         )}
+        {/* 로그인 상태를 맨 위에 (채팅·후원하기·추천 라이브는 상단 바·아래 탭에 있어 메뉴에서 뺐다) */}
+        {!creator && !account && onLogin && (
+          <button type="button" className="phone-sheet__login" disabled={loggingIn} onClick={run(onLogin)}>
+            <IconUser />
+            <span>
+              <strong>{loggingIn ? '로그인 중…' : '투네이션 로그인'}</strong>
+              <small>즐겨찾기 · 후원 내역 불러오기</small>
+            </span>
+          </button>
+        )}
         {!creator && (
           <>
             <div className="phone-sheet__list">
-              {row('추천 라이브', <IconLive />, onLive)}
+              {account && row(account.cash === null ? '내 후원 내역' : `내 후원 내역 · 캐시 ${account.cash.toLocaleString('ko-KR')}`, <IconCoin />, account.onHistory)}
               {row('전체 새로고침', <IconReload />, onReloadAll)}
               {sound && row(sound.on ? '전체 음소거' : '음소거 해제', sound.on ? <IconVolume /> : <IconMute />, sound.onToggle, { pressed: !sound.on })}
               {row('미니 모드', <IconMini />, onMini)}
@@ -254,8 +291,6 @@ function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, log
               {row('스킨', <IconPalette />, onSkin && (() => onSkin(Math.round(window.innerWidth / 2) - 90, Math.round(window.innerHeight / 3))))}
               {row('도움말', <IconHelp />, onHelp)}
               {row('설정', <IconSettings />, onSettings)}
-              {!account && onLogin && row(loggingIn ? '로그인 중…' : '로그인', <IconUser />, onLogin, { disabled: loggingIn })}
-              {account && row(account.cash === null ? '내 후원 내역' : `내 후원 내역 · 캐시 ${account.cash.toLocaleString('ko-KR')}`, <IconCoin />, account.onHistory)}
             </div>
           </>
         )}

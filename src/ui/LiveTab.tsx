@@ -21,7 +21,7 @@ function topCategories(items: LiveItem[]): string[] {
   return [...n].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([c]) => c);
 }
 
-/** 불러오기 창 '투네이션 라이브' 탭: toon.at/donator?live 목록에서 골라 칸에 넣는다 */
+/** 불러오기 창 '투네이션 라이브' 탭: toon.at/donator?live 목록에서 골라 창에 넣는다 */
 export function LiveTab({ load, onPick, favoriteTags, onToggleFavorite, variant = 'list' }: Props) {
   const [q, setQ] = useState('');
   const [query, setQuery] = useState<Omit<LiveQuery, 'page' | 'size'>>({ q: '', order: 'VIEWERS', platform: '', category: '' });

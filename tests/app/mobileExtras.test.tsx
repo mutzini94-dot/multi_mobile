@@ -1,3 +1,7 @@
+import { saveLastView } from '../../src/app/lastView';
+import { initialViewState } from '../../src/app/viewState';
+import { withSidePage } from '../../src/domain/pages';
+import { applyLayout } from '../../src/layout/layouts';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { useEffect } from 'react';
 import { App } from '../../src/app/App';
@@ -30,6 +34,8 @@ afterEach(() => {
 function setup({ onboarded = true, search = '' } = {}) {
   const kv = safeStorage(undefined);
   if (onboarded) kv.set(ONBOARDED_KEY, '1');
+  // 예전 시작 화면(방송 + 후원 페이지 2창)으로: 휴대폰 첫 화면은 빈 창 하나지만 이 테스트들은 2창을 기준으로 한다
+  saveLastView(kv, withSidePage(applyLayout(initialViewState, 'wideSide')));
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   favorites.add(mkCreator(2, { name: 'B' }));
@@ -50,7 +56,7 @@ function longPress(el: Element) {
   fireEvent.pointerUp(window, { pointerId: 5, pointerType: 'touch', clientX: 600, clientY: 400 });
 }
 
-test('휴대폰: 칸을 길게 눌렀다 떼면 아래에서 칸 메뉴 (소리·전체 화면·채팅·후원·세로·즐겨찾기·창 닫기)', () => {
+test('휴대폰: 창을 길게 눌렀다 떼면 아래에서 창 메뉴 (소리·전체 화면·채팅·후원·세로·즐겨찾기·창 닫기)', () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   mockPhone();
   const vibrate = vi.fn();
@@ -63,9 +69,9 @@ test('휴대폰: 칸을 길게 눌렀다 떼면 아래에서 칸 메뉴 (소리�
   for (const n of ['소리 끄기', '전체 화면', '채팅 보기', '후원하기', '세로로 보기', '즐겨찾기 해제', '창 닫기']) expect(within(menu).getByRole('menuitem', { name: n })).toBeInTheDocument();
   fireEvent.click(within(menu).getByRole('menuitem', { name: '즐겨찾기 해제' }));
   expect(favorites.list().map((c) => c.name)).toEqual(['B']);
-  // 빈 칸·후원 페이지 칸은 칸 메뉴
+  // 빈 창·후원 페이지 창은 창 메뉴
   longPress(tiles()[1].querySelector('.tile__bar')!);
-  expect(screen.getByRole('menu', { name: '2번 화면 메뉴' })).toBeInTheDocument();
+  expect(screen.getByRole('menu', { name: '2번 창 메뉴' })).toBeInTheDocument();
   expect(vibrate).toHaveBeenCalled(); // 진동
 });
 
@@ -108,7 +114,7 @@ test('앱 아이콘 바로가기: ?action=overview 로 열면 전체보기, 주�
   expect(replaceState).toHaveBeenCalled();
 });
 
-test('다른 앱에서 공유한 방송 링크로 열면 그 방송을 칸에 넣는다 (투네이션에 등록된 크리에이터만)', async () => {
+test('다른 앱에서 공유한 방송 링크로 열면 그 방송을 창에 넣는다 (투네이션에 등록된 크리에이터만)', async () => {
   mockPhone();
   setup({ search: '?text=' + encodeURIComponent('같이 봐요 https://www.twitch.tv/chan_2') });
   await act(async () => {});
@@ -120,9 +126,46 @@ test('휴대폰 첫 실행 안내는 휴대폰 메뉴로 (전체보기·길게 �
   mockPhone();
   const { PHONE_TOUR_STEPS } = await import('../../src/ui/Onboarding');
   setup({ onboarded: false });
+  // 빈 화면에서는 안내하지 않고, 방송을 처음 넣은 뒤에 시작
+  expect(screen.queryByRole('region', { name: '처음 사용 안내' })).toBeNull();
+  pickInto(0, 'A');
   const guide = await screen.findByRole('region', { name: '처음 사용 안내' }, { timeout: 4000 });
   expect(within(guide).getByText(PHONE_TOUR_STEPS[0].title)).toBeInTheDocument();
   expect(within(guide).getByText(`1 / ${PHONE_TOUR_STEPS.length}`)).toBeInTheDocument();
   const titles = PHONE_TOUR_STEPS.map((s) => s.title).join(' ');
-  for (const w of ['전체보기', '길게', '채팅', '전체 화면']) expect(titles).toContain(w);
+  expect(PHONE_TOUR_STEPS.length).toBeLessThanOrEqual(3);
+  for (const w of ['창', '채팅', '아래 탭']) expect(titles).toContain(w);
+});
+
+test('휴대폰 첫 화면: 후원 페이지 없이 빈 창 하나와 추천 라이브 둘러보기', () => {
+  mockPhone();
+  const kv = safeStorage(undefined);
+  kv.set(ONBOARDED_KEY, '1');
+  const noBridge: ToonationBridge = { request: vi.fn(() => Promise.reject(new Error('NO_EXTENSION'))) as ToonationBridge['request'] };
+  const win = { open: vi.fn(), screen: {} as Screen, location: { hash: '', search: '', href: 'http://localhost:5230/' } as Location, navigator: {} as Navigator };
+  render(<App favorites={localFavorites(kv)} kv={kv} win={win} bridge={noBridge} desktop={null} />);
+  expect(tiles()).toHaveLength(1);
+  expect(tiles()[0].classList.contains('tile--empty')).toBe(true);
+  expect(within(tiles()[0]).getByRole('button', { name: /추천 라이브 둘러보기/ })).toBeInTheDocument();
+});
+
+test('창 비우기는 5초 동안 되돌릴 수 있다', () => {
+  mockPhone();
+  setup();
+  pickInto(0, 'A');
+  fireEvent.click(within(tiles()[1]).getByRole('button', { name: '창 메뉴' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: /창 비우기/ }));
+  expect(tiles()[1].classList.contains('tile--empty')).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: '되돌리기' }));
+  expect(tiles()[1].classList.contains('tile--page')).toBe(true);
+});
+
+test('로고를 누르면 전체보기를 닫고 첫 화면으로', () => {
+  mockPhone();
+  setup();
+  window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
+  expect(document.querySelector('.app')!.classList.contains('app--overview')).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: '첫 화면으로' }));
+  expect(document.querySelector('.app')!.classList.contains('app--overview')).toBe(false);
 });

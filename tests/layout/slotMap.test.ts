@@ -1,7 +1,7 @@
 import { SLOT_MAP } from '../../src/layout/slotMap';
 import { LAYOUTS, SLOT_COUNT } from '../../src/layout/layouts';
 
-test('레이아웃마다 칸 수만큼 자리가 있고, 자리가 겹치지 않는다', () => {
+test('레이아웃마다 창 수만큼 자리가 있고, 자리가 겹치지 않는다', () => {
   for (const l of LAYOUTS) {
     const m = SLOT_MAP[l];
     expect(m.areas).toHaveLength(SLOT_COUNT[l]);
@@ -16,7 +16,7 @@ test('레이아웃마다 칸 수만큼 자리가 있고, 자리가 겹치지 않
   }
 });
 
-test('칸 번호는 실제 화면 배치와 같다 (4분할·6분할은 열 순서, 1+2는 왼쪽 위아래·오른쪽 큰 칸)', () => {
+test('창 번호는 실제 화면 배치와 같다 (4분할·6분할은 열 순서, 1+2는 왼쪽 위아래·오른쪽 큰 창)', () => {
   expect(SLOT_MAP.quad.areas).toEqual([
     [1, 1, 1, 1],
     [2, 1, 1, 1],

@@ -3,12 +3,12 @@ import { LAYOUT_LABEL } from '../layout/layouts';
 import { SLOT_MAP } from '../layout/slotMap';
 
 interface Props {
-  layouts: LayoutKind[]; // 칸이 하나(또는 가장 적게) 늘어나는 레이아웃들
+  layouts: LayoutKind[]; // 창이 하나(또는 가장 적게) 늘어나는 레이아웃들
   onPick(layout: LayoutKind, at: number): void;
   onClose(): void;
 }
 
-/** 창 추가: 늘어난 레이아웃 모양에서 새 빈 칸을 놓을 자리를 고른다 (지금 칸들은 순서대로 나머지 자리에) */
+/** 창 추가: 늘어난 레이아웃 모양에서 새 빈 창을 놓을 자리를 고른다 (지금 창들은 순서대로 나머지 자리에) */
 export function AddWindowDialog({ layouts, onPick, onClose }: Props) {
   return (
     <div className="modal-backdrop modal-backdrop--top" onClick={onClose}>

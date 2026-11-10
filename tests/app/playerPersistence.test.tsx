@@ -19,7 +19,7 @@ vi.mock('../../src/players/StreamPlayer', () => ({
 
 const noBridge: ToonationBridge = { request: () => Promise.reject(new Error('NO_EXTENSION')) };
 
-test('레이아웃을 바꿔도 남아 있는 칸의 플레이어는 다시 마운트되지 않는다', () => {
+test('레이아웃을 바꿔도 남아 있는 창의 플레이어는 다시 마운트되지 않는다', () => {
   mounts.length = 0;
   const kv = quadKv();
   const favorites = localFavorites(kv);
@@ -37,7 +37,7 @@ test('레이아웃을 바꿔도 남아 있는 칸의 플레이어는 다시 마�
   expect(screen.getAllByTestId('player-twitch:chan_1')).toHaveLength(1);
 });
 
-test('레이아웃을 줄이면 빠진 칸의 방송은 숨겨 두고, 다시 늘리면 다시 불러오지 않고 돌아온다', () => {
+test('레이아웃을 줄이면 빠진 창의 방송은 숨겨 두고, 다시 늘리면 다시 불러오지 않고 돌아온다', () => {
   mounts.length = 0;
   const kv = quadKv();
   const favorites = localFavorites(kv);

@@ -166,7 +166,7 @@ export function SettingsDialog(p: Props) {
         )}
 
         <Section title="화면">
-          <Toggle label="시작할 때 마지막 화면 복원" checked={s.restoreLastView} onChange={(v) => p.onChange({ restoreLastView: v })} hint="레이아웃·칸·칸 크기를 그대로 불러옵니다" />
+          <Toggle label="시작할 때 마지막 화면 복원" checked={s.restoreLastView} onChange={(v) => p.onChange({ restoreLastView: v })} hint="레이아웃·창·창 크기를 그대로 불러옵니다" />
           <Select
             label="기본 레이아웃"
             value={s.defaultLayout}
@@ -178,11 +178,11 @@ export function SettingsDialog(p: Props) {
             label="영상 클릭"
             value={s.videoClick}
             options={[
-              ['select', '칸 선택 (영상을 잡고 끌기 가능)'],
+              ['select', '창 선택 (영상을 잡고 끌기 가능)'],
               ['player', '플레이어 재생·정지'],
             ]}
             onChange={(v) => p.onChange({ videoClick: v })}
-            hint="칸 선택: 선택된 칸은 영상을 눌러 플레이어를 조작"
+            hint="창 선택: 선택된 창은 영상을 눌러 플레이어를 조작"
           />
           <Select
             label="테마"
@@ -195,7 +195,7 @@ export function SettingsDialog(p: Props) {
             onChange={(v) => p.onChange({ theme: v })}
           />
           <Select label="스킨" value={s.skin} options={SKINS.map((k) => [k.id, k.label])} onChange={(v) => p.onChange({ skin: v })} hint="색·모서리·버튼 모양만 바뀌고 배치와 기능은 같습니다" />
-          <Toggle label="칸에 방송 정보 표시" checked={s.showLiveInfo} onChange={(v) => p.onChange({ showLiveInfo: v })} hint="제목·시청자 수·방송한 시간 (투네이션에 등록된 크리에이터)" />
+          <Toggle label="창에 방송 정보 표시" checked={s.showLiveInfo} onChange={(v) => p.onChange({ showLiveInfo: v })} hint="제목·시청자 수·방송한 시간 (투네이션에 등록된 크리에이터)" />
           <Select
             label="퀵패널"
             value={s.quickPanel}
@@ -207,7 +207,7 @@ export function SettingsDialog(p: Props) {
             onChange={(v) => p.onChange({ quickPanel: v })}
             hint="즐겨찾기·최근 본 크리에이터를 화면 옆에 두고 바로 띄웁니다"
           />
-          <Toggle label="단축키" checked={s.shortcuts} onChange={(v) => p.onChange({ shortcuts: v })} hint="1~9 칸 선택 · M 소리 · F 전체 화면 · D 후원하기" />
+          <Toggle label="단축키" checked={s.shortcuts} onChange={(v) => p.onChange({ shortcuts: v })} hint="1~9 창 선택 · M 소리 · F 전체 화면 · D 후원하기" />
           {p.desktop && <Toggle label="항상 위에 표시" checked={s.alwaysOnTop} onChange={(v) => p.onChange({ alwaysOnTop: v })} />}
         </Section>
 
@@ -216,8 +216,8 @@ export function SettingsDialog(p: Props) {
             label="소리"
             value={s.soundMode}
             options={[
-              ['single', '선택한 칸만 소리'],
-              ['mix', '여러 칸 동시에 듣기 (칸별 볼륨)'],
+              ['single', '선택한 창만 소리'],
+              ['mix', '여러 창 동시에 듣기 (창별 볼륨)'],
             ]}
             onChange={(v) => p.onChange({ soundMode: v })}
           />
@@ -226,7 +226,7 @@ export function SettingsDialog(p: Props) {
             <input type="range" aria-label="기본 볼륨" min={0} max={100} value={s.masterVolume} onChange={(e) => p.onChange({ masterVolume: Number(e.target.value) })} />
           </label>
           <Select
-            label="숨긴 칸 재생"
+            label="숨긴 창 재생"
             value={s.hiddenSlotPlayback}
             options={[
               ['keep', '계속 재생 (다시 보이면 바로 이어서)'],
@@ -244,9 +244,9 @@ export function SettingsDialog(p: Props) {
               ['on', '항상'],
             ]}
             onChange={(v) => p.onChange({ dataSaver: v })}
-            hint="선택한 칸만 재생하고 다른 칸은 멈춥니다 (트위치는 낮은 화질)"
+            hint="선택한 창만 재생하고 다른 창은 멈춥니다 (트위치는 낮은 화질)"
           />
-          <Toggle label="선택하지 않은 칸은 낮은 화질" checked={s.lowQualityOthers} onChange={(v) => p.onChange({ lowQualityOthers: v })} hint="트위치만 (유튜브는 화질 지정을 지원하지 않습니다)" />
+          <Toggle label="선택하지 않은 창은 낮은 화질" checked={s.lowQualityOthers} onChange={(v) => p.onChange({ lowQualityOthers: v })} hint="트위치만 (유튜브는 화질 지정을 지원하지 않습니다)" />
           <Toggle
             label="방송이 끝나면 라이브 중인 즐겨찾기로 바꾸기"
             checked={s.autoReplaceEnded}
@@ -270,7 +270,7 @@ export function SettingsDialog(p: Props) {
             <label className="settings__row settings__row--top">
               <span>
                 자주 쓰는 후원 메시지
-                <small className="muted">한 줄에 하나, 5개까지. 후원창에서 고르면 메시지 칸만 채웁니다</small>
+                <small className="muted">한 줄에 하나, 5개까지. 후원창에서 고르면 메시지 창만 채웁니다</small>
               </span>
               <textarea
                 aria-label="자주 쓰는 후원 메시지"

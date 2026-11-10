@@ -30,7 +30,7 @@ const tiles = () => [...document.querySelectorAll<HTMLElement>('.tile')];
 const menu = () => screen.queryByRole('menu', { name: '영상 메뉴' });
 const items = () => within(menu()!).getAllByRole('menuitem').map((b) => b.querySelector('.context-menu__label')!.textContent);
 
-test('영상 칸 오른쪽 클릭: 소리 끄기·전체 화면·새 창으로 분리·창 닫기', () => {
+test('영상 창 오른쪽 클릭: 소리 끄기·전체 화면·새 창으로 분리·창 닫기', () => {
   setup();
   fireEvent.contextMenu(tiles()[0], { clientX: 200, clientY: 150 });
   expect(items()).toEqual(['소리 끄기', '전체 화면', '후원하기', '세로로 보기', expect.stringMatching(/^즐겨찾기 (추가|해제)$/), '새 창으로 분리', '창 닫기']);
@@ -39,7 +39,7 @@ test('영상 칸 오른쪽 클릭: 소리 끄기·전체 화면·새 창으로 �
   expect(screen.getByRole('button', { name: '음소거 해제' })).toBeInTheDocument(); // 전체 소리 꺼짐
 });
 
-test('소리가 안 나는 칸은 소리 켜기 (그 칸을 선택해 그 칸 소리를 켠다)', () => {
+test('소리가 안 나는 창은 소리 켜기 (그 창을 선택해 그 창 소리를 켠다)', () => {
   setup();
   fireEvent.contextMenu(tiles()[1]);
   fireEvent.click(within(menu()!).getByRole('menuitem', { name: '소리 켜기' }));
@@ -54,7 +54,7 @@ test('창 닫기: 방송을 내리고 그 창도 닫는다 (레이아웃이 한 
   expect(screen.queryByTitle('player-twitch:chan_2')).toBeNull();
 });
 
-test('영상 위(잡는 층)에서 오른쪽 클릭해도 메뉴가 뜬다, 빈 칸은 빈 창 메뉴', () => {
+test('영상 위(잡는 층)에서 오른쪽 클릭해도 메뉴가 뜬다, 빈 창은 빈 창 메뉴', () => {
   setup();
   const grab = document.querySelector<HTMLElement>('.player-layer__item[data-slot="1"] .player-layer__grab')!;
   fireEvent.contextMenu(grab, { clientX: 300, clientY: 200 });
@@ -65,7 +65,7 @@ test('영상 위(잡는 층)에서 오른쪽 클릭해도 메뉴가 뜬다, 빈 
   expect(screen.getByRole('menu', { name: '빈 창 메뉴' })).toBeInTheDocument();
 });
 
-test('설치형: 영상(iframe) 안에서 오른쪽 클릭한 자리를 앱이 알려 주면 그 칸 메뉴', () => {
+test('설치형: 영상(iframe) 안에서 오른쪽 클릭한 자리를 앱이 알려 주면 그 창 메뉴', () => {
   let frameMenu: ((p: { x: number; y: number }) => void) | null = null;
   const desktop = {
     onDonateClosed: () => () => {},

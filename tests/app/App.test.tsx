@@ -40,7 +40,7 @@ test('빈 화면에서 후원하기 비활성', () => {
   expect(screen.getByRole('button', { name: '후원하기' })).toBeDisabled();
 });
 
-test('즐겨찾기 고르기 → 칸에 표시·선택 → 후원하기 → 팝업', () => {
+test('즐겨찾기 고르기 → 창에 표시·선택 → 후원하기 → 팝업', () => {
   const { win } = setup();
   pick(0, 'A');
   expect(tiles()[0]).toHaveClass('tile--selected');
@@ -75,7 +75,7 @@ test('A 팝업 뒤 B 선택 → 경고, 팝업을 닫으면 1초 뒤 경고 사�
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
-test('4분할에서 4번 칸 선택 후 1+2로 바꾸면 후원하기 비활성', () => {
+test('4분할에서 4번 창 선택 후 1+2로 바꾸면 후원하기 비활성', () => {
   setup();
   pick(3, 'A');
   expect(screen.getByRole('button', { name: '후원하기' })).toBeEnabled();
@@ -91,7 +91,7 @@ describe('투네이션 즐겨찾기 연동', () => {
     ),
   });
 
-  test('불러오기 창에서 투네이션 즐겨찾기를 골라 칸에 넣고, 확인 없이 후원한다', async () => {
+  test('불러오기 창에서 투네이션 즐겨찾기를 골라 창에 넣고, 확인 없이 후원한다', async () => {
     const kv = quadKv();
     const win = {
       open: vi.fn(() => ({ closed: false }) as unknown as Window),

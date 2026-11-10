@@ -6,7 +6,7 @@ import type { KV } from '../storage/safeStorage';
 
 interface Props {
   kv: KV;
-  current: ViewState; // 저장할 지금 구성 (분리한 칸은 원래 내용으로)
+  current: ViewState; // 저장할 지금 구성 (분리한 창은 원래 내용으로)
   onLoad(view: ViewState): void;
   onClose(): void;
 }
@@ -16,7 +16,7 @@ const summary = (p: Preset) => {
   return `${LAYOUT_LABEL[p.view.layout]} · ${names.length ? names.join(', ') : '빈 화면'}`;
 };
 
-/** 화면 구성: 지금 레이아웃·칸 구성을 이름 붙여 저장하고 한 번에 불러온다 */
+/** 화면 구성: 지금 레이아웃·창 구성을 이름 붙여 저장하고 한 번에 불러온다 */
 export function PresetsDialog({ kv, current, onLoad, onClose }: Props) {
   const [list, setList] = useState(() => listPresets(kv));
   const [name, setName] = useState('');

@@ -38,7 +38,7 @@ describe('마지막 화면 복원 · 기본 레이아웃', () => {
     expect(within(tile(0)).getByText('A')).toBeInTheDocument();
   });
 
-  test('켜져 있으면 다음 실행에서 레이아웃·칸이 그대로 돌아온다', () => {
+  test('켜져 있으면 다음 실행에서 레이아웃·창이 그대로 돌아온다', () => {
     const kv = quadKv();
     const first = setup({ kv });
     fireEvent.click(screen.getByRole('button', { name: '1+2' }));
@@ -76,7 +76,7 @@ test('영상 클릭을 "플레이어"로 바꾸면 영상 위 잡는 층이 없�
 });
 
 describe('단축키', () => {
-  test('1~4 칸 선택, M 소리, F 전체 화면, D 후원하기', () => {
+  test('1~4 창 선택, M 소리, F 전체 화면, D 후원하기', () => {
     const { win } = setup();
     pick(0, 'A');
     pick(1, 'B');

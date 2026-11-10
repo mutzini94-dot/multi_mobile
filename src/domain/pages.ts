@@ -2,17 +2,17 @@ import type { Result } from './creatorInput';
 import type { ActivityPage, SignaturePage, ChatPage, Creator, DonatePage, PageSlot, SlotItem, ViewState, WebPage } from './types';
 import { visibleSlots } from '../layout/layouts';
 
-/** 칸 내용이 방송인지 (후원 페이지·웹페이지 칸이 아닌지) */
+/** 창 내용이 방송인지 (후원 페이지·웹페이지 창이 아닌지) */
 export function isStream(item: SlotItem | null | undefined): item is Creator {
   return !!item && !('kind' in item);
 }
 
-/** 후원 페이지·웹페이지 칸 (분리 표시는 아님) */
+/** 후원 페이지·웹페이지 창 (분리 표시는 아님) */
 export function isPage(item: SlotItem | null | undefined): item is PageSlot {
   return !!item && 'kind' in item && (item.kind === 'web' || item.kind === 'donate' || item.kind === 'chat' || item.kind === 'activity' || item.kind === 'signature');
 }
 
-/** 웹페이지 칸 주소: 주소만 넣으면 https://, http·https만 허용 */
+/** 웹페이지 창 주소: 주소만 넣으면 https://, http·https만 허용 */
 export function normalizePageUrl(input: string): Result<string> {
   const raw = String(input ?? '').trim();
   if (!raw || /\s/.test(raw)) return { ok: false, error: '열 주소를 입력해 주세요 (예: naver.com)' };
@@ -36,27 +36,27 @@ export function makeWebPage(input: string): Result<WebPage> {
   return { ok: true, value: { kind: 'web', key: newKey('web'), name, url: r.value } };
 }
 
-/** 후원 페이지 칸: 선택한 방송 크리에이터의 투네이션 후원 페이지를 따라 보여준다 */
+/** 후원 페이지 창: 선택한 방송 크리에이터의 투네이션 후원 페이지를 따라 보여준다 */
 export function makeDonatePage(): DonatePage {
   return { kind: 'donate', key: newKey('donate'), name: '후원 페이지' };
 }
 
-/** 채팅 칸: 선택한 방송의 라이브 채팅을 따라 보여준다 */
+/** 채팅 창: 선택한 방송의 라이브 채팅을 따라 보여준다 */
 export function makeChatPage(): ChatPage {
   return { kind: 'chat', key: newKey('chat'), name: '채팅' };
 }
 
-/** 활동 위젯 칸: 즐겨찾기·후원 크리에이터의 라이브와 최근 활동 */
+/** 활동 위젯 창: 즐겨찾기·후원 크리에이터의 라이브와 최근 활동 */
 export function makeActivityPage(): ActivityPage {
   return { kind: 'activity', key: newKey('activity'), name: '활동 위젯' };
 }
 
-/** 시그니처 칸: 선택한 방송 크리에이터의 시그니처 목록을 따라 보여준다 */
+/** 시그니처 창: 선택한 방송 크리에이터의 시그니처 목록을 따라 보여준다 */
 export function makeSignaturePage(): SignaturePage {
   return { kind: 'signature', key: newKey('signature'), name: '시그니처' };
 }
 
-/** 큰 화면+1: 오른쪽 좁은 칸이 비어 있으면 후원 페이지(왼쪽 방송을 따라감)를 넣는다 */
+/** 큰 화면+1: 오른쪽 좁은 창이 비어 있으면 후원 페이지(왼쪽 방송을 따라감)를 넣는다 */
 export function withSidePage(state: ViewState): ViewState {
   if (state.layout !== 'wideSide' || state.slots[1]) return state;
   const slots = state.slots.slice();
@@ -64,12 +64,12 @@ export function withSidePage(state: ViewState): ViewState {
   return { ...state, slots };
 }
 
-/** 방송에 고정할 수 있는 칸 (선택한 방송을 따라가는 칸) */
+/** 방송에 고정할 수 있는 창 (선택한 방송을 따라가는 창) */
 export function isPinnable(item: SlotItem | null | undefined): item is DonatePage | ChatPage | SignaturePage {
   return isPage(item) && (item.kind === 'donate' || item.kind === 'chat' || item.kind === 'signature');
 }
 
-/** 페이지 칸이 보여 줄 방송: 고정한 방송 > 따라가는 방송(선택한 방송) */
+/** 페이지 창이 보여 줄 방송: 고정한 방송 > 따라가는 방송(선택한 방송) */
 export function pageTarget(page: PageSlot, follow: Creator | null): Creator | null {
   if (!isPinnable(page)) return null;
   return page.pin ?? follow;
@@ -106,7 +106,7 @@ export function donatePageUrl(c: Creator): string {
   return `https://toon.at/donate/${encodeURIComponent(c.donateId)}`;
 }
 
-/** 후원 페이지 칸의 크리에이터: 선택한 방송 > 마지막으로 따라간 방송(아직 칸에 있으면) > 보이는 첫 방송 */
+/** 후원 페이지 창의 크리에이터: 선택한 방송 > 마지막으로 따라간 방송(아직 창에 있으면) > 보이는 첫 방송 */
 export function followDonateCreator(state: ViewState, last: Creator | null): Creator | null {
   const selected = state.selected !== null ? state.slots[state.selected] : null;
   if (isStream(selected)) return selected;

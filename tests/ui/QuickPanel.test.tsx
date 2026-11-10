@@ -43,7 +43,7 @@ test('방송 시작 알림: 프로필에 새로 시작 표시 + 알림 카드, �
   expect(within(panel).getByRole('button', { name: '하나 · 방송 중 · 방금 시작' }).className).toMatch(/quick-panel__item--new/);
   const alert = within(panel).getByRole('status', { name: '방송 시작 알림' });
   expect(within(alert).getByText('하나 방송 시작')).toBeInTheDocument();
-  fireEvent.click(within(alert).getByRole('button', { name: '하나 방송 칸에 넣기' }));
+  fireEvent.click(within(alert).getByRole('button', { name: '하나 방송 창에 넣기' }));
   expect(onPick).toHaveBeenCalledWith(fav[0].creator);
   fireEvent.click(within(alert).getByRole('button', { name: '하나 알림 닫기' }));
   expect(onDismiss).toHaveBeenCalledWith(fav[0].creator.key);

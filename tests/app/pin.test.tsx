@@ -29,10 +29,10 @@ const pickFav = (slot: number, name: string) => fireEvent.click(within(openPicke
 const addSignature = (slot: number) => {
   const dlg = openPicker(slot);
   fireEvent.click(within(dlg).getByRole('tab', { name: '시그니처' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 창 넣기' }));
 };
 
-test('📌 시그니처 칸을 A 방송에 고정하면 B를 선택해도 A, 해제하면 다시 선택한 방송을 따라간다', async () => {
+test('📌 시그니처 창을 A 방송에 고정하면 B를 선택해도 A, 해제하면 다시 선택한 방송을 따라간다', async () => {
   setup();
   pickFav(0, 'A');
   pickFav(1, 'B'); // B가 선택됨
@@ -40,7 +40,7 @@ test('📌 시그니처 칸을 A 방송에 고정하면 B를 선택해도 A, 해
   expect(await screen.findByText('tagB의시그')).toBeInTheDocument();
   fireEvent.click(within(tiles()[3]).getByRole('button', { name: '방송에 고정' }));
   const dlg = screen.getByRole('dialog', { name: '고정할 방송 고르기' });
-  fireEvent.click(within(dlg).getByRole('button', { name: '1번 칸 · A' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '1번 창 · A' }));
   expect(screen.queryByRole('dialog', { name: '고정할 방송 고르기' })).toBeNull();
   expect(await screen.findByText('tagA의시그')).toBeInTheDocument();
   expect(within(tiles()[3]).getByText('A 시그니처')).toBeInTheDocument();
@@ -53,7 +53,7 @@ test('📌 시그니처 칸을 A 방송에 고정하면 B를 선택해도 A, 해
   expect(await screen.findByText('tagB의시그')).toBeInTheDocument();
 });
 
-test('방송 칸을 시그니처 칸에 놓으면 자리를 바꾸고, Shift를 누른 채 놓으면 자리는 그대로 그 방송에 고정', async () => {
+test('방송 창을 시그니처 창에 놓으면 자리를 바꾸고, Shift를 누른 채 놓으면 자리는 그대로 그 방송에 고정', async () => {
   setup();
   pickFav(0, 'A');
   pickFav(1, 'B');

@@ -4,8 +4,8 @@ import { SLOT_COUNT } from '../layout/layouts';
 import { parseView, serializeView } from './lastView';
 
 /**
- * 화면 구성 공유 링크: 지금 보이는 칸(방송·페이지)과 화면 모양을 주소 뒤 #view=에 담는다.
- * 받는 쪽은 마지막 화면과 같은 검사(parseView)를 거쳐 연다. 칸 크기·선택·소리는 담지 않는다.
+ * 화면 구성 공유 링크: 지금 보이는 창(방송·페이지)과 화면 모양을 주소 뒤 #view=에 담는다.
+ * 받는 쪽은 마지막 화면과 같은 검사(parseView)를 거쳐 연다. 창 크기·선택·소리는 담지 않는다.
  */
 export const VIEW_HASH = '#view=';
 

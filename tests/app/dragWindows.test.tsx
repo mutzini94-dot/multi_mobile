@@ -9,7 +9,7 @@ import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
-/** 창 사이 끌어 놓기: 칸을 메인 창 밖에 놓으면 그 자리에 분리 창, 분리 창을 메인 창 칸에 놓으면 그 칸으로 */
+/** 창 사이 끌어 놓기: 창을 메인 창 밖에 놓으면 그 자리에 분리 창, 분리 창을 메인 창 창에 놓으면 그 창으로 */
 function fakeHost() {
   let onMsg: ((id: string, m: SoloToHost) => void) | null = null;
   let onDropped: ((id: string, x: number, y: number) => void) | null = null;
@@ -63,7 +63,7 @@ const pick = (slot: number, name: string) => {
 const grip = (i: number) => within(tiles()[i]).getByRole('button', { name: '끌어서 자리 옮기기' });
 const nameOf = (i: number) => tiles()[i].querySelector('.tile__name')?.textContent;
 
-test('칸을 메인 창 밖으로 끌면 안내가 뜨고, 놓으면 놓은 자리에 분리 창을 연다', () => {
+test('창을 메인 창 밖으로 끌면 안내가 뜨고, 놓으면 놓은 자리에 분리 창을 연다', () => {
   const { opened } = setup();
   pick(0, 'A');
   fireEvent.pointerDown(grip(0), { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
@@ -77,7 +77,7 @@ test('칸을 메인 창 밖으로 끌면 안내가 뜨고, 놓으면 놓은 자�
   expect(screen.queryByRole('status', { name: '창 밖으로 끌기' })).toBeNull();
 });
 
-test('빈 칸이나 분리할 수 없는 칸은 창 밖에 놓아도 분리하지 않는다', () => {
+test('빈 창이나 분리할 수 없는 창은 창 밖에 놓아도 분리하지 않는다', () => {
   const { opened } = setup();
   fireEvent.pointerDown(tiles()[1].querySelector('.tile__bar')!, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
   fireEvent.pointerMove(window, { pointerId: 1, clientX: -80, clientY: 40 });
@@ -85,14 +85,14 @@ test('빈 칸이나 분리할 수 없는 칸은 창 밖에 놓아도 분리하�
   expect(opened).toHaveLength(0);
 });
 
-test('분리 창을 메인 창의 빈 칸에 놓으면: 그 칸으로 돌아오고 분리 표시 칸은 비운다', () => {
+test('분리 창을 메인 창의 빈 창에 놓으면: 그 창으로 돌아오고 분리 표시 창은 비운다', () => {
   const f = setup();
   pick(0, 'A');
   fireEvent.click(within(tiles()[0]).getByRole('button', { name: '새 창으로 분리' }));
   const id = f.opened[0].p.id;
   under = tiles()[2];
   f.hover({ x: 300, y: 300 });
-  expect(tiles()[2]).toHaveClass('tile--drop'); // 끄는 동안 놓일 칸 강조
+  expect(tiles()[2]).toHaveClass('tile--drop'); // 끄는 동안 놓일 창 강조
   f.dropped(id, 300, 300);
   expect(f.host.close).toHaveBeenCalledWith(id);
   expect(nameOf(2)).toBe('A');
@@ -101,7 +101,7 @@ test('분리 창을 메인 창의 빈 칸에 놓으면: 그 칸으로 돌아오�
   expect(tiles()[2]).not.toHaveClass('tile--drop');
 });
 
-test('분리 창을 방송이 있는 칸에 놓으면: 자리 바꾸기 (그 방송은 분리 표시 칸으로)', () => {
+test('분리 창을 방송이 있는 창에 놓으면: 자리 바꾸기 (그 방송은 분리 표시 창으로)', () => {
   const f = setup();
   pick(0, 'A');
   pick(1, 'B');
@@ -112,7 +112,7 @@ test('분리 창을 방송이 있는 칸에 놓으면: 자리 바꾸기 (그 방
   expect(nameOf(0)).toBe('B');
 });
 
-test('분리 창을 놓은 곳에 칸이 없으면 아무 일도 없다', () => {
+test('분리 창을 놓은 곳에 창이 없으면 아무 일도 없다', () => {
   const f = setup();
   pick(0, 'A');
   fireEvent.click(within(tiles()[0]).getByRole('button', { name: '새 창으로 분리' }));
@@ -122,7 +122,7 @@ test('분리 창을 놓은 곳에 칸이 없으면 아무 일도 없다', () => 
   expect(within(tiles()[0]).getByText('A · 새 창으로 분리됨')).toBeInTheDocument();
 });
 
-test('칸 위를 지나 창 밖에서 놓으면: 지나간 칸과 바꾸지 않고 분리', () => {
+test('창 위를 지나 창 밖에서 놓으면: 지나간 창과 바꾸지 않고 분리', () => {
   const { opened } = setup();
   pick(0, 'A');
   pick(1, 'B');

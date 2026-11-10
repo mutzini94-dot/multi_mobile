@@ -67,10 +67,10 @@ test('↓·↑ 키로 다음·이전 방송', async () => {
   expect(scrollBy).toHaveBeenLastCalledWith(expect.objectContaining({ top: -600 }));
 });
 
-test('버튼: 칸에 넣기 · 후원 · 소리 · 닫기', async () => {
+test('버튼: 창에 넣기 · 후원 · 소리 · 닫기', async () => {
   const { feed, onAdd, onDonate, onClose } = setup();
   await within(feed()).findByTestId('player-방송1');
-  fireEvent.click(within(feed()).getByRole('button', { name: '방송1 칸에 넣기' }));
+  fireEvent.click(within(feed()).getByRole('button', { name: '방송1 창에 넣기' }));
   expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ name: '방송1' }));
   fireEvent.click(within(feed()).getByRole('button', { name: '방송1 후원하기' }));
   expect(onDonate).toHaveBeenCalledWith(expect.objectContaining({ name: '방송1' }));

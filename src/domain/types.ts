@@ -12,7 +12,7 @@ export interface Creator {
   videoId?: string; // 유튜브 라이브 영상 ID (투네이션 라이브 목록): 채널 임베드가 안 되는 채널도 재생. 저장하지 않는다
 }
 
-/** 웹페이지 칸: 주소를 직접 넣어 연 사이트 (key는 칸마다 고유) */
+/** 웹페이지 창: 주소를 직접 넣어 연 사이트 (key는 창마다 고유) */
 export interface WebPage {
   kind: 'web';
   key: string;
@@ -20,7 +20,7 @@ export interface WebPage {
   url: string;
 }
 
-/** 후원 페이지 칸: 선택한 방송 크리에이터의 투네이션 후원 페이지 */
+/** 후원 페이지 창: 선택한 방송 크리에이터의 투네이션 후원 페이지 */
 export interface DonatePage {
   kind: 'donate';
   key: string;
@@ -28,7 +28,7 @@ export interface DonatePage {
   pin?: Creator; // 이 방송에 고정 (없으면 선택한 방송을 따라간다)
 }
 
-/** 채팅 칸: 선택한 방송의 트위치·유튜브 라이브 채팅 */
+/** 채팅 창: 선택한 방송의 트위치·유튜브 라이브 채팅 */
 export interface ChatPage {
   kind: 'chat';
   key: string;
@@ -36,14 +36,14 @@ export interface ChatPage {
   pin?: Creator;
 }
 
-/** 활동 위젯 칸: 즐겨찾기·후원 크리에이터의 라이브와 시청·후원·설정 변경 기록 */
+/** 활동 위젯 창: 즐겨찾기·후원 크리에이터의 라이브와 시청·후원·설정 변경 기록 */
 export interface ActivityPage {
   kind: 'activity';
   key: string;
   name: string;
 }
 
-/** 시그니처 칸: 선택한 방송 크리에이터의 투네이션 시그니처 목록 */
+/** 시그니처 창: 선택한 방송 크리에이터의 투네이션 시그니처 목록 */
 export interface SignaturePage {
   kind: 'signature';
   key: string;
@@ -53,7 +53,7 @@ export interface SignaturePage {
 
 export type PageSlot = WebPage | DonatePage | ChatPage | ActivityPage | SignaturePage;
 
-/** 새 창으로 분리한 칸의 자리 표시: 내용은 분리 창에 있고 칸에는 되돌리기·불러오기만 */
+/** 새 창으로 분리한 창의 자리 표시: 내용은 분리 창에 있고 창에는 되돌리기·불러오기만 */
 export interface DetachedMark {
   kind: 'detached';
   key: string;
@@ -61,7 +61,7 @@ export interface DetachedMark {
   id: string; // 분리 창 id
 }
 
-/** 칸 하나의 내용: 방송 · 페이지 · 분리 표시 */
+/** 창 하나의 내용: 방송 · 페이지 · 분리 표시 */
 export type SlotItem = Creator | PageSlot | DetachedMark;
 
 export type LayoutKind = 'wideSide' | 'single' | 'split2' | 'oneTwo' | 'quad' | 'oneThree' | 'oneFive' | 'six' | 'nine';

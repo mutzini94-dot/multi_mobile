@@ -48,7 +48,7 @@ const pick = (slot: number, name: string) => {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name} ·`) }));
 };
 
-test('선택한 칸만 소리 (기본) + 기본 볼륨', () => {
+test('선택한 창만 소리 (기본) + 기본 볼륨', () => {
   setup({ masterVolume: 60 });
   pick(0, 'A');
   pick(1, 'B'); // B 선택
@@ -57,7 +57,7 @@ test('선택한 칸만 소리 (기본) + 기본 볼륨', () => {
   expect(fakes[B].volume).toBe(60);
 });
 
-test('여러 칸 동시 듣기: 칸마다 소리 켜기/끄기와 볼륨', () => {
+test('여러 창 동시 듣기: 창마다 소리 켜기/끄기와 볼륨', () => {
   setup({ soundMode: 'mix', masterVolume: 70 });
   pick(0, 'A');
   pick(1, 'B');
@@ -73,7 +73,7 @@ test('여러 칸 동시 듣기: 칸마다 소리 켜기/끄기와 볼륨', () =>
   expect(tile(0)).not.toHaveClass('tile--selected') ; // 소리 버튼은 선택을 바꾸지 않는다 (B가 선택된 상태 유지)
 });
 
-test('숨긴 칸 정지(기본, 가볍게): 레이아웃을 줄이면 정지, 다시 보이면 재생', () => {
+test('숨긴 창 정지(기본, 가볍게): 레이아웃을 줄이면 정지, 다시 보이면 재생', () => {
   setup();
   pick(3, 'A');
   expect(fakes[A].paused).toBe(false);
@@ -84,14 +84,14 @@ test('숨긴 칸 정지(기본, 가볍게): 레이아웃을 줄이면 정지, �
   expect(fakes[A].paused).toBe(false);
 });
 
-test('숨긴 칸 계속 재생으로 바꾸면 정지하지 않는다', () => {
+test('숨긴 창 계속 재생으로 바꾸면 정지하지 않는다', () => {
   setup({ hiddenSlotPlayback: 'keep' });
   pick(3, 'A');
   fireEvent.click(screen.getByRole('button', { name: '2분할' }));
   expect(fakes[A].paused).toBe(false);
 });
 
-test('선택하지 않은 칸은 낮은 화질 (기본, 가볍게)', () => {
+test('선택하지 않은 창은 낮은 화질 (기본, 가볍게)', () => {
   setup();
   pick(0, 'A');
   pick(1, 'B'); // B 선택

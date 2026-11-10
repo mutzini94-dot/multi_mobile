@@ -10,7 +10,7 @@ interface Props {
   favorites: QuickItem[];
   recent: QuickItem[];
   started: Creator[]; // 방금 방송을 시작한 크리에이터 (알림)
-  onPick(c: Creator): void; // 넣을 칸 고르기
+  onPick(c: Creator): void; // 넣을 창 고르기
   onDismiss(key: string): void; // 알림 닫기
   // 맨 위 '추천 라이브 탐색': 옆으로 펼치는 쇼츠처럼 넘겨 보기. size = 조절한 크기 (null = 기본), onResize = 조절을 마쳤을 때 (저장)
   shorts?: { open: boolean; onToggle(): void; content: ReactNode; size?: ShortsSize; onResize?(s: ShortsSize): void };
@@ -34,7 +34,7 @@ const COLLAPSE_MS = 140;
 
 /**
  * 화면 옆 퀵패널 (Edge 사이드바처럼): 즐겨찾기·최근 본 크리에이터를 프로필로, 방송 시작 알림.
- * 마우스를 올리면 넓어지며(칸 위로 겹친다) 버튼 이름·크리에이터 이름을 함께 보여 준다.
+ * 마우스를 올리면 넓어지며(창 위로 겹친다) 버튼 이름·크리에이터 이름을 함께 보여 준다.
  */
 export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss, shorts, onAddWindow, login, onRemoveRecent }: Props) {
   const [tab, setTab] = useState<'fav' | 'recent'>('fav');
@@ -193,7 +193,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
         <div className="quick-panel__alerts" role="status" aria-label="방송 시작 알림">
           {started.map((c) => (
             <div key={c.key} className="quick-panel__alert">
-              <button type="button" className="quick-panel__alert-main" aria-label={`${c.name} 방송 칸에 넣기`} onClick={() => onPick(c)}>
+              <button type="button" className="quick-panel__alert-main" aria-label={`${c.name} 방송 창에 넣기`} onClick={() => onPick(c)}>
                 {c.profile ? <img src={c.profile} alt="" referrerPolicy="no-referrer" /> : <span className="quick-panel__initial">{c.name.slice(0, 1)}</span>}
                 <span className="quick-panel__alert-text">
                   <strong>{c.name} 방송 시작</strong>

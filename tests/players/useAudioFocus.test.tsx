@@ -10,7 +10,7 @@ const handle = (muted = true) => {
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-test('선택된 칸만 unmute, 나머지 mute', () => {
+test('선택된 창만 unmute, 나머지 mute', () => {
   const hs = [handle(false), handle(true), handle(false)];
   renderHook(() => useAudioFocus(hs, 1, true));
   expect(hs.map((h) => h.muted)).toEqual([true, false, true]);
@@ -28,7 +28,7 @@ test('selected=null이면 전부 mute', () => {
   expect(hs.map((h) => h.muted)).toEqual([true, true]);
 });
 
-test('비선택 칸이 외부에서 unmute되면 1000ms 안에 다시 mute', () => {
+test('비선택 창이 외부에서 unmute되면 1000ms 안에 다시 mute', () => {
   const hs = [handle(), handle()];
   renderHook(() => useAudioFocus(hs, 0, true));
   hs[1].muted = false;
@@ -37,7 +37,7 @@ test('비선택 칸이 외부에서 unmute되면 1000ms 안에 다시 mute', () 
   expect(hs[0].muted).toBe(false);
 });
 
-test('선택이 바뀌면 이전 칸 mute, 새 칸 unmute', () => {
+test('선택이 바뀌면 이전 창 mute, 새 창 unmute', () => {
   const hs = [handle(), handle()];
   const { rerender } = renderHook(({ sel }) => useAudioFocus(hs, sel, true), { initialProps: { sel: 0 } });
   expect(hs.map((h) => h.muted)).toEqual([false, true]);
@@ -58,7 +58,7 @@ test('상태가 이미 맞으면 setMuted를 호출하지 않는다', () => {
   expect(h.setMuted).not.toHaveBeenCalled();
 });
 
-test('선택된 칸을 사용자가 플레이어 버튼으로 끄면 주기 검사에서 다시 켜지 않는다', () => {
+test('선택된 창을 사용자가 플레이어 버튼으로 끄면 주기 검사에서 다시 켜지 않는다', () => {
   const hs = [handle()];
   renderHook(() => useAudioFocus(hs, 0, true));
   expect(hs[0].muted).toBe(false);

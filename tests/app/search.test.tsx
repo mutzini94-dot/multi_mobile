@@ -44,7 +44,7 @@ const openPicker = () => {
   return screen.getByRole('dialog', { name: '불러오기' });
 };
 
-test('투네이션 크리에이터 검색: 이름으로 찾아 칸에 넣는다', async () => {
+test('투네이션 크리에이터 검색: 이름으로 찾아 창에 넣는다', async () => {
   const { request } = setup();
   const dlg = openPicker();
   fireEvent.change(within(dlg).getByLabelText('투네이션 크리에이터 검색'), { target: { value: '찾기' } });

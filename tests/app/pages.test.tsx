@@ -59,7 +59,7 @@ const pickFav = (slot: number, name: string) => {
 const addDonatePage = (slot: number) => {
   const dlg = openPicker(slot);
   fireEvent.click(within(dlg).getByRole('tab', { name: '후원 페이지' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 창 넣기' }));
 };
 const openUrl = (slot: number, url: string) => {
   const dlg = openPicker(slot);
@@ -75,7 +75,7 @@ test('불러오기 창: 방송·투네이션 라이브·후원 페이지·웹페
   expect(within(dlg).getAllByRole('tab').map((t) => t.textContent)).toEqual(['방송', '투네이션 라이브', '활동 위젯', '후원 페이지', '시그니처', '채팅', '웹페이지']);
 });
 
-test('웹페이지: 주소를 넣으면 그 칸에 사이트가 열린다 (웹은 iframe)', () => {
+test('웹페이지: 주소를 넣으면 그 창에 사이트가 열린다 (웹은 iframe)', () => {
   setup();
   openUrl(1, 'naver.com');
   expect(within(tiles()[1]).getByText('naver.com')).toBeInTheDocument();
@@ -94,7 +94,7 @@ test('웹페이지: 잘못된 주소는 알려주고 넣지 않는다, 바로가
   expect(within(tiles()[0]).getByText('naver.com')).toBeInTheDocument();
 });
 
-test('설치형: 웹페이지는 칸 안 브라우저(webview)로, 후원 페이지는 투네이션 로그인 세션으로 연다', () => {
+test('설치형: 웹페이지는 창 안 브라우저(webview)로, 후원 페이지는 투네이션 로그인 세션으로 연다', () => {
   setup({ desktop: desktopApi() });
   pickFav(0, 'A');
   openUrl(1, 'https://www.youtube.com/');
@@ -102,29 +102,29 @@ test('설치형: 웹페이지는 칸 안 브라우저(webview)로, 후원 페이
   const [web, donate] = [webviews().find((w) => w.getAttribute('partition') === 'persist:mvweb'), webviews().find((w) => w.getAttribute('partition') === 'persist:toonation')];
   expect(web?.getAttribute('src')).toBe('https://www.youtube.com/');
   expect(donate?.getAttribute('src')).toBe('https://toon.at/donate/don1');
-  // 후원 페이지는 화면 폭으로 PC판·모바일판을 고르므로, 칸 크기에 맞춰 키우는 틀 안에서 모바일판으로 (mobileFit)
+  // 후원 페이지는 화면 폭으로 PC판·모바일판을 고르므로, 창 크기에 맞춰 키우는 틀 안에서 모바일판으로 (mobileFit)
   expect(donate).toHaveClass('page-view--mobile');
   expect(donate?.parentElement).toHaveClass('page-view-fit');
   expect(web).not.toHaveClass('page-view--mobile');
 });
 
-test('후원 페이지 칸은 선택한 방송 크리에이터를 따라간다', () => {
+test('후원 페이지 창은 선택한 방송 크리에이터를 따라간다', () => {
   setup({ desktop: desktopApi() });
   pickFav(0, 'A');
-  pickFav(1, 'B'); // 넣은 칸이 선택된다
+  pickFav(1, 'B'); // 넣은 창이 선택된다
   addDonatePage(2);
   const donate = () => webviews().find((w) => w.getAttribute('partition') === 'persist:toonation')!;
   expect(donate().getAttribute('src')).toBe('https://toon.at/donate/don2');
   expect(within(tiles()[2]).getByText('B 후원 페이지')).toBeInTheDocument();
   fireEvent.click(tiles()[0].querySelector('.tile__bar')!); // A 선택
   expect(donate().getAttribute('src')).toBe('https://toon.at/donate/don1');
-  // 후원 페이지 칸을 눌러도 선택(소리)은 A 그대로
+  // 후원 페이지 창을 눌러도 선택(소리)은 A 그대로
   fireEvent.click(tiles()[2].querySelector('.tile__bar')!);
   expect(tiles()[0]).toHaveClass('tile--selected');
   expect(tiles()[2]).not.toHaveClass('tile--selected');
 });
 
-test('웹: 후원 페이지 칸은 칸 안에 띄울 수 없어 새 창으로 여는 버튼을 보여준다', () => {
+test('웹: 후원 페이지 창은 창 안에 띄울 수 없어 새 창으로 여는 버튼을 보여준다', () => {
   const { win } = setup();
   pickFav(0, 'A');
   addDonatePage(1);
@@ -132,13 +132,13 @@ test('웹: 후원 페이지 칸은 칸 안에 띄울 수 없어 새 창으로 �
   expect(win.open).toHaveBeenCalledWith(expect.stringContaining('toon.at/donate/don1'), expect.anything(), expect.anything());
 });
 
-test('후원 페이지 칸: 방송이 없으면 안내', () => {
+test('후원 페이지 창: 방송이 없으면 안내', () => {
   setup({ desktop: desktopApi() });
   addDonatePage(0);
-  expect(screen.getByText('후원할 방송 칸을 선택하세요')).toBeInTheDocument();
+  expect(screen.getByText('후원할 방송 창을 선택하세요')).toBeInTheDocument();
 });
 
-test('투네이션 라이브: 목록에서 고르면 방송이 칸에 들어가고 후원 대상이 된다', async () => {
+test('투네이션 라이브: 목록에서 고르면 방송이 창에 들어가고 후원 대상이 된다', async () => {
   const { lives } = setup();
   const dlg = openPicker(0);
   fireEvent.click(within(dlg).getByRole('tab', { name: '투네이션 라이브' }));

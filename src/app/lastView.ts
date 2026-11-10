@@ -4,7 +4,7 @@ import { isStream, makeActivityPage, makeSignaturePage, makeChatPage, makeDonate
 import { MAX_SLOTS, SLOT_COUNT } from '../layout/layouts';
 import type { KV } from '../storage/safeStorage';
 
-/** 마지막 화면(레이아웃·칸·칸 크기): 다음 실행에서 복원 (설정: 시작할 때 마지막 화면 복원) */
+/** 마지막 화면(레이아웃·창·창 크기): 다음 실행에서 복원 (설정: 시작할 때 마지막 화면 복원) */
 export const LAST_VIEW_KEY = 'mv.lastView.v1';
 
 type SavedSlot = (CreatorInput & { source: Creator['source'] }) | { kind: 'web'; url: string } | { kind: 'donate' | 'chat' | 'signature'; pin?: CreatorInput & { source: Creator['source'] } } | { kind: 'activity' } | null;
@@ -31,7 +31,7 @@ export function serializeView(state: ViewState): SavedView {
   return { v: 1, layout: state.layout, sizes: state.sizes, slots };
 }
 
-/** 저장한 값을 다시 확인하며 화면 상태로 (잘못된 칸은 빈 칸, 형식이 틀리면 null) */
+/** 저장한 값을 다시 확인하며 화면 상태로 (잘못된 창은 빈 창, 형식이 틀리면 null) */
 export function parseView(raw: unknown): ViewState | null {
   const r = raw as Partial<SavedView> | null;
   if (!r || r.v !== 1 || typeof r.layout !== 'string' || !Object.prototype.hasOwnProperty.call(SLOT_COUNT, r.layout) || !Array.isArray(r.slots)) return null;

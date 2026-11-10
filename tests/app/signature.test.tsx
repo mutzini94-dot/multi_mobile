@@ -40,15 +40,15 @@ test('불러오기 시그니처 탭 → 선택한 방송 크리에이터의 시�
   pickFav(0, 'A');
   const dlg = openPicker(3);
   fireEvent.click(within(dlg).getByRole('tab', { name: '시그니처' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 창 넣기' }));
   expect(await screen.findByText('A의시그')).toBeInTheDocument();
   expect(request).toHaveBeenCalledWith('signatures', 'tagA');
   pickFav(1, 'B'); // 새로 띄운 방송이 선택된다
   expect(await screen.findByText('B의시그')).toBeInTheDocument();
-  expect(within(tiles()[3]).getByText('B 시그니처')).toBeInTheDocument(); // 칸 이름
+  expect(within(tiles()[3]).getByText('B 시그니처')).toBeInTheDocument(); // 창 이름
 });
 
-test('시그니처 칸도 마지막 화면으로 저장·복원된다', () => {
+test('시그니처 창도 마지막 화면으로 저장·복원된다', () => {
   const kv = quadKv();
   const slots = Array(9).fill(null);
   slots[2] = makeSignaturePage();
@@ -61,7 +61,7 @@ const addSignatureTile = async () => {
   pickFav(0, 'A');
   const dlg = openPicker(3);
   fireEvent.click(within(dlg).getByRole('tab', { name: '시그니처' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 창 넣기' }));
   return screen.findByRole('button', { name: 'A의시그 · 5,000캐시 시그니처로 후원하기' });
 };
 
@@ -105,7 +105,7 @@ test('설치형: 시그니처를 고르지 못하면 직접 고르라고 알린�
   expect(await screen.findByText("후원창의 시그니처 탭에서 'A의시그'(5,000캐시)를 골라 주세요 (자동 선택 실패: timeout:popup)")).toBeInTheDocument();
 });
 
-test('설치형: 그 크리에이터의 후원 페이지 칸이 있으면 새 후원창 대신 그 칸에서 시그니처를 고른다', async () => {
+test('설치형: 그 크리에이터의 후원 페이지 창이 있으면 새 후원창 대신 그 창에서 시그니처를 고른다', async () => {
   const proto = HTMLElement.prototype as unknown as { getWebContentsId?: () => number };
   proto.getWebContentsId = () => 42;
   try {
@@ -123,11 +123,11 @@ test('설치형: 그 크리에이터의 후원 페이지 칸이 있으면 새 �
     pickFav(0, 'A');
     const dlg = openPicker(2);
     fireEvent.click(within(dlg).getByRole('tab', { name: '후원 페이지' }));
-    fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 칸 넣기' }));
+    fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 창 넣기' }));
     fireEvent.click(await addSignatureTile());
     expect(selectSignature).toHaveBeenCalledWith('A의시그', 'tagA', 5000, 42);
     expect(desktop.openDonate).not.toHaveBeenCalled();
-    expect(await screen.findByText("후원 페이지 칸에 'A의시그'(5,000캐시) 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요")).toBeInTheDocument();
+    expect(await screen.findByText("후원 페이지 창에 'A의시그'(5,000캐시) 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요")).toBeInTheDocument();
   } finally {
     delete proto.getWebContentsId;
   }

@@ -25,7 +25,7 @@ function setup() {
     navigator: {} as Navigator,
   };
   render(<App favorites={favorites} kv={kv} win={win} bridge={noBridge} desktop={null} />);
-  // 1·2번 칸에 A·B를 불러오고 1번 칸을 선택한 상태에서 시작
+  // 1·2번 창에 A·B를 불러오고 1번 창을 선택한 상태에서 시작
   for (const [slot, name] of [[0, 'A'], [1, 'B']] as const) {
     fireEvent.click(within(document.querySelectorAll('.tile')[slot] as HTMLElement).getByRole('button', { name: '불러오기' }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name} ·`) }));
@@ -49,7 +49,7 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('영상 클릭으로 선택', () => {
-  test('영상을 클릭하면 그 칸이 선택되고 그 칸만 소리가 난다', () => {
+  test('영상을 클릭하면 그 창이 선택되고 그 창만 소리가 난다', () => {
     setup();
     clickVideo('twitch:chan_2');
     act(() => vi.runOnlyPendingTimers());
@@ -82,14 +82,14 @@ describe('영상 클릭으로 선택', () => {
   });
 });
 
-describe('칸 전체 화면', () => {
-  test('전체 화면 버튼은 방송이 있는 칸에만 있다', () => {
+describe('창 전체 화면', () => {
+  test('전체 화면 버튼은 방송이 있는 창에만 있다', () => {
     setup();
     expect(within(tiles()[0] as HTMLElement).getByRole('button', { name: '전체 화면' })).toBeInTheDocument();
     expect(within(tiles()[2] as HTMLElement).queryByRole('button', { name: '전체 화면' })).toBeNull();
   });
 
-  test('누르면 그 칸이 선택되고 화면 전체를 채우며, 종료 버튼과 Esc로 돌아온다', () => {
+  test('누르면 그 창이 선택되고 화면 전체를 채우며, 종료 버튼과 Esc로 돌아온다', () => {
     setup();
     fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '전체 화면' }));
     expect(tiles()[1]).toHaveClass('tile--selected');
@@ -108,7 +108,7 @@ describe('칸 전체 화면', () => {
     expect(screen.queryByRole('region', { name: 'A 전체 화면' })).toBeNull();
   });
 
-  test('전체 화면 중 레이아웃 축소로 그 칸이 사라지면 전체 화면도 끝난다', () => {
+  test('전체 화면 중 레이아웃 축소로 그 창이 사라지면 전체 화면도 끝난다', () => {
     setup();
     fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '전체 화면' }));
     fireEvent.click(screen.getByRole('button', { name: '1화면' }));
@@ -128,7 +128,7 @@ describe('칸 전체 화면', () => {
 });
 
 describe('방송 삭제', () => {
-  test('방송이 있는 칸에만 삭제 버튼이 있고, 누르면 칸이 비고 플레이어도 사라진다', () => {
+  test('방송이 있는 창에만 삭제 버튼이 있고, 누르면 창이 비고 플레이어도 사라진다', () => {
     setup();
     expect(within(tiles()[2] as HTMLElement).queryByRole('button', { name: '방송 삭제' })).toBeNull();
     fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '방송 삭제' }));
@@ -138,15 +138,16 @@ describe('방송 삭제', () => {
     expect(iframe('twitch:chan_1')).toBeInTheDocument();
   });
 
-  test('선택된 칸을 지우면 선택이 풀리고 후원하기가 비활성된다', () => {
+  test('선택된 창을 지우면 선택이 풀리고, 후원하기는 남은 방송에서 고르게 된다', () => {
     setup();
     fireEvent.click(within(tiles()[0] as HTMLElement).getByText('A'));
     expect(screen.getByRole('button', { name: '후원하기' })).toBeEnabled();
     fireEvent.click(within(tiles()[0] as HTMLElement).getByRole('button', { name: '방송 삭제' }));
-    expect(screen.getByRole('button', { name: '후원하기' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '후원하기' })).toBeEnabled();
   });
 
-  test('삭제 버튼을 눌러도 칸 선택이 바뀌지 않는다', () => {
+  test('삭제 버튼을 눌러도 창 선택이 바뀌지 않는다', () => {
     setup();
     fireEvent.click(within(tiles()[0] as HTMLElement).getByText('A'));
     fireEvent.click(within(tiles()[1] as HTMLElement).getByRole('button', { name: '방송 삭제' }));

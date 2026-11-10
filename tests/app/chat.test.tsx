@@ -54,14 +54,14 @@ const addChat = (slot: number) => {
   fireEvent.click(within(tiles()[slot]).getByRole('button', { name: '불러오기' }));
   const dlg = screen.getByRole('dialog', { name: '불러오기' });
   fireEvent.click(within(dlg).getByRole('tab', { name: '채팅' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '채팅 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '채팅 창 넣기' }));
 };
 const chatView = () => [...document.querySelectorAll('webview')].find((w) => /chat/.test(w.getAttribute('src') ?? ''));
 
-test('채팅 칸: 선택한 방송의 채팅을 보여주고, 다른 방송을 선택하면 따라간다', async () => {
+test('채팅 창: 선택한 방송의 채팅을 보여주고, 다른 방송을 선택하면 따라간다', async () => {
   setup();
   pick(0, 'YT');
-  pick(1, 'TW'); // 넣은 칸이 선택된다
+  pick(1, 'TW'); // 넣은 창이 선택된다
   addChat(2);
   expect(chatView()?.getAttribute('src')).toBe('https://www.twitch.tv/popout/tw_one/chat');
   expect(chatView()?.getAttribute('partition')).toBe('persist:mvweb');
@@ -77,8 +77,8 @@ test('채팅 칸: 선택한 방송의 채팅을 보여주고, 다른 방송을 �
   expect(chatView()?.getAttribute('src')).toBe('https://www.youtube.com/live_chat?is_popout=1&v=m8HaYP0qcRM');
 });
 
-test('채팅 칸: 방송이 없으면 안내', () => {
+test('채팅 창: 방송이 없으면 안내', () => {
   setup();
   addChat(0);
-  expect(screen.getByText('채팅을 볼 방송 칸을 선택하세요')).toBeInTheDocument();
+  expect(screen.getByText('채팅을 볼 방송 창을 선택하세요')).toBeInTheDocument();
 });

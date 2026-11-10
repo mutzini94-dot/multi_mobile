@@ -2,7 +2,7 @@ import { isStream } from '../domain/pages';
 import type { Creator, SlotItem } from '../domain/types';
 import type { KV } from '../storage/safeStorage';
 
-/** 시청 기록: 칸에 띄운 방송 (최근 것이 앞) */
+/** 시청 기록: 창에 띄운 방송 (최근 것이 앞) */
 export const WATCH_LOG_KEY = 'mv.watchLog.v1';
 const MAX = 100;
 const MERGE_MS = 30 * 60_000; // 같은 방송을 30분 안에 다시 띄우면 시각만 갱신
@@ -34,6 +34,12 @@ export function recordWatch(kv: KV, creator: Creator, now: number): WatchEntry[]
   const next = [{ at: now, creator: kept }, ...log].slice(0, MAX);
   kv.set(WATCH_LOG_KEY, JSON.stringify(next));
   return next;
+}
+
+/** 지운 기록 되돌리기: 지우기 전 목록을 그대로 다시 쓴다 */
+export function restoreWatchLog(kv: KV, entries: WatchEntry[]): WatchEntry[] {
+  kv.set(WATCH_LOG_KEY, JSON.stringify(entries.slice(0, MAX)));
+  return entries.slice(0, MAX);
 }
 
 /** 최근 본 목록에서 지우기: 그 크리에이터의 기록을 모두 (같은 후원 아이디의 다른 채널 기록까지) */

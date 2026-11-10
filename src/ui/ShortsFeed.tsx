@@ -7,7 +7,7 @@ import { startCreatorDrag } from '../app/creatorDrag';
 
 interface Props {
   load(q: LiveQuery): Promise<LivePage>;
-  onAdd(c: Creator): void; // 칸에 넣기 (넣을 칸 고르기)
+  onAdd(c: Creator): void; // 창에 넣기 (넣을 창 고르기)
   onDonate(c: Creator): void;
   onClose(): void;
 }
@@ -27,7 +27,7 @@ export function ShortsFeed({ load, onAdd, onDonate, onClose }: Props) {
   const activeRef = useRef(0);
   activeRef.current = active;
 
-  // 창 크기가 바뀌면(추천 라이브 창 크기 조절) 한 칸의 높이가 바뀌어 스크롤 위치가 다른 방송을 가리키게 된다.
+  // 창 크기가 바뀌면(추천 라이브 창 크기 조절) 한 창의 높이가 바뀌어 스크롤 위치가 다른 방송을 가리키게 된다.
   // 보던 방송 자리로 바로 맞춰, 다른 방송으로 넘어가며 영상이 다시 불러와지지 않게 한다
   useEffect(() => {
     const el = scroller.current;
@@ -140,7 +140,7 @@ export function ShortsFeed({ load, onAdd, onDonate, onClose }: Props) {
                   {muted ? '🔇' : '🔊'}
                 </button>
               )}
-              <button type="button" className="shorts__action" aria-label={`${c.name} 칸에 넣기`} title="칸에 넣기 (끌어서 칸에 놓아도 됩니다)" onClick={() => onAdd(c)}>
+              <button type="button" className="shorts__action" aria-label={`${c.name} 창에 넣기`} title="창에 넣기 (끌어서 창에 놓아도 됩니다)" onClick={() => onAdd(c)}>
                 ＋
               </button>
               <button type="button" className="shorts__action shorts__action--donate" aria-label={`${c.name} 후원하기`} title="후원하기" onClick={() => onDonate(c)}>

@@ -54,7 +54,7 @@ describe('즐겨찾기 관리', () => {
     return fav;
   };
 
-  test('move: 위·아래로 한 칸씩, 끝에서는 그대로', () => {
+  test('move: 위·아래로 한 창씩, 끝에서는 그대로', () => {
     const fav = three();
     expect(fav.move('twitch:cccc', -1).map((c) => c.name)).toEqual(['A', 'C', 'B']);
     expect(fav.move('twitch:aaaa', -1).map((c) => c.name)).toEqual(['A', 'C', 'B']);

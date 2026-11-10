@@ -8,7 +8,7 @@ import { mkCreator } from '../helpers/fixtures';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
-test('상단 전체 음소거: 모든 칸 소리를 끄고, 다시 누르면 켠다 (M 단축키와 같은 상태)', () => {
+test('상단 전체 음소거: 모든 창 소리를 끄고, 다시 누르면 켠다 (M 단축키와 같은 상태)', () => {
   const kv = safeStorage(undefined);
   kv.set(ONBOARDED_KEY, '1');
   const favorites = localFavorites(kv);
@@ -19,7 +19,7 @@ test('상단 전체 음소거: 모든 칸 소리를 끄고, 다시 누르면 켠
   const tile = () => document.querySelectorAll<HTMLElement>('.tile')[0];
   fireEvent.click(within(tile()).getByRole('button', { name: '불러오기' }));
   fireEvent.click(within(screen.getByRole('dialog', { name: '불러오기' })).getByRole('button', { name: /^A ·/ }));
-  expect(within(tile()).getByRole('button', { name: '소리 끄기' })).toBeInTheDocument(); // 선택한 칸 소리 켜짐
+  expect(within(tile()).getByRole('button', { name: '소리 끄기' })).toBeInTheDocument(); // 선택한 창 소리 켜짐
 
   fireEvent.click(screen.getByRole('button', { name: '전체 음소거' }));
   expect(within(tile()).getByRole('button', { name: '소리 켜기' })).toBeInTheDocument();

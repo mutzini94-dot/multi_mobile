@@ -5,14 +5,14 @@ import type { KV } from '../storage/safeStorage';
 
 /** 설정 (설정 창). 설치형 창 관련(항상 위)은 앱에도 전달된다. */
 export interface Settings {
-  restoreLastView: boolean; // 시작 시 마지막 화면(레이아웃·칸·크기) 복원
+  restoreLastView: boolean; // 시작 시 마지막 화면(레이아웃·창·크기) 복원
   defaultLayout: LayoutKind; // 복원하지 않을 때 시작 레이아웃
-  hiddenSlotPlayback: 'keep' | 'pause'; // 레이아웃에서 숨긴 칸: 계속 재생 / 정지
-  lowQualityOthers: boolean; // 선택하지 않은 칸은 낮은 화질 (트위치만)
+  hiddenSlotPlayback: 'keep' | 'pause'; // 레이아웃에서 숨긴 창: 계속 재생 / 정지
+  lowQualityOthers: boolean; // 선택하지 않은 창은 낮은 화질 (트위치만)
   autoReplaceEnded: boolean; // 방송이 끝나면 라이브 중인 투네이션 즐겨찾기로 자동으로 바꾸기
-  showLiveInfo: boolean; // 칸 위쪽 바에 방송 제목·시청자 수·방송한 시간
-  videoClick: 'select' | 'player'; // 영상 클릭: 칸 선택(끌기 가능) / 플레이어 재생·정지
-  soundMode: 'single' | 'mix'; // 선택한 칸만 소리 / 여러 칸 동시 듣기(칸별 볼륨)
+  showLiveInfo: boolean; // 창 위쪽 바에 방송 제목·시청자 수·방송한 시간
+  videoClick: 'select' | 'player'; // 영상 클릭: 창 선택(끌기 가능) / 플레이어 재생·정지
+  soundMode: 'single' | 'mix'; // 선택한 창만 소리 / 여러 창 동시 듣기(창별 볼륨)
   masterVolume: number; // 0~100
   donateMode: 'last' | 'modal' | 'pip'; // 후원창 기본 모드 (설치형)
   quickAmounts: number[]; // 빠른 후원 금액 (설치형)
@@ -23,11 +23,11 @@ export interface Settings {
   liveNotify: boolean; // 즐겨찾기 방송 시작 알림
   theme: 'system' | 'light' | 'dark';
   skin: Skin; // 화면 스킨 (색·모서리·버튼 모양). 배치와 기능은 같다
-  shortcuts: boolean; // 1~4 칸 선택 · M 소리 · F 전체 화면 · D 후원
+  shortcuts: boolean; // 1~4 창 선택 · M 소리 · F 전체 화면 · D 후원
   alwaysOnTop: boolean; // 창 항상 위 (설치형)
   quickPanel: 'left' | 'right' | 'off'; // 퀵패널 (즐겨찾기·최근 본 크리에이터) 위치
   keepScreenOn: boolean; // 방송을 보는 동안 화면 꺼짐 방지 (지원하는 브라우저)
-  dataSaver: 'off' | 'auto' | 'on'; // 데이터 절약: 선택한 칸만 재생하고 나머지는 멈춘다 (auto = 모바일 데이터일 때)
+  dataSaver: 'off' | 'auto' | 'on'; // 데이터 절약: 선택한 창만 재생하고 나머지는 멈춘다 (auto = 모바일 데이터일 때)
 }
 
 export type Skin = 'classic' | 'breeze' | 'pure';
@@ -43,8 +43,8 @@ export const SETTINGS_KEY = 'mv.settings.v1';
 export const DEFAULT_SETTINGS: Settings = {
   restoreLastView: true,
   defaultLayout: 'wideSide', // 큰 화면(방송) + 오른쪽 후원 페이지
-  hiddenSlotPlayback: 'pause', // 가볍게: 숨긴 칸은 정지
-  lowQualityOthers: true, // 가볍게: 선택하지 않은 칸은 낮은 화질
+  hiddenSlotPlayback: 'pause', // 가볍게: 숨긴 창은 정지
+  lowQualityOthers: true, // 가볍게: 선택하지 않은 창은 낮은 화질
   autoReplaceEnded: false,
   showLiveInfo: true,
   videoClick: 'select',

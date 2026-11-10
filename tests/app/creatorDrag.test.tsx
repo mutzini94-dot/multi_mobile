@@ -54,7 +54,7 @@ test('readCreatorDrag: 끌어 온 방송 정보를 확인한다 (잘못된 값�
   expect(readCreatorDrag(dt as unknown as DataTransfer)).toBeNull();
 });
 
-test('추천 라이브 카드를 끌어 칸에 놓으면 그 칸에 들어가고 창은 닫힌다 (끄는 동안 창은 비켜 준다)', async () => {
+test('추천 라이브 카드를 끌어 창에 놓으면 그 창에 들어가고 창은 닫힌다 (끄는 동안 창은 비켜 준다)', async () => {
   setup();
   fireEvent.click(screen.getByRole('button', { name: '추천 라이브' }));
   const card = await within(screen.getByRole('dialog', { name: '추천 라이브' })).findByRole('button', { name: /라이브칠/ });
@@ -72,11 +72,11 @@ test('추천 라이브 카드를 끌어 칸에 놓으면 그 칸에 들어가고
   expect(document.querySelector('.player-layer--dragging')).toBeNull();
 });
 
-test('퀵패널 프로필을 끌어 시그니처 칸에 놓으면 그 방송에 고정', async () => {
+test('퀵패널 프로필을 끌어 시그니처 창에 놓으면 그 방송에 고정', async () => {
   setup();
   const dlg = (fireEvent.click(within(tiles()[3]).getByRole('button', { name: '불러오기' })), screen.getByRole('dialog', { name: '불러오기' }));
   fireEvent.click(within(dlg).getByRole('tab', { name: '시그니처' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '시그니처 창 넣기' }));
   const avatar = within(screen.getByRole('complementary', { name: '퀵패널' })).getByRole('button', { name: 'A' });
   const dt = dataTransfer();
   fireEvent.dragStart(avatar, { dataTransfer: dt });

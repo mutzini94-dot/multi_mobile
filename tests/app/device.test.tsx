@@ -40,13 +40,13 @@ afterEach(() => {
   Object.defineProperty(navigator, 'wakeLock', { value: undefined, configurable: true });
 });
 
-test('데이터 절약(항상): 선택한 칸만 재생하고 나머지는 멈춘다', () => {
+test('데이터 절약(항상): 선택한 창만 재생하고 나머지는 멈춘다', () => {
   setup({ dataSaver: 'on' });
   expect(paused.A).toBe(true);
   expect(paused.B).not.toBe(true);
 });
 
-test('데이터 절약 끔: 다른 칸도 그대로 재생', () => {
+test('데이터 절약 끔: 다른 창도 그대로 재생', () => {
   setup({ dataSaver: 'off' });
   expect(paused.A).not.toBe(true);
 });

@@ -4,7 +4,7 @@ import { Gnb } from '../../src/ui/Gnb';
 import { applyLayout } from '../../src/layout/layouts';
 import { initialViewState } from '../../src/app/viewState';
 
-test('휴대폰: 칸을 세로로 쌓는다 (나누기 손잡이 없이), 보이는 칸만', () => {
+test('휴대폰: 창을 세로로 쌓는다 (나누기 손잡이 없이), 보이는 창만', () => {
   const state = applyLayout(initialViewState, 'wideSide');
   const { container } = render(<TileGrid state={state} phone onSizes={() => {}} renderTile={(slot) => <div className="t" data-slot={slot} />} />);
   const grid = container.querySelector('.tile-grid')!;
@@ -16,7 +16,7 @@ test('휴대폰: 칸을 세로로 쌓는다 (나누기 손잡이 없이), 보이
   expect(quad.container.querySelectorAll('.q')).toHaveLength(4);
 });
 
-test('휴대폰: 세로 방송 칸은 다른 칸의 2배 높이', () => {
+test('휴대폰: 세로 방송 창은 다른 창의 2배 높이', () => {
   const state = applyLayout(initialViewState, 'oneTwo');
   const { container } = render(<TileGrid state={state} phone tallSlots={[1]} onSizes={() => {}} renderTile={(slot) => <div data-slot={slot} />} />);
   expect((container.querySelector('.tile-grid') as HTMLElement).style.gridTemplateRows).toBe('minmax(var(--phone-row), 1fr) minmax(calc(var(--phone-row) * 2), 2fr) minmax(var(--phone-row), 1fr)');
@@ -45,7 +45,8 @@ test('휴대폰 상단 메뉴: 메뉴 버튼이 도구·설정을 담은 시트�
   const sheet = screen.getByRole('dialog', { name: '메뉴' });
   expect(within(sheet).queryByRole('button', { name: '큰 화면+1' })).toBeNull(); // 화면 모양은 고르지 않는다 (휴대폰은 세로 한 줄)
   expect(within(sheet).queryByText('화면 모양')).toBeNull();
-  for (const n of ['추천 라이브', '전체 새로고침', '전체 음소거', '도움말', '설정', '크리에이터 리모컨']) expect(within(sheet).getByRole('button', { name: n })).toBeInTheDocument();
+  expect(within(sheet).queryByRole('button', { name: '추천 라이브' })).toBeNull(); // 아래 탭에 있어 메뉴에서 뺐다
+  for (const n of ['전체 새로고침', '전체 음소거', '도움말', '설정', '크리에이터 리모컨']) expect(within(sheet).getByRole('button', { name: n })).toBeInTheDocument();
   fireEvent.click(within(sheet).getByRole('button', { name: '전체 새로고침' }));
   expect(onReloadAll).toHaveBeenCalled();
   expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull();

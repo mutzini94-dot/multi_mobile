@@ -12,21 +12,21 @@ export const initialViewState: ViewState = {
 
 export type ViewAction =
   | { type: 'setLayout'; layout: LayoutKind }
-  | { type: 'removeWindow'; slot: number } // 빈 창 삭제: 그 칸을 빼고 한 단계 작은 레이아웃으로
-  | { type: 'addWindow'; layout: LayoutKind; at: number } // 창 추가: 레이아웃을 넓히고 고른 자리를 빈 칸으로
+  | { type: 'removeWindow'; slot: number } // 빈 창 삭제: 그 창을 빼고 한 단계 작은 레이아웃으로
+  | { type: 'addWindow'; layout: LayoutKind; at: number } // 창 추가: 레이아웃을 넓히고 고른 자리를 빈 창으로
   | { type: 'assign'; slot: number; creator: Creator }
-  | { type: 'assignPage'; slot: number; page: PageSlot | DetachedMark } // 후원 페이지·웹페이지 칸·분리 표시 (선택은 그대로)
-  | { type: 'restore'; slot: number; item: SlotItem } // 분리 창에서 되돌린 내용 (숨긴 칸이어도, 선택은 그대로)
+  | { type: 'assignPage'; slot: number; page: PageSlot | DetachedMark } // 후원 페이지·웹페이지 창·분리 표시 (선택은 그대로)
+  | { type: 'restore'; slot: number; item: SlotItem } // 분리 창에서 되돌린 내용 (숨긴 창이어도, 선택은 그대로)
   | { type: 'clear'; slot: number }
   | { type: 'select'; slot: number }
-  | { type: 'swap'; from: number; to: number } // 칸 자리 바꾸기 (빈 칸이면 옮기기)
-  | { type: 'openFirst'; creator: Creator } // 활동 위젯에서 누른 방송을 첫 번째 칸에
-  | { type: 'pinPage'; slot: number; creator: Creator | null } // 후원 페이지·채팅·시그니처 칸을 방송에 고정 (null = 선택한 방송 따라가기)
+  | { type: 'swap'; from: number; to: number } // 창 자리 바꾸기 (빈 창이면 옮기기)
+  | { type: 'openFirst'; creator: Creator } // 활동 위젯에서 누른 방송을 첫 번째 창에
+  | { type: 'pinPage'; slot: number; creator: Creator | null } // 후원 페이지·채팅·시그니처 창을 방송에 고정 (null = 선택한 방송 따라가기)
   | { type: 'toggleSound' }
   | { type: 'setSizes'; group: string; sizes: number[] }
   | { type: 'replace'; state: ViewState };
 
-// 지금 보이는 칸만 바꿀 수 있다
+// 지금 보이는 창만 바꿀 수 있다
 const inRange = (state: ViewState, slot: number) => Number.isInteger(slot) && slot >= 0 && slot < visibleCount(state);
 
 export function viewReducer(state: ViewState, action: ViewAction): ViewState {
@@ -62,7 +62,7 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       return { ...state, slots, selected: state.selected === action.slot ? null : state.selected };
     }
     case 'select':
-      // 페이지 칸은 선택하지 않는다: 선택은 소리·후원 대상이라 페이지를 누를 때 방송 소리가 꺼지면 안 된다
+      // 페이지 창은 선택하지 않는다: 선택은 소리·후원 대상이라 페이지를 누를 때 방송 소리가 꺼지면 안 된다
       if (!inRange(state, action.slot) || !isStream(state.slots[action.slot])) return state;
       return { ...state, selected: action.slot, soundOn: true };
     case 'swap': {
@@ -74,14 +74,14 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       return { ...state, slots, selected };
     }
     case 'openFirst': {
-      // 이미 보이는 칸에 있으면 첫 칸과 자리만 바꾼다
+      // 이미 보이는 창에 있으면 첫 창과 자리만 바꾼다
       const at = visibleSlots(state).findIndex((s) => isStream(s) && s.key === action.creator.key);
       if (at > 0) return { ...viewReducer(state, { type: 'swap', from: at, to: 0 }), selected: 0, soundOn: true };
-      // 숨긴 칸에 같은 방송이 있으면 비운다 (레이아웃을 되돌렸을 때 같은 방송이 두 칸에 뜨지 않게)
+      // 숨긴 창에 같은 방송이 있으면 비운다 (레이아웃을 되돌렸을 때 같은 방송이 두 창에 뜨지 않게)
       let s = { ...state, slots: state.slots.map((x) => (isStream(x) && x.key === action.creator.key ? null : x)) };
       const first = s.slots[0];
       if (first && !isStream(first) && (first.kind === 'activity' || first.kind === 'detached')) {
-        // 첫 칸이 활동 위젯·분리 표시면 첫 빈 칸(없으면 둘째 칸)으로 옮긴다. 1화면이면 2분할로
+        // 첫 창이 활동 위젯·분리 표시면 첫 빈 창(없으면 둘째 창)으로 옮긴다. 1화면이면 2분할로
         if (visibleCount(s) < 2) s = applyLayout(s, 'split2');
         const empty = visibleSlots(s).findIndex((x, i) => i > 0 && !x);
         const to = empty > 0 ? empty : 1;

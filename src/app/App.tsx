@@ -19,7 +19,7 @@ import { SlotPickerDialog } from '../ui/SlotPickerDialog';
 import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY } from '../quick/shortsSize';
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
-import { usePhone } from '../ui/usePhone';
+import { usePhone, PHONE_QUERY } from '../ui/usePhone';
 import { PhoneDock } from '../ui/PhoneDock';
 import { onNativeBack } from '../native/backButton';
 import { nativeToonationBridge } from '../native/toonation/nativeBridge';
@@ -33,8 +33,8 @@ import { readSharedView, shareUrl } from './shareView';
 import { ShareDialog } from '../ui/ShareDialog';
 import { useDataSaver, useWakeLock } from '../ui/useDevice';
 import { detectVertical } from '../players/verticalThumb';
-import { lockLandscape, unlockOrientation } from '../ui/orientation';
-import { forgetWatch, newlyPlaced, readWatchLog, recordWatch } from '../activity/watchLog';
+import { lockLandscape, lockPortrait, unlockOrientation } from '../ui/orientation';
+import { forgetWatch, newlyPlaced, readWatchLog, recordWatch, restoreWatchLog } from '../activity/watchLog';
 import { readSettingsLog, recordSettings } from '../activity/settingsLog';
 import { donatedToCheck, findDonatedLive, mergeLive, type LiveTarget } from '../activity/liveTargets';
 import { buildTimeline } from '../activity/timeline';
@@ -88,10 +88,10 @@ interface Props {
   lives?: (q: LiveQuery) => Promise<LivePage>; // 투네이션 라이브 목록 (테스트에서 바꿔 끼움)
   popular?: () => Promise<PopularLive>; // 인기라이브 (테스트에서 바꿔 끼움)
   quickPollMs?: number; // 퀵패널 라이브 확인 간격 (테스트에서 바꿔 끼움)
-  detachHost?: DetachHost; // 칸 분리 창 통로 (테스트에서 바꿔 끼움)
+  detachHost?: DetachHost; // 창 분리 창 통로 (테스트에서 바꿔 끼움)
 }
 
-/** 분리 창에 가 있는 칸 내용 */
+/** 분리 창에 가 있는 창 내용 */
 interface Detached {
   id: string;
   item: SlotItem;
@@ -105,6 +105,12 @@ const VERTICAL_KEY = 'mv.vertical.v1';
 const VERTICAL_SEEN_KEY = 'mv.vertical.seen.v1';
 /** 화면 잠금을 풀려면 이만큼 길게 누른다 */
 const UNLOCK_HOLD_MS = 800;
+const DOT_HINT_KEY = 'mv.dotHint.v1';
+const APP_WELCOME_KEY = 'mv.appWelcome.v1';
+
+/** 처음 열 때 휴대폰 폭인지 */
+const phoneAtStart = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(PHONE_QUERY).matches;
+
 /** 휴대폰 걸러 보기 (시안 C) */
 type PhoneFilter = 'all' | 'sound' | 'pages' | 'fav';
 const PHONE_FILTERS: [PhoneFilter, string][] = [
@@ -117,11 +123,11 @@ const PHONE_FILTERS: [PhoneFilter, string][] = [
 const PHONE_MAX_WINDOWS = 6;
 /** 후원 페이지를 창 안에 띄워도 되는 이 앱 주소 (투네이션이 허용한 뒤 Vercel 환경 변수로) */
 const DONATE_FRAME_HOSTS = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_DONATE_FRAME_HOSTS ?? '';
-/** 새 창으로 분리할 수 있는 칸 (방송·후원 페이지·채팅·웹페이지) */
+/** 새 창으로 분리할 수 있는 창 (방송·후원 페이지·채팅·웹페이지) */
 const canDetach = (item: SlotItem | null | undefined) => isStream(item) || (isPage(item) && item.kind !== 'activity' && item.kind !== 'signature');
 const detachedId = (item: SlotItem | null | undefined) => (item && !isStream(item) && item.kind === 'detached' ? item.id : null);
 
-/** 저장용: 분리 표시 칸은 분리 창에 가 있는 원래 내용으로 (다음 실행에서는 칸 안에서 연다) */
+/** 저장용: 분리 표시 창은 분리 창에 가 있는 원래 내용으로 (다음 실행에서는 창 안에서 연다) */
 function withDetachedItems(state: ViewState, detached: Detached[]): ViewState {
   return { ...state, slots: state.slots.map((s) => (detachedId(s) ? detached.find((d) => d.id === detachedId(s))?.item ?? null : s)) };
 }
@@ -160,7 +166,7 @@ export function App(props: Props) {
   const [helpOpen, setHelpOpen] = useState(false); // 도움말
   const [keysOpen, setKeysOpen] = useState(false); // 단축키 안내 (? 키)
   const [historyOpen, setHistoryOpen] = useState(false);
-  // 상단 '추천 라이브': 고른 방송을 넣을 칸을 묻는다
+  // 상단 '추천 라이브': 고른 방송을 넣을 창을 묻는다
   const [liveOpen, setLiveOpen] = useState(false);
   const [livePick, setLivePick] = useState<Creator | null>(null);
   const [limitAsk, setLimitAsk] = useState<{ creator: Creator; total: number } | null>(null);
@@ -192,7 +198,8 @@ export function App(props: Props) {
     viewReducer,
     null,
     // 공유 링크(#view=)로 열었으면 그 화면 구성, 아니면 마지막 화면 · 기본 레이아웃
-    () => sharedAtStart ?? (settings.restoreLastView ? loadLastView(kv) : null) ?? withSidePage(applyLayout(initialViewState, settings.defaultLayout)),
+    // 휴대폰: 후원 페이지 창 없이 빈 창 하나로 시작 (볼 방송부터 고르게)
+    () => sharedAtStart ?? (settings.restoreLastView ? loadLastView(kv) : null) ?? (phoneAtStart() && settings.defaultLayout === 'wideSide' ? applyLayout(initialViewState, 'single') : withSidePage(applyLayout(initialViewState, settings.defaultLayout))),
   );
   useEffect(() => {
     if (!sharedAtStart) return;
@@ -206,13 +213,13 @@ export function App(props: Props) {
   }, []);
   const [shareOpen, setShareOpen] = useState(false);
   const [phoneFilter, setPhoneFilter] = useState<PhoneFilter>('all'); // 휴대폰 걸러 보기
-  // 새 창으로 분리한 칸들 (칸에는 분리 표시만 남는다)
+  // 새 창으로 분리한 창들 (창에는 분리 표시만 남는다)
   const [detached, setDetached] = useState<Detached[]>([]);
   // 화면이 바뀔 때마다 저장
   useEffect(() => {
     saveLastView(kv, withDetachedItems(state, detached));
   }, [kv, state, detached]);
-  // 활동 위젯: 칸에 새로 띄운 방송은 시청 기록으로 (시작할 때 복원된 칸은 빼고)
+  // 활동 위젯: 창에 새로 띄운 방송은 시청 기록으로 (시작할 때 복원된 창은 빼고)
   const [watchLog, setWatchLog] = useState(() => readWatchLog(kv));
   const prevSlots = useRef(state.slots);
   useEffect(() => {
@@ -222,15 +229,28 @@ export function App(props: Props) {
   }, [kv, state.slots]);
   const [settingsLog, setSettingsLog] = useState(() => readSettingsLog(kv));
   const [message, setMessage] = useState<string | null>(null);
+  const [dotSeen, setDotSeen] = useState(() => kv.get(DOT_HINT_KEY) === '1'); // 즐겨찾기 빨간 점 안내를 봤는지
+  // 안드로이드 앱 첫 실행: 투네이션 로그인 권하기 (한 번만)
+  const [appWelcome, setAppWelcome] = useState(() => Capacitor.isNativePlatform() && kv.get(APP_WELCOME_KEY) !== '1');
+  const closeAppWelcome = () => {
+    kv.set(APP_WELCOME_KEY, '1');
+    setAppWelcome(false);
+  };
+  const [undo, setUndo] = useState<{ text: string; run(): void } | null>(null); // 창 비우기 등을 5초 동안 되돌리기
+  useEffect(() => {
+    if (!undo) return;
+    const t = setTimeout(() => setUndo(null), 5000);
+    return () => clearTimeout(t);
+  }, [undo]);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [popupCreator, setPopupCreator] = useState<Creator | null>(null);
   const [popupClosed, setPopupClosed] = useState(true);
   const popupRef = useRef<Window | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slotEls = useRef<(HTMLElement | null)[]>([]);
-  const [dragging, setDragging] = useState(false); // 칸 경계 크기 조절 중
-  // 칸 끌어서 자리 옮기기 (⠿를 눌러 끌고 다른 칸 위에서 놓기)
-  // 놓은 직후 제자리로 부드럽게 들어가는 칸들
+  const [dragging, setDragging] = useState(false); // 창 경계 크기 조절 중
+  // 창 끌어서 자리 옮기기 (⠿를 눌러 끌고 다른 창 위에서 놓기)
+  // 놓은 직후 제자리로 부드럽게 들어가는 창들
   const [settling, setSettling] = useState<number[]>([]);
   const settleTimer = useRef<ReturnType<typeof setTimeout>>();
   const settle = (slots: number[]) => {
@@ -243,7 +263,7 @@ export function App(props: Props) {
     (from, to, { shift }) => {
       const src = stateRef.current.slots[from];
       const dst = stateRef.current.slots[to];
-      // 기본은 자리 바꾸기. Shift를 누른 채 방송 칸을 후원 페이지·채팅·시그니처 칸에 놓으면 자리는 그대로 그 방송에 고정한다
+      // 기본은 자리 바꾸기. Shift를 누른 채 방송 창을 후원 페이지·채팅·시그니처 창에 놓으면 자리는 그대로 그 방송에 고정한다
       if (shift && isStream(src) && isPinnable(dst)) {
         dispatch({ type: 'pinPage', slot: to, creator: src });
         settle([from]);
@@ -252,14 +272,14 @@ export function App(props: Props) {
       dispatch({ type: 'swap', from, to });
       settle([from, to]);
     },
-    (slot) => tapActions.current(slot), // 짧게 누름 = 그 칸 선택 (그 칸만 소리), 두 번 = 그 방송 소리만
+    (slot) => tapActions.current(slot), // 짧게 누름 = 그 창 선택 (그 창만 소리), 두 번 = 그 방송 소리만
     () => true,
     (from) => settle([from]), // 취소: 제자리로
-    // 창 밖에 놓음: 그 자리에 새 창으로 분리 (분리할 수 없는 칸은 제자리로)
+    // 창 밖에 놓음: 그 자리에 새 창으로 분리 (분리할 수 없는 창은 제자리로)
     (from, x, y) => (canDetach(stateRef.current.slots[from]) ? detachActions.current.detach(from, { x, y }) : settle([from])),
-    (slot) => holdActions.current(slot), // 손가락으로 길게 누르고 그대로 뗌: 칸 메뉴 (휴대폰)
+    (slot) => holdActions.current(slot), // 손가락으로 길게 누르고 그대로 뗌: 창 메뉴 (휴대폰)
   );
-  // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
+  // 전체 화면으로 보는 창 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
   const focusHistory = useRef(false); // 전체 화면 때 쌓은 뒤로가기 기록
   const [focusPanel, setFocusPanel] = useState<'chat' | 'donate' | null>(null); // 전체 화면에서 채팅·후원 페이지 (휴대폰 세로: 아래, 가로·PC: 오른쪽)
@@ -283,9 +303,9 @@ export function App(props: Props) {
       // 기록을 쓸 수 없는 환경
     }
   }, [focused]);
-  // 전체 화면에서 다음·이전 방송으로 (좌우로 밀기·←→ 키). 빈 칸·페이지 칸은 건너뛰고 끝에서 처음으로
+  // 전체 화면에서 다음·이전 방송으로 (좌우로 밀기·←→ 키). 빈 창·페이지 창은 건너뛰고 끝에서 처음으로
   const focusStepRef = useRef<(dir: 1 | -1) => void>(() => {});
-  // 짧게 누름 = 칸 선택, 같은 칸을 0.35초 안에 두 번 = 그 방송 소리만 (여러 칸 동시 듣기에서 다른 칸 소리를 끈다)
+  // 짧게 누름 = 창 선택, 같은 창을 0.35초 안에 두 번 = 그 방송 소리만 (여러 창 동시 듣기에서 다른 창 소리를 끈다)
   const lastTap = useRef<{ slot: number; at: number } | null>(null);
   const tapActions = useRef<(slot: number) => void>(() => {});
   const holdActions = useRef<(slot: number) => void>(() => {});
@@ -313,24 +333,24 @@ export function App(props: Props) {
   }, []);
   const focusEl = useRef<HTMLDivElement>(null);
 
-  // 플레이어 핸들: 플레이어 키(방송 기준, layouts.playerKeys)로 보관해 칸 자리를 바꿔도 그대로 쓴다
+  // 플레이어 핸들: 플레이어 키(방송 기준, layouts.playerKeys)로 보관해 창 자리를 바꿔도 그대로 쓴다
   const [handles, setHandles] = useState<Record<string, PlayerHandle>>({});
-  // 전체 새로고침: 바뀌면 모든 칸의 플레이어·페이지를 다시 띄운다
+  // 전체 새로고침: 바뀌면 모든 창의 플레이어·페이지를 다시 띄운다
   const [reloadSeq, setReloadSeq] = useState(0);
-  // 트위치 칸 일시정지 버튼 (유튜브는 플레이어 자체 버튼)
+  // 트위치 창 일시정지 버튼 (유튜브는 플레이어 자체 버튼)
   const [pausedKeys, setPausedKeys] = useState<Record<string, boolean>>({});
   const [tileSeq, setTileSeq] = useState<Record<string, number>>({});
   const keys = useMemo(() => playerKeys(state.slots), [state.slots]);
   const handleList = useMemo(() => keys.map((k) => (k ? handles[k] ?? null : null)), [keys, handles]);
-  // 소리·재생 (설정: 소리 방식·기본 볼륨·숨긴 칸 재생·낮은 화질)
-  const [mixMuted, setMixMuted] = useState<Record<string, boolean>>({}); // 여러 칸 동시 듣기: 칸별로 끈 소리
-  const [tileVolumes, setTileVolumes] = useState<Record<string, number>>({}); // 여러 칸 동시 듣기: 칸별 볼륨
+  // 소리·재생 (설정: 소리 방식·기본 볼륨·숨긴 창 재생·낮은 화질)
+  const [mixMuted, setMixMuted] = useState<Record<string, boolean>>({}); // 여러 창 동시 듣기: 창별로 끈 소리
+  const [tileVolumes, setTileVolumes] = useState<Record<string, number>>({}); // 여러 창 동시 듣기: 창별 볼륨
   const shown = visibleCount(state);
   const mix = settings.soundMode === 'mix';
   const audible = keys.map((k, i) => !!k && i < shown && state.soundOn && (mix ? !mixMuted[k] : i === state.selected));
   const volumes = keys.map((k) => (k && mix ? tileVolumes[k] ?? settings.masterVolume : settings.masterVolume));
   useAudioMix(handleList, audible, volumes);
-  // 데이터 절약: 선택한 칸만 재생 (선택한 방송이 없으면 그대로), 나머지는 멈추고 낮은 화질
+  // 데이터 절약: 선택한 창만 재생 (선택한 방송이 없으면 그대로), 나머지는 멈추고 낮은 화질
   const saving = useDataSaver(settings.dataSaver) && state.selected !== null && isStream(state.slots[state.selected]);
   usePlaybackPolicy(
     handleList,
@@ -346,7 +366,7 @@ export function App(props: Props) {
   stateRef.current = state;
   // 후원 대상: 선택한 방송
   const donateTarget = selectedCreator;
-  // 후원 페이지 칸이 따라가는 크리에이터: 선택한 방송 (선택이 풀리면 마지막으로 따라간 방송)
+  // 후원 페이지 창이 따라가는 크리에이터: 선택한 방송 (선택이 풀리면 마지막으로 따라간 방송)
   const [lastFollowed, setLastFollowed] = useState<Creator | null>(null);
   const detachHost = useMemo(
     () => props.detachHost ?? (desktop ? desktopDetachHost(desktop, () => window.location.href) : webDetachHost(window)),
@@ -356,11 +376,11 @@ export function App(props: Props) {
   useEffect(() => {
     if (donateFor !== lastFollowed) setLastFollowed(donateFor);
   }, [donateFor, lastFollowed]);
-  // 페이지 칸의 뒤로·새로고침 (플레이어 키로 보관)
+  // 페이지 창의 뒤로·새로고침 (플레이어 키로 보관)
   const pageHandles = useRef<Record<string, PageHandle>>({});
   const embed = desktop ? 'webview' : 'iframe';
-  // 채팅 칸: 유튜브는 라이브 영상 ID로만 채팅을 열 수 있다. 라이브 목록에서 고른 방송은 이미 알고,
-  // 채널로 넣은 방송은 플레이어가 재생을 시작한 뒤 알려 주므로 채팅 칸이 있는 동안 잠깐씩 물어본다
+  // 채팅 창: 유튜브는 라이브 영상 ID로만 채팅을 열 수 있다. 라이브 목록에서 고른 방송은 이미 알고,
+  // 채널로 넣은 방송은 플레이어가 재생을 시작한 뒤 알려 주므로 채팅 창이 있는 동안 잠깐씩 물어본다
   const [ytLive, setYtLive] = useState<Record<string, string>>({});
   // 세로 방송: 직접 고른 것(크리에이터별 저장)이 우선, 아니면 유튜브 썸네일 방향으로 알아낸 것
   const [verticalPick, setVerticalPick] = useState<Record<string, boolean>>(() => {
@@ -382,7 +402,7 @@ export function App(props: Props) {
   });
   const verticalAutoRef = useRef<Record<string, boolean>>({});
   const ytVideoOfRef = useRef<(c: Creator, slot: number) => string | null>(() => null);
-  // 페이지 칸(후원 페이지·채팅·시그니처)이 보여 줄 방송: 고정한 방송 > 선택한 방송
+  // 페이지 창(후원 페이지·채팅·시그니처)이 보여 줄 방송: 고정한 방송 > 선택한 방송
   const targetOf = (page: PageSlot) => pageTarget(page, donateFor);
   const videoIdOf = (c: Creator | null) => (c?.platform === 'youtube' ? (c.videoId ?? ytLive[c.key] ?? null) : null);
   const ytVideoOf = (c: Creator, slot: number) => videoIdOf(c) ?? (keys[slot] ? handles[keys[slot]!]?.videoId?.() ?? null : null);
@@ -400,7 +420,7 @@ export function App(props: Props) {
       kv.set(VERTICAL_KEY, JSON.stringify(next));
       return next;
     });
-  // 유튜브 세로 방송 알아내기: 보이는 유튜브 칸의 영상 ID(재생되면 알게 된다)로 썸네일 방향을 본다
+  // 유튜브 세로 방송 알아내기: 보이는 유튜브 창의 영상 ID(재생되면 알게 된다)로 썸네일 방향을 본다
   const ytVisibleSig = state.slots.map((s, i) => (isStream(s) && s.platform === 'youtube' && i < visibleCount(state) ? s.key : '')).join(',');
   useEffect(() => {
     const check = () => {
@@ -468,19 +488,19 @@ export function App(props: Props) {
   };
   const pageEmptyText = (page: PageSlot) =>
     page.kind !== 'chat'
-      ? '후원할 방송 칸을 선택하세요'
+      ? '후원할 방송 창을 선택하세요'
       : targetOf(page)?.platform === 'youtube'
         ? '유튜브 채팅은 방송이 재생되면 표시됩니다'
-        : '채팅을 볼 방송 칸을 선택하세요';
+        : '채팅을 볼 방송 창을 선택하세요';
   const pageLabel = (page: PageSlot) => {
     const c = targetOf(page);
     return page.kind === 'web' || page.kind === 'activity' || !c ? page.name : `${c.name} ${page.kind === 'donate' ? '후원 페이지' : page.kind === 'signature' ? '시그니처' : '채팅'}`;
   };
-  // 📌 페이지 칸을 방송에 고정 (고정할 방송 고르기 창)
+  // 📌 페이지 창을 방송에 고정 (고정할 방송 고르기 창)
   const [pinSlot, setPinSlot] = useState<number | null>(null);
-  // 카드(추천 라이브·활동 위젯·퀵패널)를 칸으로 끄는 중: 플레이어·페이지가 끌기를 가로채지 않게, 추천 라이브 창은 비켜 준다
+  // 카드(추천 라이브·활동 위젯·퀵패널)를 창으로 끄는 중: 플레이어·페이지가 끌기를 가로채지 않게, 추천 라이브 창은 비켜 준다
   const [cardDrag, setCardDrag] = useState(false);
-  const [cardOverSlot, setCardOverSlot] = useState<number | null>(null); // 카드를 끌고 있는 칸 (테두리 강조)
+  const [cardOverSlot, setCardOverSlot] = useState<number | null>(null); // 카드를 끌고 있는 창 (테두리 강조)
   useEffect(() => {
     // 끌기를 시작한 그 순간에 화면을 바꾸면 브라우저가 끌기를 취소하므로 다음 차례에 바꾼다
     const start = (e: DragEvent) => hasCreatorDrag(e.dataTransfer) && setTimeout(() => setCardDrag(true), 0);
@@ -488,7 +508,7 @@ export function App(props: Props) {
       setCardDrag(false);
       setCardOverSlot(null);
     };
-    // 놓기는 창 전체에서 받아 커서 아래의 칸을 찾는다: 끌기를 막 시작한 순간에는 영상 위 층이 아직 끌기를 받고 있어서
+    // 놓기는 창 전체에서 받아 커서 아래의 창을 찾는다: 끌기를 막 시작한 순간에는 영상 위 층이 아직 끌기를 받고 있어서
     const slotAt = (e: DragEvent): number | null => {
       const direct = (e.target as Element | null)?.closest?.('.tile[data-slot]') as HTMLElement | null;
       const tile = direct ?? ((document.elementsFromPoint?.(e.clientX, e.clientY) ?? []).map((el) => el.closest('.tile[data-slot]')).find(Boolean) as HTMLElement | undefined);
@@ -526,7 +546,7 @@ export function App(props: Props) {
       window.removeEventListener('drop', drop);
     };
   }, []);
-  /** 끌어 온 방송을 칸에 놓기: 후원 페이지·채팅·시그니처 칸이면 그 방송에 고정, 아니면 그 칸에 띄운다 */
+  /** 끌어 온 방송을 창에 놓기: 후원 페이지·채팅·시그니처 창이면 그 방송에 고정, 아니면 그 창에 띄운다 */
   const dropCreator = (slot: number, c: Creator) => {
     setCardDrag(false);
     if (isPinnable(stateRef.current.slots[slot])) dispatch({ type: 'pinPage', slot, creator: c });
@@ -536,7 +556,7 @@ export function App(props: Props) {
   };
   const dropCreatorRef = useRef(dropCreator);
   dropCreatorRef.current = dropCreator;
-  // 시그니처 칸: 선택한 방송 크리에이터의 시그니처 (로그인 없이도)
+  // 시그니처 창: 선택한 방송 크리에이터의 시그니처 (로그인 없이도)
   const loadSignatures = useCallback((tag: string) => bridge.request<unknown[]>('signatures', tag).then(parseSignatures), [bridge]);
 
   // 사용자가 팝업을 직접 닫았는지 주기적으로 확인한다 (설치형은 앱이 닫힘을 알려준다)
@@ -656,10 +676,13 @@ export function App(props: Props) {
     }
     // 브라우저(설치형은 창) 전체 화면도 함께. 지원하지 않거나 거부되면 앱 안에서만 크게 본다
     // 휴대폰은 전체 화면이 되면 가로 화면으로 돌린다
+    // 세로 방송은 세로 그대로 (돌리면 화면이 작아진다)
     const phoneNow = phoneRef.current;
+    const item = stateRef.current.slots[slot];
+    const vertical = isStream(item) && isVertical(item, slot);
     document.documentElement
       .requestFullscreen?.()
-      .then(() => phoneNow && lockLandscape())
+      .then(() => phoneNow && (vertical ? lockPortrait() : lockLandscape()))
       .catch(() => {});
   };
   // 미니 모드: 선택한 방송(없으면 보이는 첫 방송) 하나만, 상단 메뉴 없이. 설치형은 앱 창도 작게·항상 위로
@@ -718,6 +741,28 @@ export function App(props: Props) {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }, [desktop]);
   focusExitRef.current = exitFullscreen;
+  // 최근 본에서 지우기 (5초 동안 되돌리기)
+  const forgetRecent = (c: Creator) => {
+    const before = readWatchLog(kv);
+    setWatchLog(forgetWatch(kv, c));
+    setUndo({ text: `최근 본 목록에서 ${c.name}을(를) 지웠습니다`, run: () => setWatchLog(restoreWatchLog(kv, before)) });
+  };
+  // 창 닫기 (5초 동안 되돌리기: 닫기 전 화면 구성 그대로)
+  const closeWindow = (slot: number, clearFirst = false) => {
+    const before = stateRef.current;
+    if (clearFirst && before.slots[slot]) dispatch({ type: 'clear', slot });
+    dispatch({ type: 'removeWindow', slot });
+    setUndo({ text: '창을 닫았습니다', run: () => dispatch({ type: 'replace', state: before }) });
+  };
+  // 로고: 첫 화면으로 — 전체 화면·전체보기·시트·걸러 보기를 풀고 맨 위로
+  const goHome = () => {
+    if (focused !== null) exitFullscreen();
+    setOverview(false);
+    setPageSheet(null);
+    setShortsOpen(false);
+    setPhoneFilter('all');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   useEffect(() => {
     if (focused === null) return;
     const onKey = (e: KeyboardEvent) => {
@@ -760,11 +805,11 @@ export function App(props: Props) {
     if (mix) setMixMuted(Object.fromEntries(keys.filter((x): x is string => !!x).map((x) => [x, x !== k])));
   };
   useEffect(() => {
-    if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 칸이 사라짐
+    if (focused !== null && !focusedCreator) exitFullscreen(); // 레이아웃 축소 등으로 창이 사라짐
   }, [focused, focusedCreator, exitFullscreen]);
 
   // ---------- 방송 종료 감지 ----------
-  // 플레이어가 알려 준 상태 (플레이어 키). 칸에서 빠진 방송의 상태는 지운다
+  // 플레이어가 알려 준 상태 (플레이어 키). 창에서 빠진 방송의 상태는 지운다
   const [streamStatus, setStreamStatus] = useState<Record<string, StreamStatus>>({});
   useEffect(() => {
     setStreamStatus((m) => {
@@ -814,11 +859,11 @@ export function App(props: Props) {
           delete next[key];
           return next;
         });
-        setTileSeq((t) => ({ ...t, [key]: (t[key] ?? 0) + 1 })); // 그 칸 플레이어만 새로
+        setTileSeq((t) => ({ ...t, [key]: (t[key] ?? 0) + 1 })); // 그 창 플레이어만 새로
       })
       .catch(() => {});
   };
-  /** 끝난 방송 대신 넣을 방송: 투네이션 즐겨찾기 중 라이브이면서 아직 칸에 없는 첫 방송 */
+  /** 끝난 방송 대신 넣을 방송: 투네이션 즐겨찾기 중 라이브이면서 아직 창에 없는 첫 방송 */
   const liveReplacement = (): Creator | null =>
     toonation.state.creators.find((c) => c.live && !state.slots.some((s) => isStream(s) && s.key === c.key)) ?? null;
   const replaceSlot = (slot: number, c: Creator) => {
@@ -851,7 +896,7 @@ export function App(props: Props) {
           const now = h?.isPaused?.() ?? paused; // 플레이어 안에서 직접 멈췄을 수도 있다
           h?.setPaused?.(!now);
           setPausedKeys((p) => ({ ...p, [key]: !now }));
-          // 웹 브라우저의 트위치 임베드는 멈춘 뒤 재생 요청을 무시하기도 한다: 그대로면 그 칸만 다시 띄운다 (라이브는 지금 시점부터)
+          // 웹 브라우저의 트위치 임베드는 멈춘 뒤 재생 요청을 무시하기도 한다: 그대로면 그 창만 다시 띄운다 (라이브는 지금 시점부터)
           if (now && h?.isPaused)
             setTimeout(() => {
               if (h.isPaused?.()) setTileSeq((t) => ({ ...t, [key]: (t[key] ?? 0) + 1 }));
@@ -877,11 +922,23 @@ export function App(props: Props) {
         ) : (
           <span className="muted">{s === 'ended' ? '라이브 중인 투네이션 즐겨찾기가 없습니다' : '지금 방송 중이 아니거나 다른 사이트에서 볼 수 없는 방송입니다'}</span>
         )}
+        {/* 다음 행동: 다시 불러오기 · 다른 라이브 둘러보기 */}
+        <span className="ended-notice__actions">
+          <button type="button" className="btn btn--sm ended-notice__btn" onClick={() => {
+            const k = keys[slot];
+            if (k) setTileSeq((t) => ({ ...t, [k]: (t[k] ?? 0) + 1 }));
+          }}>
+            다시 불러오기
+          </button>
+          <button type="button" className="btn btn--sm ended-notice__btn" onClick={() => (phoneRef.current ? setShortsOpen(true) : setLiveOpen(true))}>
+            다른 라이브 보기
+          </button>
+        </span>
       </div>
     );
   };
 
-  // 단축키: 1~9 칸 선택 · M 소리 · F 전체 화면 · D 후원하기 (입력 중이거나 창이 열려 있으면 무시)
+  // 단축키: 1~9 창 선택 · M 소리 · F 전체 화면 · D 후원하기 (입력 중이거나 창이 열려 있으면 무시)
   const keyActions = useRef({ onDonate: () => {}, fullscreen: (_slot: number) => {} });
   useEffect(() => {
     if (!settings.shortcuts) return;
@@ -965,7 +1022,7 @@ export function App(props: Props) {
       return;
     }
     if (phoneRef.current) {
-      // 휴대폰: 채팅과 같은 배치 — 그 방송을 맨 위 칸으로 올리고 아래에 후원 페이지
+      // 휴대폰: 채팅과 같은 배치 — 그 방송을 맨 위 창으로 올리고 아래에 후원 페이지
       const at = visibleSlots(stateRef.current).findIndex((x) => isStream(x) && x.key === c.key);
       if (at > 0) {
         dispatch({ type: 'select', slot: at });
@@ -983,15 +1040,15 @@ export function App(props: Props) {
     const tag = c.donateId;
     const label = `'${s.name}'(${s.cash.toLocaleString('ko-KR')}캐시)`;
     const manual = `후원창의 시그니처 탭에서 ${label}를 골라 주세요`;
-    // 그 크리에이터의 후원 페이지 칸이 떠 있으면 새 후원창 대신 그 칸에서 고른다 (설치형)
+    // 그 크리에이터의 후원 페이지 창이 떠 있으면 새 후원창 대신 그 창에서 고른다 (설치형)
     const tileSlot = desktop?.selectSignature
       ? visibleSlots(state).findIndex((p) => isPage(p) && p.kind === 'donate' && targetOf(p)?.donateId === tag)
       : -1;
     const tileWc = tileSlot >= 0 && keys[tileSlot] ? pageHandles.current[keys[tileSlot]!]?.webContentsId?.() : null;
     if (desktop?.selectSignature && tileWc) {
-      setMessage(`후원 페이지 칸에서 ${label} 시그니처를 고르는 중…`);
+      setMessage(`후원 페이지 창에서 ${label} 시그니처를 고르는 중…`);
       desktop.selectSignature(s.name, tag, s.cash, tileWc).then(
-        (r) => setMessage(r === 'ok' ? `후원 페이지 칸에 ${label} 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요` : `후원 페이지 칸의 시그니처 탭에서 ${label}를 골라 주세요 (자동 선택 실패: ${r})`),
+        (r) => setMessage(r === 'ok' ? `후원 페이지 창에 ${label} 시그니처를 골라 두었습니다. 후원 버튼을 눌러 주세요` : `후원 페이지 창의 시그니처 탭에서 ${label}를 골라 주세요 (자동 선택 실패: ${r})`),
         () => setMessage(manual),
       );
       return;
@@ -1007,14 +1064,19 @@ export function App(props: Props) {
       () => setMessage(manual),
     );
   };
+  const [donatePick, setDonatePick] = useState(false); // 후원할 방송 고르기 (선택한 방송이 없고 방송이 여럿일 때)
   const onDonate = () => {
     const c = phoneRef.current ? sheetTargetRef.current : donateTarget;
-    if (c) donateTo(c);
+    if (c) return donateTo(c);
+    // 고른 방송이 없으면: 방송이 하나뿐이면 바로, 여럿이면 목록에서 고르게
+    const streams = visibleSlots(stateRef.current).filter(isStream);
+    if (streams.length === 1) donateTo(streams[0]);
+    else if (streams.length > 1) setDonatePick(true);
   };
 
   keyActions.current = { onDonate, fullscreen: enterFullscreen };
 
-  // ---------- 칸 새 창으로 분리 ----------
+  // ---------- 창 새 창으로 분리 ----------
   const detachSlot = (slot: number, at?: { x: number; y: number }) => {
     const item = stateRef.current.slots[slot];
     if (!isStream(item) && !isPage(item)) return;
@@ -1040,9 +1102,9 @@ export function App(props: Props) {
     setMessage(null);
   };
   /**
-   * 분리 창의 내용을 칸으로 되돌린다.
-   * button(칸의 되돌리기)·return(분리 창의 되돌리기): 분리 표시 칸으로, 그 칸에 다른 방송을 넣었으면 보이는 첫 빈 칸으로
-   * closed(분리 창을 닫음): 분리 표시 칸이 남아 있을 때만 되돌리고, 아니면 버린다
+   * 분리 창의 내용을 창으로 되돌린다.
+   * button(창의 되돌리기)·return(분리 창의 되돌리기): 분리 표시 창으로, 그 창에 다른 방송을 넣었으면 보이는 첫 빈 창으로
+   * closed(분리 창을 닫음): 분리 표시 창이 남아 있을 때만 되돌리고, 아니면 버린다
    */
   const restoreDetached = (id: string, how: 'button' | 'return' | 'closed') => {
     const entry = detachedRef.current.find((d) => d.id === id);
@@ -1052,7 +1114,7 @@ export function App(props: Props) {
     if (slot < 0 && how !== 'closed') {
       slot = visibleSlots(s).findIndex((x) => !x);
       if (slot < 0) {
-        setMessage('빈 칸이 없어 되돌릴 수 없습니다. 칸을 비운 뒤 다시 눌러 주세요');
+        setMessage('빈 창이 없어 되돌릴 수 없습니다. 창을 비운 뒤 다시 눌러 주세요');
         return;
       }
     }
@@ -1062,8 +1124,8 @@ export function App(props: Props) {
     setMessage(null);
   };
   /**
-   * 분리 창을 메인 창의 칸에 끌어 놓음 (설치형): 빈 칸·분리 표시 칸이면 그 칸으로 (분리 표시 칸은 비운다),
-   * 다른 내용이 있는 칸이면 자리 바꾸기 (그 내용은 분리 표시 칸으로). 분리 표시 칸이 없으면 빈 칸에만.
+   * 분리 창을 메인 창의 창에 끌어 놓음 (설치형): 빈 창·분리 표시 창이면 그 창으로 (분리 표시 창은 비운다),
+   * 다른 내용이 있는 창이면 자리 바꾸기 (그 내용은 분리 표시 창으로). 분리 표시 창이 없으면 빈 창에만.
    */
   const dropDetached = (id: string, x: number, y: number) => {
     setExtHover(null);
@@ -1075,7 +1137,7 @@ export function App(props: Props) {
     const dst = s.slots[slot];
     if (slot !== marker && dst) {
       if (marker < 0) {
-        setMessage('빈 칸에 놓아 주세요');
+        setMessage('빈 창에 놓아 주세요');
         return;
       }
       dispatch({ type: 'restore', slot: marker, item: dst });
@@ -1086,7 +1148,7 @@ export function App(props: Props) {
     settle(marker >= 0 && marker !== slot ? [slot, marker] : [slot]);
     setMessage(null);
   };
-  const [extHover, setExtHover] = useState<number | null>(null); // 분리 창을 끄는 동안 놓일 칸 (테두리 강조)
+  const [extHover, setExtHover] = useState<number | null>(null); // 분리 창을 끄는 동안 놓일 창 (테두리 강조)
   const detachedRef = useRef(detached);
   detachedRef.current = detached;
   const detachActions = useRef({ restore: restoreDetached, donate: (_id: string) => {}, drop: dropDetached, detach: detachSlot });
@@ -1170,7 +1232,7 @@ export function App(props: Props) {
   const [quickStarted, setQuickStarted] = useState<Creator[]>([]);
   const quickPrev = useRef<Record<string, boolean>>({});
   const quickAll = [...quickFavs, ...quickRecents];
-  // 빈 칸의 '최근' 바로 넣기: 최근 본 크리에이터 중 지금 칸에 없는 3명 (방송 중이 먼저)
+  // 빈 창의 '최근' 바로 넣기: 최근 본 크리에이터 중 지금 창에 없는 3명 (방송 중이 먼저)
   const shownKeys = new Set(visibleSlots(state).filter(isStream).map((c) => c.key));
   const emptyPicks = withLive(quickRecents.filter((c) => !shownKeys.has(c.key)).map(quickLiveCreator), quickIsLive, 3);
   const quickLiveMap: Record<string, boolean> = {};
@@ -1191,7 +1253,7 @@ export function App(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickLiveSig]);
   const dismissQuick = (key: string) => setQuickStarted((s) => s.filter((c) => c.key !== key));
-  // 방송 시작 알림을 누르면(서비스 워커가 알려 준다) 그 방송을 칸에 넣는다
+  // 방송 시작 알림을 누르면(서비스 워커가 알려 준다) 그 방송을 창에 넣는다
   const openLiveRef = useRef<(key: string) => void>(() => {});
   openLiveRef.current = (key: string) => {
     const c = [...quickStarted, ...quickAll.map(quickLiveCreator), ...toonation.state.creators].find((x) => x.key === key);
@@ -1210,7 +1272,7 @@ export function App(props: Props) {
   const [shortsOpen, setShortsOpen] = useState(false);
   const phone = usePhone(); // 휴대폰 폭: 세로로 쌓는 배치
   phoneRef.current = phone;
-  // 휴대폰 후원·채팅 대상: 선택한 방송, 없으면 보이는 후원 페이지·채팅 칸이 따라가는 크리에이터
+  // 휴대폰 후원·채팅 대상: 선택한 방송, 없으면 보이는 후원 페이지·채팅 창이 따라가는 크리에이터
   const sheetTarget =
     donateTarget ??
     visibleSlots(state)
@@ -1218,7 +1280,7 @@ export function App(props: Props) {
       .find((c): c is Creator => !!c) ??
     null;
   sheetTargetRef.current = sheetTarget;
-  // 휴대폰 채팅: 선택한 방송을 맨 위 칸으로 올리고 채팅은 그 아래에 (방송을 가리지 않는다)
+  // 휴대폰 채팅: 선택한 방송을 맨 위 창으로 올리고 채팅은 그 아래에 (방송을 가리지 않는다)
   const openChat = () => {
     if (!sheetTarget) return;
     const s = state.selected;
@@ -1270,7 +1332,7 @@ export function App(props: Props) {
   const [overviewOn, setOverview] = useState(false);
   const overview = phone && overviewOn;
   const [scrollToSlot, setScrollToSlot] = useState<number | null>(null);
-  /** 이 방송을 맨 위 칸으로 올리고 그 아래에 채팅 */
+  /** 이 방송을 맨 위 창으로 올리고 그 아래에 채팅 */
   const openStreamChat = (slot: number) => {
     const item = stateRef.current.slots[slot];
     if (!isStream(item)) return;
@@ -1283,11 +1345,11 @@ export function App(props: Props) {
     if (!overview || slot >= visibleCount(state)) return null;
     const item = state.slots[slot];
     return {
-      label: isStream(item) ? `${item.name} 보기` : `${slot + 1}번 화면 보기`,
+      label: isStream(item) ? `${item.name} 보기` : `${slot + 1}번 창 보기`,
       onClick: () => {
         setOverview(false);
         if (isStream(item)) {
-          openStreamChat(slot); // 방송: 맨 위 칸으로 올리고 그 아래에 채팅 (채팅 버튼과 같다)
+          openStreamChat(slot); // 방송: 맨 위 창으로 올리고 그 아래에 채팅 (채팅 버튼과 같다)
           return;
         }
         setScrollToSlot(slot); // 빈 창·페이지: 그 자리로
@@ -1296,7 +1358,7 @@ export function App(props: Props) {
   };
   useEffect(() => {
     if (scrollToSlot === null) return;
-    // 타일 배치가 원래대로 돌아온 다음 프레임에 (부드럽게 넘기면 칸 자리 다시 재기에 끊긴다)
+    // 타일 배치가 원래대로 돌아온 다음 프레임에 (부드럽게 넘기면 창 자리 다시 재기에 끊긴다)
     const go = () => document.querySelectorAll('.tile-grid--phone .phone-cell')[scrollToSlot]?.scrollIntoView?.({ block: 'start' });
     go();
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
@@ -1349,7 +1411,7 @@ export function App(props: Props) {
       setDockTop(r && r.bottom > 0 ? Math.round(r.bottom + 8) : null);
     };
     measure();
-    const t = setTimeout(measure, 80); // 맨 위 칸이 16:9로 바뀐 뒤 다시
+    const t = setTimeout(measure, 80); // 맨 위 창이 16:9로 바뀐 뒤 다시
     window.addEventListener('resize', measure);
     return () => {
       clearTimeout(t);
@@ -1357,12 +1419,12 @@ export function App(props: Props) {
     };
   }, [chatDock, state.layout]);
   const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
-  const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 칸 놓을 자리 고르기
+  const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 창 놓을 자리 고르기
   // 휴대폰: 창은 최대 6개, 자리를 묻지 않고 맨 위에 빈 창을 더한다
   const growTo = growLayouts(state.layout).filter((l) => !phone || SLOT_COUNT[l] <= PHONE_MAX_WINDOWS);
   /**
-   * 방송을 칸에 넣기: 넓은 화면은 넣을 칸을 묻고, 휴대폰은 묻지 않는다
-   * (이미 보이면 그 칸 선택 → 첫 빈 칸 → 맨 위에 새 창 → 선택한 칸(없으면 첫 칸)을 바꾼다)
+   * 방송을 창에 넣기: 넓은 화면은 넣을 창을 묻고, 휴대폰은 묻지 않는다
+   * (이미 보이면 그 창 선택 → 첫 빈 창 → 맨 위에 새 창 → 선택한 창(없으면 첫 창)을 바꾼다)
    */
   const askSlot = (c: Creator) => {
     if (!phone) {
@@ -1424,9 +1486,9 @@ export function App(props: Props) {
     const layout = growTo.find((l) => l !== 'oneThree' && l !== 'oneFive') ?? growTo[0];
     dispatch({ type: 'addWindow', layout, at: 0 });
   };
-  const [emptyMenu, setEmptyMenu] = useState<{ slot: number; x: number; y: number; sheet?: boolean } | null>(null); // 빈 칸 오른쪽 클릭 메뉴 (휴대폰: 길게 누르기, 아래 시트)
+  const [emptyMenu, setEmptyMenu] = useState<{ slot: number; x: number; y: number; sheet?: boolean } | null>(null); // 빈 창 오른쪽 클릭 메뉴 (휴대폰: 길게 누르기, 아래 시트)
   const closeEmptyMenu = useCallback(() => setEmptyMenu(null), []);
-  const [videoMenu, setVideoMenu] = useState<{ slot: number; x: number; y: number; sheet?: boolean } | null>(null); // 영상 칸 오른쪽 클릭 메뉴 (휴대폰: 길게 누르기, 아래 시트)
+  const [videoMenu, setVideoMenu] = useState<{ slot: number; x: number; y: number; sheet?: boolean } | null>(null); // 영상 창 오른쪽 클릭 메뉴 (휴대폰: 길게 누르기, 아래 시트)
   holdActions.current = (slot) => {
     if (!phoneRef.current) return;
     haptic(15);
@@ -1438,7 +1500,7 @@ export function App(props: Props) {
       setEmptyMenu({ slot, x: 0, y: 0, sheet: true });
     }
   };
-  const [favTick, setFavTick] = useState(0); // 칸 메뉴에서 즐겨찾기를 바꾸면 다시 그린다
+  const [favTick, setFavTick] = useState(0); // 창 메뉴에서 즐겨찾기를 바꾸면 다시 그린다
   void favTick;
   const closeVideoMenu = useCallback(() => setVideoMenu(null), []);
   const openVideoMenu = (slot: number, x: number, y: number) => {
@@ -1448,7 +1510,7 @@ export function App(props: Props) {
   };
   const openVideoMenuRef = useRef(openVideoMenu);
   openVideoMenuRef.current = openVideoMenu;
-  // 설치형: 영상(iframe) 안 오른쪽 클릭 → 그 자리의 칸 메뉴
+  // 설치형: 영상(iframe) 안 오른쪽 클릭 → 그 자리의 창 메뉴
   useEffect(
     () =>
       desktop?.onFrameContextMenu?.(({ x, y }) => {
@@ -1472,7 +1534,7 @@ export function App(props: Props) {
       onDismiss={dismissQuick}
       onAddWindow={growTo.length ? addNewWindow : null}
       login={{ loggedIn: !!toonation.state.account, onLogin: toonation.login }}
-      onRemoveRecent={(c) => setWatchLog(forgetWatch(kv, c))}
+      onRemoveRecent={forgetRecent}
       shorts={{
         open: shortsOpen,
         onToggle: () => setShortsOpen((o) => !o),
@@ -1491,6 +1553,10 @@ export function App(props: Props) {
   // 휴대폰 아래 탭 (시안 C): 추천 라이브 · 즐겨찾기 · 최근 본 · 전체보기 · 창 추가
   const phoneDock = (
     <PhoneDock
+      onDotSeen={dotSeen ? undefined : () => {
+        kv.set(DOT_HINT_KEY, '1');
+        setDotSeen(true);
+      }}
       favorites={withLive(quickFavs.map(quickLiveCreator), quickIsLive)}
       recent={withLive(quickRecents.map(quickLiveCreator), quickIsLive)}
       started={quickStarted}
@@ -1498,7 +1564,7 @@ export function App(props: Props) {
         dismissQuick(c.key);
         askSlot(c);
       }}
-      onRemoveRecent={(c) => setWatchLog(forgetWatch(kv, c))}
+      onRemoveRecent={forgetRecent}
       login={{ loggedIn: !!toonation.state.account, onLogin: toonation.login }}
       shorts={{
         open: shortsOpen,
@@ -1516,7 +1582,7 @@ export function App(props: Props) {
       onAddWindow={growTo.length ? addNewWindow : null}
     />
   );
-  // 휴대폰 걸러 보기: 전체 · 소리 나는 칸 · 후원 페이지 등 페이지 칸 · 즐겨찾기 방송
+  // 휴대폰 걸러 보기: 전체 · 소리 나는 창 · 후원 페이지 등 페이지 창 · 즐겨찾기 방송
   const filterVisible = visibleSlots(state);
   const favKeySet = new Set(quickFavs.map((c) => c.key));
   const filterMatch: Record<PhoneFilter, (i: number) => boolean> = {
@@ -1528,12 +1594,14 @@ export function App(props: Props) {
   const filterCount = (f: PhoneFilter) => filterVisible.filter((_, i) => filterMatch[f](i)).length;
   const activeFilter: PhoneFilter = phone && phoneFilter !== 'all' && filterCount(phoneFilter) > 0 ? phoneFilter : 'all';
   const filterHidden = activeFilter === 'all' ? [] : filterVisible.flatMap((_, i) => (filterMatch[activeFilter](i) ? [] : [i]));
-  const phoneFilters = (
+  // 0개인 칩은 숨기고, 거를 것이 없으면(전체만 남으면) 줄째 숨긴다
+  const shownFilters = PHONE_FILTERS.filter(([f]) => f === 'all' || filterCount(f) > 0);
+  const phoneFilters = shownFilters.length > 1 && (
     <div className="phone-filters" role="toolbar" aria-label="창 걸러 보기">
-      {PHONE_FILTERS.map(([f, label]) => {
+      {shownFilters.map(([f, label]) => {
         const n = filterCount(f);
         return (
-          <button key={f} type="button" className="phone-filters__chip" aria-pressed={activeFilter === f} disabled={f !== 'all' && n === 0} onClick={() => setPhoneFilter(f)}>
+          <button key={f} type="button" className="phone-filters__chip" aria-pressed={activeFilter === f} onClick={() => setPhoneFilter(f)}>
             {label} {n}
           </button>
         );
@@ -1554,7 +1622,7 @@ export function App(props: Props) {
   const loadDonatedLive = useCallback(() => {
     if (loggedIn) loadHistory().then(checkDonatedLive, () => setDonatedLive([]));
   }, [loggedIn, loadHistory, checkDonatedLive]);
-  // 칸을 넣을 때·칸의 새로고침: 즐겨찾기 라이브도 새로 불러온다
+  // 창을 넣을 때·창의 새로고침: 즐겨찾기 라이브도 새로 불러온다
   const refreshActivity = () => {
     if (toonStatus !== 'waiting-login') refreshToonation();
     loadDonatedLive();
@@ -1582,7 +1650,7 @@ export function App(props: Props) {
     if (donatedLive?.some((t) => t.creator.key === key)) return true;
     return tileLive[key] ? true : null;
   };
-  // 칸 위쪽 바의 방송 정보 (설정). 방송한 시간은 1분마다 다시 그린다
+  // 창 위쪽 바의 방송 정보 (설정). 방송한 시간은 1분마다 다시 그린다
   const tileLive = useTileLiveInfo({
     streams: visibleSlots(state).filter(isStream),
     known: toonation.state.creators,
@@ -1788,8 +1856,9 @@ export function App(props: Props) {
       <Gnb
         layout={state.layout}
         onLayout={(layout) => dispatch({ type: 'setLayout', layout })}
-        canDonate={phone ? !!sheetTarget : !!donateTarget}
+        canDonate={(phone ? !!sheetTarget : !!donateTarget) || visibleSlots(state).some(isStream)}
         onChat={phone ? openChat : undefined}
+        onHome={goHome}
         sleep={phone ? { remainingMin: sleepRemaining, onOpen: () => setSleepOpen(true) } : undefined}
         canChat={!!sheetTarget}
         onDonate={onDonate}
@@ -1836,6 +1905,7 @@ export function App(props: Props) {
                           // 유튜브처럼: 위 줄은 방송 제목(모르면 채널 이름), 아래 줄은 채널 · 시청자 · 방송한 시간
                           title: tileLive[creator.key]?.title || creator.name,
                           sub: [
+                            ...(endedSlots[slot] ? [endedSlots[slot] === 'ended' ? '방송 종료' : '재생할 수 없음'] : []),
                             tileLive[creator.key]?.title ? creator.name : creator.platform === 'youtube' ? 'YouTube' : 'Twitch',
                             ...(tileLive[creator.key] ? [liveLine({ ...tileLive[creator.key], title: '' })] : []),
                           ]
@@ -1852,11 +1922,13 @@ export function App(props: Props) {
                   onSelect={() => dispatch({ type: 'select', slot })}
                   onLoad={() => setPickerSlot(slot)}
                   quickPicks={emptyPicks}
+                  onLive={phone ? () => setShortsOpen(true) : undefined}
+                  compactBar={phone}
                   slotNumber={slot + 1}
                   onQuickPick={(c) => dispatch({ type: 'assign', slot, creator: c })}
                   onEmptyMenu={(x, y) => setEmptyMenu({ slot, x, y })}
                   onStreamMenu={(x, y) => openVideoMenu(slot, x, y)}
-                  onDeleteWindow={shrinkLayout(state, slot) ? () => dispatch({ type: 'removeWindow', slot }) : undefined}
+                  onDeleteWindow={shrinkLayout(state, slot) ? () => closeWindow(slot) : undefined}
                   onToggleSound={() => dispatch({ type: 'toggleSound' })}
                   playerSlotRef={(el) => {
                     slotEls.current[slot] = el;
@@ -1885,7 +1957,7 @@ export function App(props: Props) {
                             page.kind === 'activity'
                               ? refreshActivity
                               : page.kind === 'signature'
-                                ? () => pageKey && setTileSeq((t) => ({ ...t, [pageKey]: (t[pageKey] ?? 0) + 1 })) // 칸을 다시 띄워 새로 불러온다
+                                ? () => pageKey && setTileSeq((t) => ({ ...t, [pageKey]: (t[pageKey] ?? 0) + 1 })) // 창을 다시 띄워 새로 불러온다
                                 : () => pageKey && pageHandles.current[pageKey]?.reload(),
                           onOpenWindow:
                             page.kind === 'web'
@@ -1900,7 +1972,7 @@ export function App(props: Props) {
                   }
                   dnd={{
                     slot,
-                    canDrag: true, // 빈 칸도 끌어서 자리를 옮긴다
+                    canDrag: true, // 빈 창도 끌어서 자리를 옮긴다
                     canDrop: tileDrag.drag !== null && tileDrag.drag.from !== slot,
                     over: tileDrag.drag?.over === slot,
                     source: tileDrag.drag?.from === slot || tileDrag.armed === slot,
@@ -1916,8 +1988,10 @@ export function App(props: Props) {
                   onRemove={
                     creator || page
                       ? () => {
+                          const removed = state.slots[slot];
                           dispatch({ type: 'clear', slot });
-                          // 지운 칸의 플레이어 핸들도 버린다
+                          if (removed) setUndo({ text: `${'name' in removed ? removed.name : pageLabel(removed as PageSlot)} 창을 비웠습니다`, run: () => dispatch({ type: 'restore', slot, item: removed }) });
+                          // 지운 창의 플레이어 핸들도 버린다
                           const k = keys[slot];
                           setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([hk]) => hk !== k)));
                         }
@@ -2025,7 +2099,7 @@ export function App(props: Props) {
                     slot: tileDrag.drag.from,
                     x: tileDrag.drag.x,
                     y: tileDrag.drag.y,
-                    // 방송을 후원 페이지·채팅·시그니처 칸 위로 끌 때: Shift로 고정할 수 있다고 알려 준다
+                    // 방송을 후원 페이지·채팅·시그니처 창 위로 끌 때: Shift로 고정할 수 있다고 알려 준다
                     name:
                       tileDrag.drag.over !== null && isStream(state.slots[tileDrag.drag.from]) && isPinnable(state.slots[tileDrag.drag.over])
                         ? tileDrag.drag.shift
@@ -2117,6 +2191,16 @@ export function App(props: Props) {
           rowExtra={groupSelect}
           source={favorites}
           onClose={() => setPickerSlot(null)}
+          compact={phone}
+          findLink={async (text) => {
+            const t = parseSharedLink(text);
+            if (!t) return null;
+            return findSharedCreator(t, {
+              known: [...favorites.list(), ...toonation.state.creators, ...watchLog.map((w) => w.creator)],
+              lives: liveSource,
+              fetchJson: (u) => fetch(u).then((r) => r.json()),
+            });
+          }}
           tabs={[
             {
               label: '투네이션 라이브',
@@ -2155,6 +2239,7 @@ export function App(props: Props) {
             />
           )}
           <ToonationSection
+            phone={phone}
             filter={inGroup}
             rowExtra={groupSelect}
             state={toonation.state}
@@ -2206,9 +2291,9 @@ export function App(props: Props) {
                   if (mix && k) {
                     if (!on && !state.soundOn) dispatch({ type: 'toggleSound' });
                     setMixMuted((m) => ({ ...m, [k]: on }));
-                  } else if (on) dispatch({ type: 'toggleSound' }); // 이 칸만 소리가 나므로 전체 소리 끄기
+                  } else if (on) dispatch({ type: 'toggleSound' }); // 이 창만 소리가 나므로 전체 소리 끄기
                   else {
-                    dispatch({ type: 'select', slot }); // 이 칸 소리로
+                    dispatch({ type: 'select', slot }); // 이 창 소리로
                     if (!state.soundOn) dispatch({ type: 'toggleSound' });
                   }
                 },
@@ -2243,8 +2328,12 @@ export function App(props: Props) {
                 onSelect: () => {
                   // 방송을 내리고, 줄일 수 있으면 그 창도 닫는다
                   const cleared = { ...state, slots: state.slots.map((s, i) => (i === slot ? null : s)) };
-                  dispatch({ type: 'clear', slot });
-                  if (shrinkLayout(cleared, slot)) dispatch({ type: 'removeWindow', slot });
+                  if (shrinkLayout(cleared, slot)) closeWindow(slot, true);
+                  else {
+                    const removed = state.slots[slot];
+                    dispatch({ type: 'clear', slot });
+                    if (isStream(removed)) setUndo({ text: `${removed.name} 창을 비웠습니다`, run: () => dispatch({ type: 'restore', slot, item: removed }) });
+                  }
                   setHandles((prev) => Object.fromEntries(Object.entries(prev).filter(([hk]) => hk !== k)));
                 },
               },
@@ -2256,7 +2345,7 @@ export function App(props: Props) {
         <ContextMenu
           x={emptyMenu.x}
           y={emptyMenu.y}
-          label={emptyMenu.sheet ? `${emptyMenu.slot + 1}번 화면 메뉴` : '빈 창 메뉴'}
+          label={emptyMenu.sheet ? `${emptyMenu.slot + 1}번 창 메뉴` : '빈 창 메뉴'}
           sheet={emptyMenu.sheet}
           onClose={closeEmptyMenu}
           items={[
@@ -2269,8 +2358,7 @@ export function App(props: Props) {
               hint: shrinkLayout({ ...state, slots: state.slots.map((s, i) => (i === emptyMenu.slot ? null : s)) }, emptyMenu.slot) ? undefined : '줄일 수 없음',
               disabled: !shrinkLayout({ ...state, slots: state.slots.map((s, i) => (i === emptyMenu.slot ? null : s)) }, emptyMenu.slot),
               onSelect: () => {
-                if (state.slots[emptyMenu.slot]) dispatch({ type: 'clear', slot: emptyMenu.slot }); // 후원 페이지 등은 비우고 닫는다
-                dispatch({ type: 'removeWindow', slot: emptyMenu.slot });
+                closeWindow(emptyMenu.slot, true); // 후원 페이지 등은 비우고 닫는다
               },
             },
           ]}
@@ -2310,7 +2398,56 @@ export function App(props: Props) {
           onClose={() => setPinSlot(null)}
         />
       )}
-      {guideOpen && <Onboarding onDone={closeGuide} steps={phone ? PHONE_TOUR_STEPS : undefined} />}
+      {appWelcome && !toonation.state.account && (
+        <div className="modal-backdrop modal-backdrop--top">
+          <div className="modal app-welcome" role="dialog" aria-label="투네이션 로그인 안내">
+            <h2>투네이션 계정으로 시작하기</h2>
+            <p>로그인하면 즐겨찾기한 크리에이터와 방송 중인 사람을 바로 불러오고, 후원 내역도 볼 수 있어요.</p>
+            <button
+              type="button"
+              className="btn btn--donate app-welcome__login"
+              onClick={() => {
+                closeAppWelcome();
+                toonation.login();
+              }}
+            >
+              투네이션 로그인
+            </button>
+            <button type="button" className="btn btn--ghost app-welcome__later" onClick={closeAppWelcome}>
+              나중에
+            </button>
+          </div>
+        </div>
+      )}
+      {donatePick && (
+        <ContextMenu
+          x={Math.round(window.innerWidth / 2) - 100}
+          y={80}
+          sheet={phone}
+          label="후원할 방송 고르기"
+          onClose={() => setDonatePick(false)}
+          items={visibleSlots(state)
+            .map((s, slot) => ({ s, slot }))
+            .filter((x): x is { s: Creator; slot: number } => isStream(x.s))
+            .map(({ s, slot }) => ({ label: `${s.name}에게 후원`, icon: '♥', hint: `${slot + 1}번 창`, onSelect: () => donateTo(s) }))}
+        />
+      )}
+      {undo && (
+        <div className="undo-toast" role="status">
+          <span>{undo.text}</span>
+          <button
+            type="button"
+            onClick={() => {
+              undo.run();
+              setUndo(null);
+            }}
+          >
+            되돌리기
+          </button>
+        </div>
+      )}
+      {/* 휴대폰: 방송을 처음 넣은 뒤에 안내 (빈 화면에서는 해 볼 것이 없다) */}
+      {guideOpen && (!phone || visibleSlots(state).some(isStream)) && <Onboarding onDone={closeGuide} steps={phone ? PHONE_TOUR_STEPS : undefined} />}
       {pendingBackup && <BackupConfirmDialog summary={pendingBackup.summary} onConfirm={() => void confirmBackup()} onClose={() => setPendingBackup(null)} />}
       {keysOpen && <ShortcutsDialog enabled={settings.shortcuts} onClose={closeKeys} />}
       {helpOpen && (
@@ -2428,7 +2565,7 @@ export function App(props: Props) {
           kv={kv}
           current={withDetachedItems(state, detached)}
           onLoad={(view) => {
-            // 분리 창은 따로 남는다 (칸에 다른 방송을 넣은 것과 같다)
+            // 분리 창은 따로 남는다 (창에 다른 방송을 넣은 것과 같다)
             exitFullscreen();
             dispatch({ type: 'replace', state: view });
             setPresetsOpen(false);

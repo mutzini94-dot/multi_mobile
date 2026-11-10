@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { PlayerHandle } from './types';
 
 /**
- * 칸마다 정지(숨긴 칸 정지 설정)와 낮은 화질(선택하지 않은 칸 낮은 화질 설정)을 적용한다.
+ * 창마다 정지(숨긴 창 정지 설정)와 낮은 화질(선택하지 않은 창 낮은 화질 설정)을 적용한다.
  * 값이 바뀔 때만 명령하고, 처음 상태(재생 중·자동 화질)와 같으면 건드리지 않는다.
  */
 export function usePlaybackPolicy(handles: (PlayerHandle | null)[], paused: boolean[], low: boolean[]): void {

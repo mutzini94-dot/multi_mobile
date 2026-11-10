@@ -31,26 +31,26 @@ function setup() {
 }
 const tiles = () => [...document.querySelectorAll<HTMLElement>('.tile')];
 
-test('GNB 추천 라이브 → 방송 클릭 → 칸 고르기 → 그 칸에 방송, 창은 모두 닫힌다', async () => {
+test('GNB 추천 라이브 → 방송 클릭 → 창 고르기 → 그 창에 방송, 창은 모두 닫힌다', async () => {
   const { loadPopular } = setup();
   fireEvent.click(screen.getByRole('button', { name: '추천 라이브' }));
   const live = screen.getByRole('dialog', { name: '추천 라이브' });
   expect(loadPopular).toHaveBeenCalled();
   fireEvent.click(await within(live).findByRole('button', { name: /라이브칠/ }));
-  const pick = screen.getByRole('dialog', { name: '넣을 칸 고르기' });
-  expect(within(pick).getAllByRole('button', { name: /번 칸/ })).toHaveLength(4); // 기본 4분할
-  fireEvent.click(within(pick).getByRole('button', { name: '3번 칸 · 빈 칸' }));
-  expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
+  const pick = screen.getByRole('dialog', { name: '넣을 창 고르기' });
+  expect(within(pick).getAllByRole('button', { name: /번 창/ })).toHaveLength(4); // 기본 4분할
+  fireEvent.click(within(pick).getByRole('button', { name: '3번 창 · 빈 창' }));
+  expect(screen.queryByRole('dialog', { name: '넣을 창 고르기' })).toBeNull();
   expect(screen.queryByRole('dialog', { name: '추천 라이브' })).toBeNull();
   expect(within(tiles()[2]).getByText('라이브칠')).toBeInTheDocument();
 });
 
-test('칸 고르기에서 취소하면 추천 라이브 목록으로 돌아간다', async () => {
+test('창 고르기에서 취소하면 추천 라이브 목록으로 돌아간다', async () => {
   setup();
   fireEvent.click(screen.getByRole('button', { name: '추천 라이브' }));
   fireEvent.click(await within(screen.getByRole('dialog', { name: '추천 라이브' })).findByRole('button', { name: /라이브칠/ }));
-  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 칸 고르기' })).getByRole('button', { name: '취소' }));
-  expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
+  fireEvent.click(within(screen.getByRole('dialog', { name: '넣을 창 고르기' })).getByRole('button', { name: '취소' }));
+  expect(screen.queryByRole('dialog', { name: '넣을 창 고르기' })).toBeNull();
   expect(screen.getByRole('dialog', { name: '추천 라이브' })).toBeInTheDocument();
 });
 

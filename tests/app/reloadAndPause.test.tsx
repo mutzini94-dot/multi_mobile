@@ -49,7 +49,7 @@ const pick = (slot: number, name: string) => {
   fireEvent.click(within(screen.getByRole('dialog', { name: '불러오기' })).getByRole('button', { name: new RegExp(`^${name} ·`) }));
 };
 
-test('전체 새로고침: 모든 칸의 플레이어를 다시 띄운다', () => {
+test('전체 새로고침: 모든 창의 플레이어를 다시 띄운다', () => {
   setup();
   pick(0, '트위치방송');
   pick(1, '유튜브방송');
@@ -59,7 +59,7 @@ test('전체 새로고침: 모든 칸의 플레이어를 다시 띄운다', () =
   expect(screen.getAllByTestId('player')).toHaveLength(2);
 });
 
-test('트위치 칸: 일시정지·재생 버튼 (유튜브는 플레이어 자체 버튼을 쓴다)', () => {
+test('트위치 창: 일시정지·재생 버튼 (유튜브는 플레이어 자체 버튼을 쓴다)', () => {
   setup();
   pick(0, '트위치방송');
   pick(1, '유튜브방송');
@@ -78,7 +78,7 @@ test('트위치 플레이어 자체 버튼으로 멈췄어도 실제 상태를 �
   expect(handles['트위치방송'].setPaused).toHaveBeenLastCalledWith(false);
 });
 
-test('트위치가 재생 요청을 무시하면(웹 브라우저) 그 칸만 다시 띄워 재생한다', async () => {
+test('트위치가 재생 요청을 무시하면(웹 브라우저) 그 창만 다시 띄워 재생한다', async () => {
   setup();
   pick(0, '트위치방송');
   pick(1, '유튜브방송');
@@ -90,6 +90,6 @@ test('트위치가 재생 요청을 무시하면(웹 브라우저) 그 칸만 �
   fireEvent.click(screen.getByRole('button', { name: '트위치방송 재생' }));
   expect(h.setPaused).toHaveBeenCalledWith(false);
   await act(() => new Promise((r) => setTimeout(r, 1700)));
-  expect(mounts.slice(before)).toEqual(['트위치방송']); // 트위치 칸만 다시
+  expect(mounts.slice(before)).toEqual(['트위치방송']); // 트위치 창만 다시
   expect(screen.getByRole('button', { name: '트위치방송 일시정지' })).toBeInTheDocument();
 });

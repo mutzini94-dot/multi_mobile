@@ -6,12 +6,13 @@ interface Props {
   favorites: QuickItem[];
   recent: QuickItem[];
   started: Creator[]; // 방금 방송을 시작한 크리에이터 (즐겨찾기 탭에 점)
-  onPick(c: Creator): void; // 칸에 넣기
+  onPick(c: Creator): void; // 창에 넣기
   onRemoveRecent?(c: Creator): void;
   login?: { loggedIn: boolean; onLogin(): void };
   shorts: { open: boolean; onToggle(): void; content: ReactNode };
   overview: { on: boolean; onToggle(): void };
   onAddWindow: (() => void) | null; // null = 더 늘릴 수 없음 (휴대폰 최대 6개)
+  onDotSeen?(): void; // 빨간 점 첫 안내 말풍선 (본 적 없을 때만 넘긴다)
 }
 
 const Star = () => (
@@ -41,9 +42,9 @@ const Plus = () => (
 
 /**
  * 휴대폰 하단 탭 막대 (시안 C · 와이드 피드): 추천 라이브 · 즐겨찾기 · 최근 본 · 전체보기 · 창 추가.
- * 즐겨찾기·최근 본은 아래에서 올라오는 목록으로, 누르면 그 방송을 칸에 넣는다.
+ * 즐겨찾기·최근 본은 아래에서 올라오는 목록으로, 누르면 그 방송을 창에 넣는다.
  */
-export function PhoneDock({ favorites, recent, started, onPick, onRemoveRecent, login, shorts, overview, onAddWindow }: Props) {
+export function PhoneDock({ favorites, recent, started, onPick, onRemoveRecent, login, shorts, overview, onAddWindow, onDotSeen }: Props) {
   const [sheet, setSheet] = useState<'fav' | 'recent' | null>(null);
   const startedKeys = new Set(started.map((c) => c.key));
   const items = sheet === 'fav' ? favorites : sheet === 'recent' ? recent : [];
@@ -56,7 +57,27 @@ export function PhoneDock({ favorites, recent, started, onPick, onRemoveRecent, 
           </b>
           <span>추천 라이브</span>
         </button>
-        <button type="button" className="phone-dock__tab" aria-label="즐겨찾기" onClick={() => setSheet('fav')}>
+        {started.length > 0 && onDotSeen && (
+          <button
+            type="button"
+            className="phone-dock__bubble"
+            onClick={() => {
+              onDotSeen();
+              setSheet('fav');
+            }}
+          >
+            빨간 점: 즐겨찾기한 크리에이터가 방금 방송을 시작했어요
+          </button>
+        )}
+        <button
+          type="button"
+          className="phone-dock__tab"
+          aria-label="즐겨찾기"
+          onClick={() => {
+            if (started.length > 0) onDotSeen?.();
+            setSheet('fav');
+          }}
+        >
           <Star />
           <span>즐겨찾기</span>
           {started.length > 0 && <i className="phone-dock__dot" aria-label="방금 방송을 시작한 크리에이터가 있어요" />}

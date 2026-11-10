@@ -20,7 +20,7 @@ function handle() {
 }
 
 describe('useAudioMix', () => {
-  test('들리는 칸만 소리를 켜고 칸별 볼륨을 적용한다 (여러 칸 동시)', () => {
+  test('들리는 창만 소리를 켜고 창별 볼륨을 적용한다 (여러 창 동시)', () => {
     const hs = [handle(), handle(), handle()];
     renderHook(() => useAudioMix(hs, [true, true, false], [80, 30, 100]));
     expect(hs.map((h) => h.muted)).toEqual([false, false, true]);
@@ -39,7 +39,7 @@ describe('useAudioMix', () => {
 });
 
 describe('usePlaybackPolicy', () => {
-  test('숨긴 칸은 정지하고, 다시 보이면 재생한다 (바뀔 때만 명령)', () => {
+  test('숨긴 창은 정지하고, 다시 보이면 재생한다 (바뀔 때만 명령)', () => {
     const hs = [handle(), handle()];
     const { rerender } = renderHook(({ pause }) => usePlaybackPolicy(hs, pause, [false, false]), { initialProps: { pause: [false, true] } });
     expect(hs[1].calls).toEqual(['pause']);

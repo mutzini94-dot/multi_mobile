@@ -4,15 +4,15 @@ import type { Creator, SlotItem } from '../domain/types';
 import { fromBase64Url, toBase64Url } from './base64url';
 
 /**
- * 분리 창 주소: 같은 앱을 `#solo=<base64url(JSON)>`로 열면 칸 하나만 보여 주는 분리 창이 된다.
- * { v: 1, id, item, sound, donateFor? } — 후원 페이지 칸은 처음 따라갈 크리에이터를 함께 담는다.
+ * 분리 창 주소: 같은 앱을 `#solo=<base64url(JSON)>`로 열면 창 하나만 보여 주는 분리 창이 된다.
+ * { v: 1, id, item, sound, donateFor? } — 후원 페이지 창은 처음 따라갈 크리에이터를 함께 담는다.
  */
 export interface SoloPayload {
   id: string; // 분리 창 id (메인 화면과 주고받는 메시지의 주소)
   item: SlotItem; // 방송·웹페이지·후원 페이지
-  sound: boolean; // 처음 소리를 켤지 (분리 전 소리가 나던 칸)
-  donateFor?: Creator | null; // 후원 페이지·채팅 칸이 처음 따라갈 크리에이터
-  videoId?: string | null; // 채팅 칸: 따라갈 유튜브 방송의 라이브 영상 ID
+  sound: boolean; // 처음 소리를 켤지 (분리 전 소리가 나던 창)
+  donateFor?: Creator | null; // 후원 페이지·채팅 창이 처음 따라갈 크리에이터
+  videoId?: string | null; // 채팅 창: 따라갈 유튜브 방송의 라이브 영상 ID
 }
 
 const PREFIX = '#solo=';

@@ -1,7 +1,7 @@
 import { makeCreator, type CreatorInput } from '../domain/creatorInput';
 import type { Creator } from '../domain/types';
 
-/** 카드(추천 라이브·활동 위젯·퀵패널)를 칸으로 끌어 넣을 때 쓰는 끌기 자료 형식 */
+/** 카드(추천 라이브·활동 위젯·퀵패널)를 창으로 끌어 넣을 때 쓰는 끌기 자료 형식 */
 export const CREATOR_MIME = 'application/x-mv-creator';
 
 /** 끌기 시작: 방송 정보를 담는다 */

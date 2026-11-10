@@ -24,7 +24,7 @@ test('? 키를 누르면 단축키 안내, Esc나 닫기로 닫는다', () => {
   fireEvent.keyDown(window, { key: '?' });
   const dlg = keysDialog()!;
   for (const k of ['1 ~ 9', 'M', 'F', 'D', 'Esc', '?']) expect(within(dlg).getByText(k)).toBeInTheDocument();
-  expect(within(dlg).getByText(/^칸 선택/)).toBeInTheDocument();
+  expect(within(dlg).getByText(/^창 선택/)).toBeInTheDocument();
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(keysDialog()).toBeNull();
   fireEvent.keyDown(window, { key: '?' });

@@ -10,7 +10,7 @@ interface Props {
   timeline: TimelineItem[];
   isLive(key: string): boolean | null; // 시청 기록의 LIVE·종료 (null = 모름)
   now: number;
-  onOpen(c: Creator): void; // 방송을 첫 번째 칸에
+  onOpen(c: Creator): void; // 방송을 첫 번째 창에
   onLogin(): void;
 }
 
@@ -18,7 +18,7 @@ function Avatar({ c }: { c: Creator }) {
   return c.profile ? <img className="activity__avatar" src={c.profile} alt="" /> : <span className="activity__avatar">{c.name.slice(0, 1)}</span>;
 }
 
-/** 활동 위젯 칸: 위에는 즐겨찾기·후원 크리에이터 중 지금 라이브, 아래에는 시청·후원·설정 변경 타임라인 */
+/** 활동 위젯 창: 위에는 즐겨찾기·후원 크리에이터 중 지금 라이브, 아래에는 시청·후원·설정 변경 타임라인 */
 export function ActivityWidget({ loggedIn, live, timeline, isLive, now, onOpen, onLogin }: Props) {
   return (
     <div className="activity">

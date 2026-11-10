@@ -55,13 +55,13 @@ const pick = (slot: number, name: string) => {
 };
 const detach = (slot: number) => fireEvent.click(within(tiles()[slot]).getByRole('button', { name: '새 창으로 분리' }));
 
-test('분리: 칸 내용을 새 창으로 열고, 원래 칸은 "분리됨"과 되돌리기·불러오기를 보여준다', () => {
+test('분리: 창 내용을 새 창으로 열고, 원래 창은 "분리됨"과 되돌리기·불러오기를 보여준다', () => {
   const { opened } = setup();
-  pick(0, 'A'); // 넣은 칸이 선택(소리)된다
+  pick(0, 'A'); // 넣은 창이 선택(소리)된다
   detach(0);
   expect(opened).toHaveLength(1);
   expect(opened[0].p.item).toMatchObject({ name: 'A' });
-  expect(opened[0].p.sound).toBe(true); // 소리 나던 칸은 분리 창에서도 소리
+  expect(opened[0].p.sound).toBe(true); // 소리 나던 창은 분리 창에서도 소리
   expect(opened[0].title).toBe('A');
   const t = tiles()[0];
   expect(within(t).getByText('A · 새 창으로 분리됨')).toBeInTheDocument();
@@ -71,7 +71,7 @@ test('분리: 칸 내용을 새 창으로 열고, 원래 칸은 "분리됨"과 �
   expect(t).not.toHaveClass('tile--selected');
 });
 
-test('되돌리기(칸 버튼): 분리 창을 닫고 원래 칸으로', () => {
+test('되돌리기(창 버튼): 분리 창을 닫고 원래 창으로', () => {
   const { opened, host } = setup();
   pick(1, 'B');
   detach(1);
@@ -81,7 +81,7 @@ test('되돌리기(칸 버튼): 분리 창을 닫고 원래 칸으로', () => {
   expect(screen.getAllByTestId('player')).toHaveLength(1);
 });
 
-test('분리 창에서 되돌리기를 누르거나 창을 닫으면 원래 칸으로', () => {
+test('분리 창에서 되돌리기를 누르거나 창을 닫으면 원래 창으로', () => {
   const { opened, fromSolo, closeSolo } = setup();
   pick(0, 'A');
   pick(1, 'B');
@@ -93,7 +93,7 @@ test('분리 창에서 되돌리기를 누르거나 창을 닫으면 원래 칸�
   expect(within(tiles()[1]).getByText('B')).toBeInTheDocument();
 });
 
-test('분리한 칸에 다른 방송을 넣으면 분리 창은 따로 남고, 닫으면 사라진다', () => {
+test('분리한 창에 다른 방송을 넣으면 분리 창은 따로 남고, 닫으면 사라진다', () => {
   const { opened, closeSolo } = setup();
   pick(0, 'A');
   detach(0);
@@ -101,23 +101,23 @@ test('분리한 칸에 다른 방송을 넣으면 분리 창은 따로 남고, �
   expect(within(tiles()[0]).getByText('C', { selector: '.tile__name' })).toBeInTheDocument();
   closeSolo(opened[0].p.id);
   expect(within(tiles()[0]).getByText('C', { selector: '.tile__name' })).toBeInTheDocument();
-  expect(within(document.querySelector<HTMLElement>('.stage')!).queryByText('A', { selector: '.tile__name, .tile__detached-text' })).toBeNull(); // 칸 이름에서 (퀵패널·빈 칸 '최근'의 프로필 글자는 빼고)
+  expect(within(document.querySelector<HTMLElement>('.stage')!).queryByText('A', { selector: '.tile__name, .tile__detached-text' })).toBeNull(); // 창 이름에서 (퀵패널·빈 창 '최근'의 프로필 글자는 빼고)
 });
 
-test('원래 칸이 다른 방송으로 바뀐 뒤 분리 창에서 되돌리기: 빈 칸으로, 빈 칸이 없으면 알려준다', () => {
+test('원래 창이 다른 방송으로 바뀐 뒤 분리 창에서 되돌리기: 빈 창으로, 빈 창이 없으면 알려준다', () => {
   const { opened, fromSolo } = setup();
   pick(0, 'A');
   detach(0);
   pick(0, 'C');
   fromSolo(opened[0].p.id, { type: 'return' });
-  expect(within(tiles()[1]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument(); // 첫 빈 칸
+  expect(within(tiles()[1]).getByText('A', { selector: '.tile__name' })).toBeInTheDocument(); // 첫 빈 창
   // 꽉 찬 상태
   pick(2, 'B');
   pick(3, 'C');
   detach(1); // A 다시 분리
   pick(1, 'B');
   fromSolo(opened[1].p.id, { type: 'return' });
-  expect(screen.getByText('빈 칸이 없어 되돌릴 수 없습니다. 칸을 비운 뒤 다시 눌러 주세요')).toBeInTheDocument();
+  expect(screen.getByText('빈 창이 없어 되돌릴 수 없습니다. 창을 비운 뒤 다시 눌러 주세요')).toBeInTheDocument();
 });
 
 test('분리 창의 후원하기: 그 방송 크리에이터에게 후원', () => {
@@ -136,7 +136,7 @@ test('분리한 후원 페이지 창에는 따라갈 크리에이터를 계속 �
   fireEvent.click(within(tiles()[2]).getByRole('button', { name: '불러오기' }));
   const dlg = screen.getByRole('dialog', { name: '불러오기' });
   fireEvent.click(within(dlg).getByRole('tab', { name: '후원 페이지' }));
-  fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 칸 넣기' }));
+  fireEvent.click(within(dlg).getByRole('button', { name: '후원 페이지 창 넣기' }));
   detach(2);
   expect(opened[0].p.donateFor).toMatchObject({ name: 'B' });
   fireEvent.click(tiles()[0].querySelector('.tile__bar')!); // A 선택
@@ -152,7 +152,7 @@ test('팝업이 막히면 분리하지 않고 알려준다', () => {
   expect(screen.getByText('새 창을 열지 못했습니다. 팝업을 허용해 주세요')).toBeInTheDocument();
 });
 
-test('마지막 화면 저장: 분리한 칸은 원래 내용으로 저장 (다음 실행에서는 칸 안에)', () => {
+test('마지막 화면 저장: 분리한 창은 원래 내용으로 저장 (다음 실행에서는 창 안에)', () => {
   const { kv } = setup();
   pick(0, 'A');
   detach(0);

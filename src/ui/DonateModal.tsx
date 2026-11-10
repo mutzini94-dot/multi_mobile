@@ -7,9 +7,9 @@ interface Props {
   onClose(): void;
   onPip(): void;
   onBounds(rect: DonateBounds): void; // 설치형 앱이 후원 페이지(WebContentsView)를 본문 자리에 놓는다
-  amounts?: number[]; // 빠른 후원 금액: 누르면 후원 페이지의 금액 칸만 채운다
+  amounts?: number[]; // 빠른 후원 금액: 누르면 후원 페이지의 금액 창만 채운다
   onFill?(amount: number): void;
-  messages?: string[]; // 자주 쓰는 후원 메시지: 고르면 메시지 칸만 채운다
+  messages?: string[]; // 자주 쓰는 후원 메시지: 고르면 메시지 창만 채운다
   onFillMessage?(message: string): void;
   cash?: number | null; // 캐시 잔액
 }

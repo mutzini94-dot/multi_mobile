@@ -1,7 +1,7 @@
 import type { WatchEntry } from '../activity/watchLog';
 import type { Creator } from '../domain/types';
 
-/** 퀵패널 한 칸: 크리에이터와 방송 중인지 (null = 모름) */
+/** 퀵패널 한 창: 크리에이터와 방송 중인지 (null = 모름) */
 export interface QuickItem {
   creator: Creator;
   live: boolean | null;

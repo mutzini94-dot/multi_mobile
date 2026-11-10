@@ -23,7 +23,7 @@ export interface DesktopApi {
   search?(q: string): Promise<DesktopResult<ToonationFavorite[]>>; // 투네이션 크리에이터 검색
   bookmark?(tag: string, on: boolean): Promise<DesktopResult<object>>; // 투네이션 즐겨찾기 추가·해제
   signatures?(tag: string): Promise<DesktopResult<unknown[]>>; // 크리에이터 시그니처 (src/toonation/signatures.ts)
-  selectSignature?(name: string, tag: string, cash: number, webContentsId?: number): Promise<string>; // 열린 후원창(또는 webContentsId의 후원 페이지 칸)의 시그니처 탭에서 그 시그니처를 고른다 ('ok' | 실패 사유)
+  selectSignature?(name: string, tag: string, cash: number, webContentsId?: number): Promise<string>; // 열린 후원창(또는 webContentsId의 후원 페이지 창)의 시그니처 탭에서 그 시그니처를 고른다 ('ok' | 실패 사유)
   /** mode가 없으면 앱이 마지막으로 쓴 모드, amounts는 PIP 머리줄의 빠른 후원 금액 */
   openDonate(target: { tag: string; name: string; mode?: DonateMode; amounts?: number[]; messages?: string[] }): void;
   closeDonate(): void;
@@ -35,7 +35,7 @@ export interface DesktopApi {
   setMiniMode?(on: boolean): void; // 미니 모드: 앱 창을 작게·항상 위로 (끄면 되돌린다)
   onDonateClosed(cb: () => void): () => void;
   onDonateMode(cb: (mode: DonateMode) => void): () => void;
-  // 칸 분리 창 (src/detach/channel.ts). 메인 화면 쪽
+  // 창 분리 창 (src/detach/channel.ts). 메인 화면 쪽
   detachOpen?(p: { id: string; url: string; title: string; at?: { x: number; y: number } | null }): void;
   onDetachDropped?(cb: (id: string, x: number, y: number) => void): () => void; // 분리 창을 메인 창 (x, y)에 놓음
   onDragHover?(cb: (p: { x: number; y: number } | null) => void): () => void; // 분리 창을 끄는 동안 메인 창 안 커서 자리

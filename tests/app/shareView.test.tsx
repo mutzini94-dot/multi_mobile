@@ -11,7 +11,7 @@ import { quadKv } from '../helpers/quadKv';
 
 vi.mock('../../src/players/StreamPlayer', () => ({ StreamPlayer: () => <div data-testid="player" /> }));
 
-test('공유 링크: 보이는 칸과 화면 모양을 담고, 받는 쪽은 검사해서 연다', () => {
+test('공유 링크: 보이는 창과 화면 모양을 담고, 받는 쪽은 검사해서 연다', () => {
   const state = { ...applyLayout(initialViewState, 'quad'), slots: [mkCreator(1, { name: 'A' }), null, makeDonatePage(), null, mkCreator(9), null, null, null, null] };
   const url = shareUrl('https://multi.example.com/?source=pwa#old', state);
   expect(url.startsWith(`https://multi.example.com/${VIEW_HASH}`)).toBe(true);
@@ -19,7 +19,7 @@ test('공유 링크: 보이는 칸과 화면 모양을 담고, 받는 쪽은 검
   expect(v.layout).toBe('quad');
   expect(v.slots[0]).toMatchObject({ name: 'A', platform: 'twitch', channel: 'chan_1' });
   expect(v.slots[2]).toMatchObject({ kind: 'donate' });
-  expect(v.slots[4]).toBeNull(); // 보이지 않는 칸(4분할의 5번째)은 담지 않는다
+  expect(v.slots[4]).toBeNull(); // 보이지 않는 창(4분할의 5번째)은 담지 않는다
   expect(readSharedView('#view=@@@')).toBeNull();
   expect(readSharedView('#other')).toBeNull();
 });

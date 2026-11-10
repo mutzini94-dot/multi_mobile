@@ -2,7 +2,7 @@ import { barsHidden, floatingBox } from '../../src/ui/phoneScroll';
 
 const vp = { width: 375, height: 812 };
 
-test('선택한 칸이 화면 안에 보이면 떠 있는 창 없음', () => {
+test('선택한 창이 화면 안에 보이면 떠 있는 창 없음', () => {
   expect(floatingBox({ left: 8, top: 100, width: 359, height: 202 }, vp)).toBeNull();
   expect(floatingBox({ left: 8, top: -100, width: 359, height: 202 }, vp)).toBeNull(); // 아직 절반 넘게 보임
 });

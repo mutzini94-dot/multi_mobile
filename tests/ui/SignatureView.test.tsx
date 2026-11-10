@@ -47,9 +47,9 @@ test('검색: 이름·금액, 결과가 없으면 안내', async () => {
   expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
 });
 
-test('방송 칸이 없으면 안내, 시그니처가 없으면 안내', async () => {
+test('방송 창이 없으면 안내, 시그니처가 없으면 안내', async () => {
   const { rerender } = setup(vi.fn(async () => []), null);
-  expect(screen.getByText('시그니처를 볼 방송 칸을 선택하세요')).toBeInTheDocument();
+  expect(screen.getByText('시그니처를 볼 방송 창을 선택하세요')).toBeInTheDocument();
   rerender(<SignatureView creator={creator} load={vi.fn(async () => [])} />);
   expect(await screen.findByText('등록된 시그니처가 없습니다')).toBeInTheDocument();
 });
