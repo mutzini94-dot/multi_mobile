@@ -48,14 +48,14 @@ const pickInto = (slot: number, name: string) => {
 };
 const pickA = () => pickInto(0, 'A');
 
-test('휴대폰: 후원하기는 위에 뜨는 창으로 (소리 유지)', () => {
+test('휴대폰: 후원하기는 채팅과 같은 배치 (방송 아래에 후원 페이지, 소리 유지)', () => {
   mockPhone(true);
   const { win } = setup();
   pickA();
   fireEvent.click(screen.getByRole('button', { name: '후원하기' }));
   const sheet = screen.getByRole('dialog', { name: 'A 후원하기' });
-  expect(sheet).toHaveClass('donate-modal'); // 아래 시트가 아니라 위에 뜨는 창
-  expect(document.querySelector('.page-sheet__backdrop')).toHaveClass('donate-modal__backdrop');
+  expect(sheet).toHaveClass('page-sheet--dock'); // 채팅처럼 맨 위 방송 아래에 붙는다
+  expect(document.querySelector('.app')).toHaveClass('app--chat-dock');
   expect(document.querySelector('.tile--selected')).not.toBeNull(); // 선택(소리)은 그대로
   // 투네이션이 허용한 주소(테스트의 localhost)에서는 창 안에 후원 페이지, 아니면 '새 창으로 후원 페이지 열기' (domain/pages canFrameDonate)
   expect(sheet.querySelector('iframe')!.getAttribute('src')).toBe('https://toon.at/donate/don1');

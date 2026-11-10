@@ -20,6 +20,7 @@ import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY 
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone } from '../ui/usePhone';
+import { onNativeBack } from '../native/backButton';
 import { findSharedCreator, parseSharedLink } from './sharedLink';
 import { barsHidden, floatingBox, type Box } from '../ui/phoneScroll';
 import { haptic } from '../ui/haptic';
@@ -248,7 +249,7 @@ export function App(props: Props) {
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
   const focusHistory = useRef(false); // 전체 화면 때 쌓은 뒤로가기 기록
-  const [focusChat, setFocusChat] = useState(false); // 전체 화면에서 채팅 (휴대폰 세로: 아래, 가로·PC: 오른쪽)
+  const [focusPanel, setFocusPanel] = useState<'chat' | 'donate' | null>(null); // 전체 화면에서 채팅·후원 페이지 (휴대폰 세로: 아래, 가로·PC: 오른쪽)
   useEffect(() => {
     const onPop = () => {
       if (!focusHistory.current) return;
@@ -417,7 +418,7 @@ export function App(props: Props) {
     .filter((s): s is PageSlot => isPage(s) && s.kind === 'chat')
     .map(targetOf)
     .concat(pageSheet?.kind === 'chat' ? [pageSheet.creator] : []) // 휴대폰 채팅 시트도
-    .concat(focusChat && focused !== null && isStream(state.slots[focused]) ? [state.slots[focused] as Creator] : []) // 전체 화면 채팅도
+    .concat(focusPanel === 'chat' && focused !== null && isStream(state.slots[focused]) ? [state.slots[focused] as Creator] : []) // 전체 화면 채팅도
     .filter((c): c is Creator => !!c && c.platform === 'youtube' && !videoIdOf(c));
   const chatTargetSig = chatTargets.map((c) => c.key).join(',');
   useEffect(() => {
@@ -685,7 +686,7 @@ export function App(props: Props) {
   };
   const exitFullscreen = useCallback(() => {
     setFocused(null);
-    setFocusChat(false);
+    setFocusPanel(null);
     // 버튼·Esc로 나갔으면 전체 화면 때 쌓은 기록을 되돌린다 (뒤로가기로 나간 경우는 이미 빠져 있다)
     if (focusHistory.current) {
       focusHistory.current = false;
@@ -951,7 +952,14 @@ export function App(props: Props) {
       return;
     }
     if (phoneRef.current) {
+      // 휴대폰: 채팅과 같은 배치 — 그 방송을 맨 위 칸으로 올리고 아래에 후원 페이지
+      const at = visibleSlots(stateRef.current).findIndex((x) => isStream(x) && x.key === c.key);
+      if (at > 0) {
+        dispatch({ type: 'select', slot: at });
+        dispatch({ type: 'swap', from: at, to: 0 });
+      }
       setPageSheet({ kind: 'donate', creator: c });
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
       return;
     }
     openPopup(c);
@@ -1244,7 +1252,7 @@ export function App(props: Props) {
       window.removeEventListener('online', on);
     };
   }, []);
-  const chatDock = phone && pageSheet?.kind === 'chat';
+  const chatDock = phone && !!pageSheet; // 채팅·후원 페이지: 맨 위 방송 아래에 붙인다
   // 휴대폰 전체보기: 모든 창을 작은 타일(2열)로 모아 본다. 영상은 그대로 재생되며, 타일을 누르면 그 창으로 이동
   const [overviewOn, setOverview] = useState(false);
   const overview = phone && overviewOn;
@@ -1569,8 +1577,58 @@ export function App(props: Props) {
     kv.set(ONBOARDED_KEY, '1');
     setGuideOpen(false);
   };
+  // 안드로이드 앱의 휴대폰 뒤로가기: 열려 있는 것부터 하나씩 닫고, 아무것도 없으면 앱을 뒤로 보낸다 (끄지 않는다)
+  const nativeBack = useRef<() => boolean>(() => false);
+  nativeBack.current = () => {
+    if (locked && focused !== null) return true; // 화면 잠금 중에는 뒤로가기도 막는다
+    if (videoMenu || emptyMenu) {
+      setVideoMenu(null);
+      setEmptyMenu(null);
+      return true;
+    }
+    const dialogs: [boolean, () => void][] = [
+      [pickerSlot !== null, () => setPickerSlot(null)],
+      [settingsOpen, () => setSettingsOpen(false)],
+      [presetsOpen, () => setPresetsOpen(false)],
+      [helpOpen, () => setHelpOpen(false)],
+      [keysOpen, () => setKeysOpen(false)],
+      [historyOpen, () => setHistoryOpen(false)],
+      [shareOpen, () => setShareOpen(false)],
+      [sleepOpen, () => setSleepOpen(false)],
+      [livePick !== null, () => setLivePick(null)],
+      [addOpen, () => setAddOpen(false)],
+      [pinSlot !== null, () => setPinSlot(null)],
+      [limitAsk !== null, () => setLimitAsk(null)],
+      [liveOpen, () => setLiveOpen(false)],
+      [shortsOpen, () => setShortsOpen(false)],
+    ];
+    const open = dialogs.find(([on]) => on);
+    if (open) {
+      open[1]();
+      return true;
+    }
+    if (focused !== null && focusPanel) {
+      setFocusPanel(null); // 전체 화면의 채팅·후원 페이지부터 닫는다
+      return true;
+    }
+    if (focused !== null) {
+      exitFullscreen();
+      return true;
+    }
+    if (pageSheet) {
+      setPageSheet(null);
+      return true;
+    }
+    if (overview) {
+      setOverview(false);
+      return true;
+    }
+    return false;
+  };
+  useEffect(() => onNativeBack(() => nativeBack.current()), []);
+
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${focusChat && focusedStream && !mini ? ' app--focus-chat' : ''}${overview ? ' app--overview' : ''}${phone && barsOff && !overview ? ' app--bars-hidden' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${focusPanel && focusedStream && !mini ? ' app--focus-chat' : ''}${overview ? ' app--overview' : ''}${phone && barsOff && !overview ? ' app--bars-hidden' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
       {focusedStream && !mini && !(locked && focused !== null) && (
         // 손가락으로 좌우로 밀어 다른 방송 (마우스는 통과: app.css). 아래쪽 플레이어 조작 줄은 비워 둔다
         <div
@@ -1794,16 +1852,26 @@ export function App(props: Props) {
             }}
           />
           {focusedCreator && (
-            <section className={`focus-view${focusChat && focusedStream && !mini ? ' focus-view--chat' : ''}`} role={mini ? 'region' : undefined} aria-label={`${focusedCreator.name} ${mini ? '미니 모드' : '전체 화면'}`}>
+            <section className={`focus-view${focusPanel && focusedStream && !mini ? ' focus-view--chat' : ''}`} role={mini ? 'region' : undefined} aria-label={`${focusedCreator.name} ${mini ? '미니 모드' : '전체 화면'}`}>
               <div className="focus-view__player" ref={focusEl} />
-              {focusChat && focusedStream && !mini && (
+              {focusPanel && focusedStream && !mini && (
                 <div className="focus-view__chat">
-                  <PageView
-                    page={SHEET_PAGES.chat}
-                    url={chatUrl(focusedStream, videoIdOf(focusedStream), embed, host)}
-                    embed={embed}
-                    emptyText="유튜브 채팅은 방송이 재생되면 표시됩니다"
-                  />
+                  {focusPanel === 'chat' ? (
+                    <PageView
+                      page={SHEET_PAGES.chat}
+                      url={chatUrl(focusedStream, videoIdOf(focusedStream), embed, host)}
+                      embed={embed}
+                      emptyText="유튜브 채팅은 방송이 재생되면 표시됩니다"
+                    />
+                  ) : (
+                    <PageView
+                      page={SHEET_PAGES.donate}
+                      url={donatePageUrl(focusedStream)}
+                      embed={embed}
+                      frameDonate={canFrameDonate(host, DONATE_FRAME_HOSTS)}
+                      onOpenWindow={() => openPopup(focusedStream)}
+                    />
+                  )}
                 </div>
               )}
               <div className="tile__bar focus-view__bar">
@@ -1818,7 +1886,12 @@ export function App(props: Props) {
                     >
                       {state.soundOn ? '🔊' : '🔇'}
                     </button>
-                    <button type="button" className="btn btn--donate" onClick={onDonate}>
+                    <button
+                      type="button"
+                      className="btn btn--donate"
+                      aria-pressed={phone ? focusPanel === 'donate' : undefined}
+                      onClick={phone ? () => setFocusPanel((v) => (v === 'donate' ? null : 'donate')) : onDonate}
+                    >
                       후원하기
                     </button>
                   </>
@@ -1826,11 +1899,11 @@ export function App(props: Props) {
                 {!mini && focusedStream && (
                   <button
                     type="button"
-                    className={`sound focus-view__chat-btn${focusChat ? ' sound--on' : ''}`}
-                    aria-label={focusChat ? '채팅 닫기' : '채팅 보기'}
-                    aria-pressed={focusChat}
-                    title={focusChat ? '채팅 닫기' : '채팅 보기'}
-                    onClick={() => setFocusChat((v) => !v)}
+                    className={`sound focus-view__chat-btn${focusPanel === 'chat' ? ' sound--on' : ''}`}
+                    aria-label={focusPanel === 'chat' ? '채팅 닫기' : '채팅 보기'}
+                    aria-pressed={focusPanel === 'chat'}
+                    title={focusPanel === 'chat' ? '채팅 닫기' : '채팅 보기'}
+                    onClick={() => setFocusPanel((v) => (v === 'chat' ? null : 'chat'))}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
                       <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />
@@ -2193,12 +2266,12 @@ export function App(props: Props) {
       )}
       {pageSheet && (
         <div
-          className={`modal-backdrop page-sheet__backdrop${chatDock ? ' page-sheet__backdrop--dock' : ''}${pageSheet.kind === 'donate' ? ' donate-modal__backdrop' : ''}`}
+          className={`modal-backdrop page-sheet__backdrop${chatDock ? ' page-sheet__backdrop--dock' : ''}`}
           style={chatDock && dockTop !== null ? { top: dockTop } : undefined}
           onClick={() => setPageSheet(null)}
         >
           <div
-            className={`modal page-sheet${chatDock ? ' page-sheet--dock' : ''}${pageSheet.kind === 'donate' ? ' donate-modal' : ''}`}
+            className={`modal page-sheet${chatDock ? ' page-sheet--dock' : ''}`}
             role="dialog"
             aria-label={`${pageSheet.creator.name} ${pageSheet.kind === 'donate' ? '후원하기' : '채팅'}`}
             onClick={(e) => e.stopPropagation()}

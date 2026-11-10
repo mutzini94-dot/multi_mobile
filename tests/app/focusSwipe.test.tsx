@@ -108,3 +108,17 @@ test('전체 화면에서 채팅: 버튼을 누르면 방송 옆(아래)에 그 
   fireEvent.click(screen.getByRole('button', { name: '채팅 닫기' }));
   expect(view).not.toHaveClass('focus-view--chat');
 });
+
+test('휴대폰 전체 화면의 후원하기: 채팅처럼 방송 아래에 후원 페이지', () => {
+  window.matchMedia = ((q: string) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
+  try {
+    setup();
+    fireEvent.click(within(tiles()[0]).getByRole('button', { name: '전체 화면' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'A 전체 화면' })).getByRole('button', { name: '후원하기' }));
+    const view = screen.getByRole('region', { name: 'A 전체 화면' });
+    expect(view).toHaveClass('focus-view--chat');
+    expect(view.querySelector('.focus-view__chat iframe')!.getAttribute('src')).toBe('https://toon.at/donate/don1');
+  } finally {
+    delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  }
+});
