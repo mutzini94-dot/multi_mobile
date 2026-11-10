@@ -16,9 +16,9 @@ export const TOUR_STEPS: { target: string; title: string; body: string }[] = [
 /** 휴대폰 둘러보기: 휴대폰 상단 바·칸·하단 바 기준 */
 export const PHONE_TOUR_STEPS: { target: string; title: string; body: string }[] = [
   { target: '.tile', title: '칸 길게 누르기', body: '칸을 짧게 누르면 그 방송 소리로, 길게 누르면 칸 메뉴(소리·전체 화면·채팅·후원·세로로 보기·즐겨찾기)가 열립니다. 길게 누른 채 끌면 자리를 바꿉니다.' },
-  { target: '.gnb__overview', title: '전체보기', body: '띄워 둔 모든 창을 한 화면에 작게 모아 봅니다. 방송을 누르면 그 방송과 채팅이 함께 나옵니다.' },
+  { target: '.phone-dock', title: '전체보기', body: '띄워 둔 모든 창을 한 화면에 작게 모아 봅니다. 방송을 누르면 그 방송과 채팅이 함께 나옵니다.' },
   { target: '.gnb__chat', title: '채팅 · 후원하기', body: '채팅은 방송을 맨 위로 올리고 그 아래에 채팅을 붙입니다. 후원하기는 지금 고른 방송에 후원합니다.' },
-  { target: '.quick-panel', title: '하단 바', body: 'LIVE로 추천 라이브를 넘겨 보고, ★ 즐겨찾기 · 🕘 최근 본 크리에이터를 눌러 바로 넣습니다. + 로 창을 더합니다(최대 6개).' },
+  { target: '.phone-dock', title: '아래 탭', body: '추천 라이브를 넘겨 보고, 즐겨찾기 · 최근 본 목록에서 방송을 바로 넣습니다. 창 추가로 창을 더합니다(최대 6개).' },
   { target: '.gnb__more', title: '메뉴', body: '화면 공유(링크·QR), 취침 타이머, 설정·도움말이 여기에 있습니다.' },
   { target: '.tile', title: '전체 화면에서', body: '좌우로 밀면 다음 방송, 오른쪽을 위아래로 밀면 볼륨입니다. 🔒 화면 잠금으로 터치를 막을 수 있어요.' },
 ];

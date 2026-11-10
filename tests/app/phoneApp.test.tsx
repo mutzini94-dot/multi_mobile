@@ -142,10 +142,14 @@ test('휴대폰: 채팅을 열면 그 방송이 맨 위 칸으로 올라가고 �
   expect(document.querySelector('.app')).not.toHaveClass('app--chat-dock');
 });
 
-test('휴대폰: 퀵패널에서 고른 방송은 칸을 묻지 않고 빈 칸에, 빈 칸이 없으면 맨 위에 창을 더해 넣는다', () => {
+test('휴대폰: 아래 탭 즐겨찾기에서 고른 방송은 칸을 묻지 않고 빈 칸에, 빈 칸이 없으면 맨 위에 창을 더해 넣는다', () => {
   mockPhone(true);
   setup();
-  const card = (name: string) => within(document.querySelector('.quick-panel') as HTMLElement).getByRole('button', { name });
+  // 아래 탭의 즐겨찾기 목록에서 고른다
+  const card = (name: string) => {
+    fireEvent.click(screen.getByRole('button', { name: '즐겨찾기' }));
+    return within(screen.getByRole('dialog', { name: '즐겨찾기' })).getByRole('button', { name });
+  };
   fireEvent.click(card('A'));
   expect(screen.queryByRole('dialog', { name: '넣을 칸 고르기' })).toBeNull();
   expect(tiles()[0].querySelector('.tile__name')?.textContent).toBe('A'); // 첫 빈 칸

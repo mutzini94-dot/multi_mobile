@@ -20,6 +20,7 @@ import { readShortsHeight, readShortsWidth, SHORTS_HEIGHT_KEY, SHORTS_WIDTH_KEY 
 import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone } from '../ui/usePhone';
+import { PhoneDock } from '../ui/PhoneDock';
 import { onNativeBack } from '../native/backButton';
 import { nativeToonationBridge } from '../native/toonation/nativeBridge';
 import { Capacitor } from '@capacitor/core';
@@ -104,6 +105,14 @@ const VERTICAL_KEY = 'mv.vertical.v1';
 const VERTICAL_SEEN_KEY = 'mv.vertical.seen.v1';
 /** 화면 잠금을 풀려면 이만큼 길게 누른다 */
 const UNLOCK_HOLD_MS = 800;
+/** 휴대폰 걸러 보기 (시안 C) */
+type PhoneFilter = 'all' | 'sound' | 'pages' | 'fav';
+const PHONE_FILTERS: [PhoneFilter, string][] = [
+  ['all', '전체'],
+  ['sound', '소리'],
+  ['pages', '후원 페이지'],
+  ['fav', '즐겨찾기'],
+];
 /** 휴대폰에서 만들 수 있는 창 수 */
 const PHONE_MAX_WINDOWS = 6;
 /** 후원 페이지를 창 안에 띄워도 되는 이 앱 주소 (투네이션이 허용한 뒤 Vercel 환경 변수로) */
@@ -196,6 +205,7 @@ export function App(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [shareOpen, setShareOpen] = useState(false);
+  const [phoneFilter, setPhoneFilter] = useState<PhoneFilter>('all'); // 휴대폰 걸러 보기
   // 새 창으로 분리한 칸들 (칸에는 분리 표시만 남는다)
   const [detached, setDetached] = useState<Detached[]>([]);
   // 화면이 바뀔 때마다 저장
@@ -1478,6 +1488,58 @@ export function App(props: Props) {
       }}
     />
   ) : null;
+  // 휴대폰 아래 탭 (시안 C): 추천 라이브 · 즐겨찾기 · 최근 본 · 전체보기 · 창 추가
+  const phoneDock = (
+    <PhoneDock
+      favorites={withLive(quickFavs.map(quickLiveCreator), quickIsLive)}
+      recent={withLive(quickRecents.map(quickLiveCreator), quickIsLive)}
+      started={quickStarted}
+      onPick={(c) => {
+        dismissQuick(c.key);
+        askSlot(c);
+      }}
+      onRemoveRecent={(c) => setWatchLog(forgetWatch(kv, c))}
+      login={{ loggedIn: !!toonation.state.account, onLogin: toonation.login }}
+      shorts={{
+        open: shortsOpen,
+        onToggle: () => setShortsOpen((o) => !o),
+        content: <ShortsFeed load={liveSource} onAdd={(c) => askSlot(c)} onDonate={(c) => donateTo(c)} onClose={() => setShortsOpen(false)} />,
+      }}
+      overview={{
+        on: overview,
+        onToggle: () => {
+          haptic(10);
+          setPageSheet(null);
+          setOverview((o) => !o);
+        },
+      }}
+      onAddWindow={growTo.length ? addNewWindow : null}
+    />
+  );
+  // 휴대폰 걸러 보기: 전체 · 소리 나는 칸 · 후원 페이지 등 페이지 칸 · 즐겨찾기 방송
+  const filterVisible = visibleSlots(state);
+  const favKeySet = new Set(quickFavs.map((c) => c.key));
+  const filterMatch: Record<PhoneFilter, (i: number) => boolean> = {
+    all: () => true,
+    sound: (i) => !!audible[i] && isStream(filterVisible[i]),
+    pages: (i) => isPage(filterVisible[i]),
+    fav: (i) => isStream(filterVisible[i]) && favKeySet.has((filterVisible[i] as Creator).key),
+  };
+  const filterCount = (f: PhoneFilter) => filterVisible.filter((_, i) => filterMatch[f](i)).length;
+  const activeFilter: PhoneFilter = phone && phoneFilter !== 'all' && filterCount(phoneFilter) > 0 ? phoneFilter : 'all';
+  const filterHidden = activeFilter === 'all' ? [] : filterVisible.flatMap((_, i) => (filterMatch[activeFilter](i) ? [] : [i]));
+  const phoneFilters = (
+    <div className="phone-filters" role="toolbar" aria-label="창 걸러 보기">
+      {PHONE_FILTERS.map(([f, label]) => {
+        const n = filterCount(f);
+        return (
+          <button key={f} type="button" className="phone-filters__chip" aria-pressed={activeFilter === f} disabled={f !== 'all' && n === 0} onClick={() => setPhoneFilter(f)}>
+            {label} {n}
+          </button>
+        );
+      })}
+    </div>
+  );
   // 활동 위젯: 후원한 크리에이터 중 라이브 (즐겨찾기 라이브는 투네이션 즐겨찾기 목록이 이미 안다)
   const hasActivity = state.slots.some((s) => isPage(s) && s.kind === 'activity');
   const [donatedLive, setDonatedLive] = useState<LiveTarget[] | null>(null);
@@ -1729,18 +1791,6 @@ export function App(props: Props) {
         canDonate={phone ? !!sheetTarget : !!donateTarget}
         onChat={phone ? openChat : undefined}
         sleep={phone ? { remainingMin: sleepRemaining, onOpen: () => setSleepOpen(true) } : undefined}
-        overview={
-          phone
-            ? {
-                on: overview,
-                onToggle: () => {
-                  haptic(10);
-                  setPageSheet(null);
-                  setOverview((o) => !o);
-                },
-              }
-            : undefined
-        }
         canChat={!!sheetTarget}
         onDonate={onDonate}
         onSettings={() => setSettingsOpen(true)}
@@ -1761,13 +1811,15 @@ export function App(props: Props) {
         account={toonation.state.account ? { cash: typeof toonation.state.account.cash === 'number' ? toonation.state.account.cash : null, onHistory: () => setHistoryOpen(true) } : null}
       />
       <div className="app__body">
-        {settings.quickPanel === 'left' && quickPanel}
+        {settings.quickPanel === 'left' && !phone && quickPanel}
+        {phone && phoneFilters}
         <div className={`stage${focusedCreator ? ' stage--focus' : ''}`} ref={stageRef}>
           <TileGrid
             state={state}
             onSizes={(group, sizes) => dispatch({ type: 'setSizes', group, sizes })}
             phone={phone}
             tallSlots={visibleSlots(state).flatMap((s, i) => (isStream(s) && isVertical(s, i) ? [i] : []))}
+            hiddenSlots={filterHidden}
             onDragging={setDragging}
             renderTile={(slot) => {
               const item = state.slots[slot] ?? null;
@@ -2028,7 +2080,8 @@ export function App(props: Props) {
             }
           />
         </div>
-        {settings.quickPanel === 'right' && quickPanel}
+        {settings.quickPanel === 'right' && !phone && quickPanel}
+        {phone && phoneDock}
       </div>
       {(
       <DonationBar popupCreator={popupClosed || desktopDonate ? null : popupCreator} warning={warning} message={message}>
