@@ -33,7 +33,7 @@ const items = () => within(menu()!).getAllByRole('menuitem').map((b) => b.queryS
 test('영상 칸 오른쪽 클릭: 소리 끄기·전체 화면·새 창으로 분리·창 닫기', () => {
   setup();
   fireEvent.contextMenu(tiles()[0], { clientX: 200, clientY: 150 });
-  expect(items()).toEqual(['소리 끄기', '전체 화면', '새 창으로 분리', '창 닫기']);
+  expect(items()).toEqual(['소리 끄기', '전체 화면', '후원하기', '세로로 보기', expect.stringMatching(/^즐겨찾기 (추가|해제)$/), '새 창으로 분리', '창 닫기']);
   fireEvent.click(within(menu()!).getByRole('menuitem', { name: '소리 끄기' }));
   expect(menu()).toBeNull();
   expect(screen.getByRole('button', { name: '음소거 해제' })).toBeInTheDocument(); // 전체 소리 꺼짐
@@ -79,5 +79,5 @@ test('설치형: 영상(iframe) 안에서 오른쪽 클릭한 자리를 앱이 �
   const item = document.querySelector<HTMLElement>('.player-layer__item[data-slot="0"]')!;
   document.elementsFromPoint = () => [item.querySelector('iframe')!, item];
   act(() => frameMenu!({ x: 120, y: 90 }));
-  expect(items()).toEqual(['소리 끄기', '전체 화면', '새 창으로 분리', '창 닫기']);
+  expect(items()).toEqual(['소리 끄기', '전체 화면', '후원하기', '세로로 보기', expect.stringMatching(/^즐겨찾기 (추가|해제)$/), '새 창으로 분리', '창 닫기']);
 });

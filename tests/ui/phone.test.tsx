@@ -62,3 +62,10 @@ test('휴대폰 메뉴 맨 아래에 빌드 버전 (배포가 반영됐는지 �
   fireEvent.click(screen.getByRole('button', { name: '메뉴' }));
   expect(within(screen.getByRole('dialog', { name: '메뉴' })).getByText(/^버전 \S+ · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeInTheDocument();
 });
+
+test('휴대폰 배치 조건: 폭 640px 이하이거나, 손가락으로 쓰는 낮은 가로 화면(휴대폰을 가로로)', async () => {
+  const { PHONE_QUERY, PHONE_LANDSCAPE_QUERY } = await import('../../src/ui/usePhone');
+  expect(PHONE_QUERY).toContain('(max-width: 640px)');
+  expect(PHONE_QUERY).toContain(PHONE_LANDSCAPE_QUERY);
+  expect(PHONE_LANDSCAPE_QUERY).toBe('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)');
+});

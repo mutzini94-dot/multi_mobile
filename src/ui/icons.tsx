@@ -101,6 +101,11 @@ export const IconCoin = () => (
 );
 
 /** 후원하기: 하트 */
+export const IconMoon = () => (
+  <Svg size={16}>
+    <path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z" />
+  </Svg>
+);
 export const IconShare = () => (
   <Svg size={16}>
     <circle cx="6" cy="12" r="2.3" />

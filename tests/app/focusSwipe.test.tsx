@@ -69,3 +69,18 @@ test('여러 칸 동시 듣기에서 칸을 두 번 탭하면 그 방송 소리�
   expect(soundOf(0)).toHaveAccessibleName('소리 켜기');
   expect(soundOf(3)).toHaveAccessibleName('소리 켜기');
 });
+
+test('전체 화면 오른쪽 절반을 위아래로 밀면 볼륨 (아래로 = 작게), 놓으면 기본 볼륨으로 저장', () => {
+  setup();
+  fireEvent.click(within(tiles()[0]).getByRole('button', { name: '전체 화면' }));
+  const zone = document.querySelector('.focus-swipe')!;
+  const x = window.innerWidth - 50;
+  fireEvent.pointerDown(zone, { pointerId: 4, pointerType: 'touch', clientX: x, clientY: 200 });
+  fireEvent.pointerMove(zone, { pointerId: 4, pointerType: 'touch', clientX: x, clientY: 300 });
+  expect(screen.getByRole('status', { name: '볼륨' })).toHaveTextContent('50');
+  fireEvent.pointerUp(zone, { pointerId: 4, pointerType: 'touch', clientX: x, clientY: 300 });
+  expect(screen.queryByRole('status', { name: '볼륨' })).toBeNull();
+  expect(screen.getByRole('region', { name: 'A 전체 화면' })).toBeInTheDocument(); // 다른 방송으로 넘어가지 않는다
+  fireEvent.click(screen.getByRole('button', { name: '설정' }));
+  expect(screen.getByRole('slider', { name: '기본 볼륨' })).toHaveValue('50');
+});

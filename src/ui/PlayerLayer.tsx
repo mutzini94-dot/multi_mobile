@@ -37,7 +37,8 @@ interface Props {
   reloadSeq?: number; // 전체 새로고침: 바뀌면 모든 플레이어·페이지를 다시 띄운다
   tileSeq?: Record<string, number>;
   verticalKeys?: ReadonlySet<string>; // 세로로 보는 방송 (크리에이터 키)
-  fitVerticalWidth?: boolean; // 넓은 화면: 세로 방송은 칸 높이 그대로 폭만 9:16 (휴대폰은 칸 자체를 2배 높이로) // 칸 하나만 다시 띄우기 (플레이어 키별)
+  fitVerticalWidth?: boolean;
+  pinned?: { slot: number; rect: { left: number; top: number; width: number; height: number } } | null; // 휴대폰: 화면 밖으로 넘어간 선택 방송을 오른쪽 아래 작은 창으로 // 넓은 화면: 세로 방송은 칸 높이 그대로 폭만 9:16 (휴대폰은 칸 자체를 2배 높이로) // 칸 하나만 다시 띄우기 (플레이어 키별)
 }
 
 /** 끄는 동안 작은 창의 폭 (높이는 원래 칸 비율, 모르면 16:9) */
@@ -62,7 +63,7 @@ export function fitVertical(r: { left: number; top: number; width: number; heigh
   return { left: Math.round(r.left + (r.width - width) / 2), top: r.top, width, height: r.height };
 }
 
-export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, onItemMenu, renderOverlay, renderControls, reloadSeq = 0, tileSeq, verticalKeys, fitVerticalWidth = true }: Props) {
+export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = false, onSelectSlot, focused = null, focusEl, onGrab, floating = null, settling = [], renderPage, onStatus, onStarting, starting, onItemMenu, renderOverlay, renderControls, reloadSeq = 0, tileSeq, verticalKeys, fitVerticalWidth = true, pinned = null }: Props) {
   const [rects, setRects] = useState<Record<number, Rect>>({});
   const onSelectRef = useRef(onSelectSlot);
   onSelectRef.current = onSelectSlot;
@@ -127,6 +128,8 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         const vertical = isStream(creator) && !!verticalKeys?.has(creator.key);
         const fit = vertical && fitVerticalWidth && !isFloating;
         if (fit) r = fitVertical(r);
+        const pip = !isFloating && !offscreen && focused === null && pinned?.slot === slot;
+        if (pip) r = pinned!.rect;
         if (isFloating && floating) {
           const stage = stageRef.current?.getBoundingClientRect();
           const width = FLOAT_WIDTH;
@@ -136,7 +139,7 @@ export function PlayerLayer({ state, stageRef, slotEls, onReady, dragging = fals
         return (
           <div
             key={`${key}#${reloadSeq}.${tileSeq?.[key] ?? 0}`}
-            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}${starting?.has(key) ? ' player-layer__item--starting' : ''}${vertical ? ' player-layer__item--vertical' : ''}${fit ? ' player-layer__item--fit' : ''}`}
+            className={`player-layer__item${state.selected === slot ? ' player-layer__item--selected' : ''}${isFloating ? ' player-layer__item--floating' : ''}${settling.includes(slot) ? ' player-layer__item--settling' : ''}${starting?.has(key) ? ' player-layer__item--starting' : ''}${vertical ? ' player-layer__item--vertical' : ''}${fit ? ' player-layer__item--fit' : ''}${pip ? ' player-layer__item--pip' : ''}`}
             data-slot={slot}
             data-kind={isStream(creator) ? 'stream' : 'page'}
             onContextMenu={

@@ -1,3 +1,4 @@
+import { PHONE_QUERY } from './usePhone';
 import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { clampShortsHeight, clampShortsWidth, SHORTS_DEFAULT_WIDTH } from '../quick/shortsSize';
 import type { Creator } from '../domain/types';
@@ -45,7 +46,7 @@ export function QuickPanel({ side, favorites, recent, started, onPick, onDismiss
   const showLogin = tab === 'fav' && !!login && !login.loggedIn;
   const enter = () => {
     clearTimeout(leaveTimer.current);
-    if (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches) return; // 휴대폰: 하단 바는 넓히지 않는다
+    if (typeof window.matchMedia === 'function' && window.matchMedia(PHONE_QUERY).matches) return; // 휴대폰: 하단 바는 넓히지 않는다
     setExpanded(true);
   };
   const leave = () => {

@@ -10,19 +10,19 @@ export interface MenuItem {
 }
 
 /** 오른쪽 클릭 메뉴: 누른 자리에 띄우고 화면 밖으로 나가지 않게 한다. 바깥 클릭·Esc·창 크기 변경으로 닫는다 */
-export function ContextMenu({ x, y, label, items, onClose }: { x: number; y: number; label: string; items: MenuItem[]; onClose(): void }) {
+export function ContextMenu({ x, y, label, items, onClose, sheet = false }: { x: number; y: number; label: string; items: MenuItem[]; onClose(): void; sheet?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: x, top: y });
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || sheet) return;
     const r = el.getBoundingClientRect();
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 800;
     setPos({ left: Math.max(8, Math.min(x, vw - r.width - 8)), top: Math.max(8, Math.min(y, vh - r.height - 8)) });
     el.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-  }, [x, y]);
+  }, [x, y, sheet]);
 
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
@@ -33,16 +33,16 @@ export function ContextMenu({ x, y, label, items, onClose }: { x: number; y: num
     };
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('keydown', onKey);
-    window.addEventListener('resize', onClose);
+    if (!sheet) window.addEventListener('resize', onClose); // 휴대폰 시트는 주소창이 접히며 크기가 바뀌어도 닫지 않는다
     return () => {
       window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onClose);
     };
-  }, [onClose]);
+  }, [onClose, sheet]);
 
-  return (
-    <div ref={ref} className="context-menu" role="menu" aria-label={label} style={pos} onContextMenu={(e) => e.preventDefault()}>
+  const list = (
+    <>
       {items.map((it) => (
         <button
           key={it.label}
@@ -62,6 +62,21 @@ export function ContextMenu({ x, y, label, items, onClose }: { x: number; y: num
           {it.hint && <span className="context-menu__hint">{it.hint}</span>}
         </button>
       ))}
+    </>
+  );
+  if (sheet)
+    return (
+      <div className="context-sheet__backdrop">
+        <div ref={ref} className="context-menu context-sheet" role="menu" aria-label={label} onContextMenu={(e) => e.preventDefault()}>
+          <span className="phone-sheet__grip" aria-hidden="true" />
+          <p className="context-sheet__title">{label}</p>
+          {list}
+        </div>
+      </div>
+    );
+  return (
+    <div ref={ref} className="context-menu" role="menu" aria-label={label} style={pos} onContextMenu={(e) => e.preventDefault()}>
+      {list}
     </div>
   );
 }

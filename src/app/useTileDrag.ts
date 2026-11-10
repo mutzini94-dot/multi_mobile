@@ -61,12 +61,13 @@ export function useTileDrag(
   canDropOn: (from: number, to: number) => boolean,
   onCancel?: (from: number) => void,
   onOutside?: (from: number, x: number, y: number) => void, // 창 밖에 놓음
+  onHold?: (from: number) => void, // 손가락으로 길게 누르고 움직이지 않고 뗌 (칸 메뉴)
 ) {
   const [press, setPress] = useState<Press | null>(null);
   const pressRef = useRef<Press | null>(null);
   pressRef.current = press;
-  const cb = useRef({ onDrop, onTap, canDropOn, onCancel, onOutside });
-  cb.current = { onDrop, onTap, canDropOn, onCancel, onOutside };
+  const cb = useRef({ onDrop, onTap, canDropOn, onCancel, onOutside, onHold });
+  cb.current = { onDrop, onTap, canDropOn, onCancel, onOutside, onHold };
 
   const pressing = press !== null;
   useEffect(() => {
@@ -89,7 +90,8 @@ export function useTileDrag(
         if (to !== null && to !== p.from) cb.current.onDrop(p.from, to, { shift: e.shiftKey });
         else if (cb.current.onOutside && out) cb.current.onOutside(p.from, e.clientX, e.clientY);
         else cb.current.onCancel?.(p.from); // 놓을 곳이 아니면 제자리로
-      } else if (p && !(p.touch && p.armed)) cb.current.onTap(p.from); // 길게 누르고 그대로 떼면 아무것도 하지 않는다
+      } else if (p && p.touch && p.armed) cb.current.onHold?.(p.from); // 길게 누르고 그대로 떼면 칸 메뉴
+      else if (p) cb.current.onTap(p.from);
       setPress(null);
     };
     const key = (e: KeyboardEvent) => {

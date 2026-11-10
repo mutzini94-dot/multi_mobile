@@ -3,7 +3,7 @@ import type { LayoutKind } from '../domain/types';
 import type { RemoteMode } from '../app/remoteMode';
 import { LAYOUT_LABEL, LAYOUTS } from '../layout/layouts';
 import logoUrl from '../assets/logo.png';
-import { IconChat, IconShare, IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
+import { IconChat, IconMoon, IconShare, IconCoin, IconHeart, IconHelp, IconPalette, IconUser, IconLive, IconMini, IconMute, IconPresets, IconReload, IconSettings, IconVolume } from './icons';
 
 
 /** 레이아웃 아이콘 모양(미니 그리드) */
@@ -26,6 +26,7 @@ interface Props {
   onDonate(): void;
   onChat?(): void; // 휴대폰: 선택한 방송의 채팅 시트
   overview?: { on: boolean; onToggle(): void }; // 휴대폰: 모든 창을 작은 타일로 모아 보기
+  sleep?: { remainingMin: number | null; onOpen(): void }; // 휴대폰 메뉴: 취침 타이머
   canChat?: boolean;
   onSettings?(): void;
   onHelp?(): void; // 도움말 (자주 묻는 질문·단축키·둘러보기)
@@ -207,7 +208,7 @@ function GnbBar({ onMenu, overview, layout, onLayout, canDonate, onDonate, onCha
 }
 
 /** 휴대폰 '메뉴' 시트: 상단 바에 다 들어가지 않는 레이아웃·도구·설정·로그인·리모컨 전환 (고르면 닫힌다) */
-function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode, onClose }: Props & { onClose(): void }) {
+function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, loggingIn, onPresets, onShare, account, onMini, sound, onLive, onReloadAll, mode, sleep, onClose }: Props & { onClose(): void }) {
   const creator = mode?.value === 'creator';
   const run = (fn?: () => void) => () => {
     onClose();
@@ -249,6 +250,7 @@ function PhoneSheet({ layout, onLayout, onSettings, onHelp, onSkin, onLogin, log
               {row('미니 모드', <IconMini />, onMini)}
               {row('화면 구성', <IconPresets />, onPresets)}
               {row('화면 공유', <IconShare />, onShare)}
+              {sleep && row(sleep.remainingMin !== null ? `취침 타이머 · ${sleep.remainingMin}분 남음` : '취침 타이머', <IconMoon />, sleep.onOpen, { pressed: sleep.remainingMin !== null })}
               {row('스킨', <IconPalette />, onSkin && (() => onSkin(Math.round(window.innerWidth / 2) - 90, Math.round(window.innerHeight / 3))))}
               {row('도움말', <IconHelp />, onHelp)}
               {row('설정', <IconSettings />, onSettings)}
