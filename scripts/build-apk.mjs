@@ -2,7 +2,7 @@
 // 1) 웹 빌드 → 2) Capacitor로 android/ 에 복사 → 3) 영문 경로(C:/mvtmp/apkbuild)에서 Gradle 빌드 → 4) apk/ 에 복사
 // (안드로이드 빌드 도구는 한글이 든 경로에서 빌드하지 않는다. Java도 한글 경로에서 내부 연결이 실패해 임시 폴더를 영문으로 둔다)
 import { execSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -22,7 +22,11 @@ run('npx cap sync android');
 rmSync(work, { recursive: true, force: true });
 mkdirSync(join(work, 'node_modules', '@capacitor'), { recursive: true });
 cpSync(join(root, 'android'), join(work, 'android'), { recursive: true, filter: (p) => !/[\\/](build|\.gradle)([\\/]|$)/.test(p.slice(root.length)) });
-cpSync(join(root, 'node_modules', '@capacitor', 'android'), join(work, 'node_modules', '@capacitor', 'android'), { recursive: true });
+// Capacitor 본체와 플러그인(@capacitor/app 등): android/capacitor.settings.gradle이 ../node_modules/@capacitor/* 를 가리킨다
+for (const pkg of readdirSync(join(root, 'node_modules', '@capacitor'))) {
+  if (pkg === 'cli') continue;
+  cpSync(join(root, 'node_modules', '@capacitor', pkg), join(work, 'node_modules', '@capacitor', pkg), { recursive: true });
+}
 
 const env = {
   JAVA_HOME: javaHome,
