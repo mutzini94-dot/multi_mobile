@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from '../../src/app/App';
 import { localFavorites } from '../../src/favorites/favorites';
 import { SETTINGS_KEY } from '../../src/settings/settings';
@@ -83,4 +83,28 @@ test('전체 화면 오른쪽 절반을 위아래로 밀면 볼륨 (아래로 = 
   expect(screen.getByRole('region', { name: 'A 전체 화면' })).toBeInTheDocument(); // 다른 방송으로 넘어가지 않는다
   fireEvent.click(screen.getByRole('button', { name: '설정' }));
   expect(screen.getByRole('slider', { name: '기본 볼륨' })).toHaveValue('50');
+});
+
+test('전체 화면에서 휴대폰 뒤로가기(브라우저 뒤로) = 원래 화면으로, 앱이 꺼지지 않게 기록을 하나 쌓는다', () => {
+  setup();
+  const before = window.history.length;
+  fireEvent.click(within(tiles()[0]).getByRole('button', { name: '전체 화면' }));
+  expect(window.history.length).toBe(before + 1);
+  expect(window.history.state).toMatchObject({ mvFocus: true });
+  act(() => {
+    window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+  });
+  expect(screen.queryByRole('region', { name: 'A 전체 화면' })).toBeNull();
+});
+
+test('전체 화면에서 채팅: 버튼을 누르면 방송 옆(아래)에 그 방송 채팅, 다시 누르면 닫힌다', () => {
+  setup();
+  fireEvent.click(within(tiles()[0]).getByRole('button', { name: '전체 화면' }));
+  fireEvent.click(screen.getByRole('button', { name: '채팅 보기' }));
+  const view = screen.getByRole('region', { name: 'A 전체 화면' });
+  expect(view).toHaveClass('focus-view--chat');
+  expect(view.querySelector('.focus-view__chat iframe')!.getAttribute('src')).toContain('twitch.tv/embed/chan_1/chat');
+  expect(document.querySelector('.app')).toHaveClass('app--focus-chat');
+  fireEvent.click(screen.getByRole('button', { name: '채팅 닫기' }));
+  expect(view).not.toHaveClass('focus-view--chat');
 });

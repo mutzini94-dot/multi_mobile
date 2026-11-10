@@ -247,6 +247,28 @@ export function App(props: Props) {
   );
   // 전체 화면으로 보는 칸 (보기 방식일 뿐이라 저장하지 않는다)
   const [focused, setFocused] = useState<number | null>(null);
+  const focusHistory = useRef(false); // 전체 화면 때 쌓은 뒤로가기 기록
+  const [focusChat, setFocusChat] = useState(false); // 전체 화면에서 채팅 (휴대폰 세로: 아래, 가로·PC: 오른쪽)
+  useEffect(() => {
+    const onPop = () => {
+      if (!focusHistory.current) return;
+      focusHistory.current = false; // 이미 뒤로 갔으므로 되돌리지 않는다
+      focusExitRef.current();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const focusExitRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    // 브라우저 전체 화면이 저절로 끝나는 등 다른 길로 나갔으면 쌓아 둔 기록도 되돌린다
+    if (focused !== null || !focusHistory.current) return;
+    focusHistory.current = false;
+    try {
+      window.history.back();
+    } catch {
+      // 기록을 쓸 수 없는 환경
+    }
+  }, [focused]);
   // 전체 화면에서 다음·이전 방송으로 (좌우로 밀기·←→ 키). 빈 칸·페이지 칸은 건너뛰고 끝에서 처음으로
   const focusStepRef = useRef<(dir: 1 | -1) => void>(() => {});
   // 짧게 누름 = 칸 선택, 같은 칸을 0.35초 안에 두 번 = 그 방송 소리만 (여러 칸 동시 듣기에서 다른 칸 소리를 끈다)
@@ -395,6 +417,7 @@ export function App(props: Props) {
     .filter((s): s is PageSlot => isPage(s) && s.kind === 'chat')
     .map(targetOf)
     .concat(pageSheet?.kind === 'chat' ? [pageSheet.creator] : []) // 휴대폰 채팅 시트도
+    .concat(focusChat && focused !== null && isStream(state.slots[focused]) ? [state.slots[focused] as Creator] : []) // 전체 화면 채팅도
     .filter((c): c is Creator => !!c && c.platform === 'youtube' && !videoIdOf(c));
   const chatTargetSig = chatTargets.map((c) => c.key).join(',');
   useEffect(() => {
@@ -607,6 +630,16 @@ export function App(props: Props) {
   const enterFullscreen = (slot: number) => {
     dispatch({ type: 'select', slot });
     setFocused(slot);
+    if (phoneRef.current && document.scrollingElement) document.scrollingElement.scrollTop = 0; // 휴대폰: 넘겨 둔 화면도 맨 위에서
+    // 휴대폰 뒤로가기(브라우저 뒤로)가 앱을 끄지 않고 전체 화면만 나가도록 기록을 하나 쌓는다 (popstate에서 나간다)
+    if (!focusHistory.current) {
+      try {
+        window.history.pushState({ ...(window.history.state ?? {}), mvFocus: true }, '');
+        focusHistory.current = true;
+      } catch {
+        // 기록을 쓸 수 없는 환경
+      }
+    }
     // 브라우저(설치형은 창) 전체 화면도 함께. 지원하지 않거나 거부되면 앱 안에서만 크게 본다
     // 휴대폰은 전체 화면이 되면 가로 화면으로 돌린다
     const phoneNow = phoneRef.current;
@@ -652,6 +685,16 @@ export function App(props: Props) {
   };
   const exitFullscreen = useCallback(() => {
     setFocused(null);
+    setFocusChat(false);
+    // 버튼·Esc로 나갔으면 전체 화면 때 쌓은 기록을 되돌린다 (뒤로가기로 나간 경우는 이미 빠져 있다)
+    if (focusHistory.current) {
+      focusHistory.current = false;
+      try {
+        window.history.back();
+      } catch {
+        // 기록을 쓸 수 없는 환경
+      }
+    }
     if (miniRef.current) {
       miniRef.current = false;
       setMini(false);
@@ -660,6 +703,7 @@ export function App(props: Props) {
     unlockOrientation();
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }, [desktop]);
+  focusExitRef.current = exitFullscreen;
   useEffect(() => {
     if (focused === null) return;
     const onKey = (e: KeyboardEvent) => {
@@ -1526,7 +1570,7 @@ export function App(props: Props) {
     setGuideOpen(false);
   };
   return (
-    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${overview ? ' app--overview' : ''}${phone && barsOff && !overview ? ' app--bars-hidden' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
+    <div className={`app${focusedCreator ? ' app--focus' : ''}${mini && focusedCreator ? ' app--mini' : ''}${tileDrag.drag ? ' app--dragging' : ''}${phone ? ' app--phone' : ''}${chatDock ? ' app--chat-dock' : ''}${focusChat && focusedStream && !mini ? ' app--focus-chat' : ''}${overview ? ' app--overview' : ''}${phone && barsOff && !overview ? ' app--bars-hidden' : ''}${locked && focused !== null ? ' app--locked' : ''}`}>
       {focusedStream && !mini && !(locked && focused !== null) && (
         // 손가락으로 좌우로 밀어 다른 방송 (마우스는 통과: app.css). 아래쪽 플레이어 조작 줄은 비워 둔다
         <div
@@ -1750,8 +1794,18 @@ export function App(props: Props) {
             }}
           />
           {focusedCreator && (
-            <section className="focus-view" role={mini ? 'region' : undefined} aria-label={`${focusedCreator.name} ${mini ? '미니 모드' : '전체 화면'}`}>
+            <section className={`focus-view${focusChat && focusedStream && !mini ? ' focus-view--chat' : ''}`} role={mini ? 'region' : undefined} aria-label={`${focusedCreator.name} ${mini ? '미니 모드' : '전체 화면'}`}>
               <div className="focus-view__player" ref={focusEl} />
+              {focusChat && focusedStream && !mini && (
+                <div className="focus-view__chat">
+                  <PageView
+                    page={SHEET_PAGES.chat}
+                    url={chatUrl(focusedStream, videoIdOf(focusedStream), embed, host)}
+                    embed={embed}
+                    emptyText="유튜브 채팅은 방송이 재생되면 표시됩니다"
+                  />
+                </div>
+              )}
               <div className="tile__bar focus-view__bar">
                 <span className="tile__name">{focusedCreator.name}</span>
                 {focusedStream && (
@@ -1769,6 +1823,20 @@ export function App(props: Props) {
                     </button>
                   </>
                 )}
+                {!mini && focusedStream && (
+                  <button
+                    type="button"
+                    className={`sound focus-view__chat-btn${focusChat ? ' sound--on' : ''}`}
+                    aria-label={focusChat ? '채팅 닫기' : '채팅 보기'}
+                    aria-pressed={focusChat}
+                    title={focusChat ? '채팅 닫기' : '채팅 보기'}
+                    onClick={() => setFocusChat((v) => !v)}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+                      <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />
+                    </svg>
+                  </button>
+                )}
                 {!mini && (
                   <button type="button" className="sound focus-view__lock" aria-label="화면 잠금" title="화면 잠금 (터치 막기)" onClick={() => setLocked(true)}>
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -1783,7 +1851,7 @@ export function App(props: Props) {
                   </button>
                 ) : (
                   <button type="button" className="btn btn--ghost" aria-label="전체 화면 종료" onClick={exitFullscreen}>
-                    전체 화면 종료 (Esc)
+                    {phone ? '✕' : '전체 화면 종료 (Esc)'}
                   </button>
                 )}
               </div>

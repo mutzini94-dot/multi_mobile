@@ -66,6 +66,8 @@
 }
 
 * { box-sizing: border-box; }
+/* 안전 영역: 휴대폰 상태 표시줄·내비게이션 바·노치 (안드로이드 앱은 Capacitor가 --safe-area-inset-* 를 넣어 준다) */
+:root { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px)); --sal: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px)); --sar: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px)); }
 html, body, #root { height: 100%; margin: 0; }
 /* 화면 크기에 꼭 맞는 레이아웃이라 문서 스크롤바는 쓰지 않는다. 절대 위치로 덮는 플레이어가 1px만 넘쳐도
    스크롤바가 생겼다 사라지며 크기 재측정과 맞물려 화면이 떨린다 (전체 화면에서 매 프레임 반복되던 문제) */
@@ -1140,7 +1142,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 .gnb__chat { gap: 6px; height: 36px; padding: 0 12px; }
 /* 전체 화면 화면 잠금: 화면 전체를 덮어 터치를 막고, 자물쇠를 길게 눌러 푼다 */
 .screen-lock { position: fixed; inset: 0; z-index: 80; background: transparent; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.screen-lock__unlock { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-size: 13px; font-weight: 600; opacity: 0.35; transition: opacity 0.2s ease, background 0.8s linear; touch-action: none; }
+.screen-lock__unlock { position: absolute; top: calc(14px + var(--sat)); right: calc(14px + var(--sar)); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-size: 13px; font-weight: 600; opacity: 0.35; transition: opacity 0.2s ease, background 0.8s linear; touch-action: none; }
 .screen-lock__text { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width 0.2s ease; }
 .screen-lock__unlock--hint { opacity: 1; }
 .screen-lock__unlock--hint .screen-lock__text { max-width: 160px; }
@@ -1162,7 +1164,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 .phone-sheet__version, .settings__version { margin: 12px 2px 0; color: var(--ink-mute); font-size: 11px; font-variant-numeric: tabular-nums; }
 /* 칸 메뉴 (휴대폰: 길게 누르기) · 취침 타이머 · 연결 끊김 */
 .context-sheet__backdrop { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; background: rgba(13, 15, 16, 0.4); }
-.context-menu.context-sheet { position: static; width: 100%; max-width: none; max-height: 80vh; overflow-y: auto; padding: 8px 12px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; animation: mv-sheet-up 0.2s ease-out; }
+.context-menu.context-sheet { position: static; width: 100%; max-width: none; max-height: 80vh; overflow-y: auto; padding: 8px 12px calc(16px + var(--sab)); border-radius: 22px 22px 0 0; animation: mv-sheet-up 0.2s ease-out; }
 .context-sheet .context-menu__item { height: 48px; font-size: 15px; }
 .context-sheet__title { margin: 0 6px 6px; color: var(--ink-mute); font-size: 12px; font-weight: 700; }
 .sleep-dialog { width: min(360px, 100%); display: flex; flex-direction: column; gap: 12px; }
@@ -1170,7 +1172,12 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
 .sleep-dialog__options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sleep-dialog__options .btn { height: 44px; }
 .sleep-dialog__foot { display: flex; justify-content: flex-end; gap: 8px; }
-.net-banner { position: fixed; left: 50%; top: calc(60px + env(safe-area-inset-top)); z-index: 75; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 8px 14px; border-radius: 999px; background: #1f2329; color: #fff; font-size: 13px; font-weight: 600; box-shadow: var(--elev-1); text-align: center; pointer-events: none; }
+.net-banner { position: fixed; left: 50%; top: calc(60px + var(--sat)); z-index: 75; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 8px 14px; border-radius: 999px; background: #1f2329; color: #fff; font-size: 13px; font-weight: 600; box-shadow: var(--elev-1); text-align: center; pointer-events: none; }
+/* 전체 화면 채팅 (넓은 화면: 오른쪽) */
+.focus-view--chat .focus-view__player { right: 340px; }
+.focus-view__chat { position: absolute; top: 0; right: 0; bottom: 0; width: 340px; z-index: 2; background: var(--canvas); overflow: hidden; }
+.focus-view__chat > * { position: absolute; inset: 0; }
+.focus-view--chat .focus-view__bar { right: 340px; }
 /* ================= 휴대폰 (폭 640px 이하, 또는 가로로 돌린 휴대폰) =================
    상단 바 = 로고 · 메뉴 · 후원하기, 칸은 세로로 쌓기, 퀵패널은 하단 바, 창은 아래에서 올라오는 시트 */
 .gnb__more, .gnb__overview { display: none; }
@@ -1206,7 +1213,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   /* 본문: 칸 위, 퀵패널은 아래 바 */
   .app__body { flex-direction: column; gap: 8px; padding: 8px 8px 0; }
   .quick-panel { order: 2; width: auto !important; max-width: none; margin: 0 -8px !important; height: auto; border-radius: 0; box-shadow: 0 -1px 0 var(--line) !important; background: var(--canvas) !important; }
-  .quick-panel__rail { flex-direction: row; align-items: center; gap: 6px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); overflow: hidden; }
+  .quick-panel__rail { flex-direction: row; align-items: center; gap: 6px; padding: 6px 8px calc(6px + var(--sab)); overflow: hidden; }
   .quick-panel__head { flex-direction: row; align-items: center; margin: 0; padding: 2px; border-radius: 14px; }
   .quick-panel__tabs { flex-direction: row; align-self: auto; }
   .quick-panel__divider { width: 1px !important; height: 22px; margin: 0 2px; }
@@ -1227,7 +1234,7 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .tile__empty { inset: 6px; gap: 6px; }
   /* 창: 아래에서 올라오는 시트 */
   .modal-backdrop { align-items: flex-end; padding: 0; }
-  .modal { width: 100% !important; max-width: none; max-height: 92vh; border-radius: 22px 22px 0 0 !important; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .modal { width: 100% !important; max-width: none; max-height: 92vh; border-radius: 22px 22px 0 0 !important; padding: 18px 16px calc(18px + var(--sab)); }
   .picker--nav { height: 92vh; }
   .settings__row { flex-wrap: wrap; gap: 6px 12px; }
   .settings__row select, .settings__row input:not([type]), .settings__row input[type='text'] { width: 100%; max-width: none; }
@@ -1282,6 +1289,27 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .gnb, .quick-panel { transition: transform 0.22s ease; }
   .app--bars-hidden .gnb { transform: translateY(-110%); }
   .app--bars-hidden .quick-panel { transform: translateY(110%); }
+  /* 안전 영역: 상태 표시줄 아래부터 그리고, 넘길 때 그 자리는 바탕색으로 가린다 */
+  .app { padding-top: var(--sat); padding-left: var(--sal); padding-right: var(--sar); }
+  .app::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: var(--sat); z-index: 79; background: var(--canvas); pointer-events: none; }
+  .app--focus::before { background: #000; }
+  .gnb { top: var(--sat); }
+  .quick-panel__drawer { padding-top: var(--sat); padding-bottom: var(--sab); background: #000; }
+  .donate-modal__backdrop { padding-top: calc(64px + var(--sat)); }
+  .page-sheet__backdrop--dock { bottom: 0; }
+  .focus-swipe { top: calc(64px + var(--sat)); bottom: calc(76px + var(--sab)); }
+  /* 전체 화면 채팅: 세로는 아래 45%, 가로는 오른쪽 */
+  /* 전체 화면: 화면 높이에 맞춘다 (칸 목록은 접고, 넘기기 없이) */
+  .app--focus { min-height: 0; height: 100vh; height: 100dvh; overflow: hidden; padding-bottom: var(--sab); }
+  .app--focus .app__body { padding: 0; flex: 1 1 auto; min-height: 0; }
+  .app--focus .stage { flex: 1 1 auto; min-height: 0; }
+  .app--focus .tile-grid--phone { display: none; }
+  .app--focus .focus-view { border-radius: 0; }
+  .focus-view--chat .focus-view__player { right: 0; bottom: 45%; }
+  .focus-view--chat .focus-view__bar { right: 0; }
+  .focus-view__chat { position: absolute; top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 45%; z-index: 2; background: var(--canvas); border-radius: 16px 16px 0 0; overflow: hidden; }
+  .focus-view__chat > * { position: absolute; inset: 0; }
+  .app--focus-chat .focus-swipe { bottom: calc(45% + 8px); }
 }
 
 /* 휴대폰을 가로로: 2열, 상단 바를 낮게, 채팅은 방송 오른쪽에 */
@@ -1295,4 +1323,8 @@ body.is-resizing-xy { cursor: nwse-resize; user-select: none; }
   .modal.page-sheet--dock { border-radius: 18px 0 0 0 !important; }
   .modal { max-height: 96vh; }
   .focus-swipe { top: 48px; bottom: 60px; }
+  .focus-view--chat .focus-view__player { bottom: 0; right: 36%; }
+  .focus-view__chat { top: 0; left: auto; width: 36%; height: auto; border-radius: 0; }
+  .focus-view--chat .focus-view__bar { right: 36%; }
+  .app--focus-chat .focus-swipe { bottom: calc(60px + var(--sab)); right: 36%; }
 }
