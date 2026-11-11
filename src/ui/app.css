@@ -297,6 +297,7 @@ button:disabled { cursor: not-allowed; }
 
 /* 직접 추가 폼 (Textinput: 8px, #DEE5EC) */
 .fav-form { display: flex; flex-direction: column; gap: 10px; }
+.page-view--native { display: flex; align-items: center; justify-content: center; background: #fff; }
 .focus-view__chat-btn:has(.focus-view__chat-text) { width: auto; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; font-size: 14px; font-weight: 700; line-height: 1; }
 .phone-picker { height: min(80vh, 640px); }
 .phone-picker__tabs { display: flex; gap: 6px; padding: 2px 0 4px; }

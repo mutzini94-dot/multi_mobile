@@ -22,6 +22,7 @@ import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone, PHONE_QUERY } from '../ui/usePhone';
 import { PhoneDock } from '../ui/PhoneDock';
 import { PhonePicker } from '../ui/PhonePicker';
+import { canNativeDonate } from '../native/donateOverlay';
 import { onNativeBack } from '../native/backButton';
 import { nativeToonationBridge } from '../native/toonation/nativeBridge';
 import { Capacitor } from '@capacitor/core';
@@ -2086,6 +2087,7 @@ export function App(props: Props) {
                       url={donatePageUrl(focusedStream)}
                       embed={embed}
                       frameDonate={canFrameDonate(host, DONATE_FRAME_HOSTS)}
+                      nativeDonate={canNativeDonate()}
                       onOpenWindow={() => openPopup(focusedStream)}
                     />
                   )}
@@ -2603,6 +2605,7 @@ export function App(props: Props) {
                 url={pageSheet.kind === 'donate' ? donatePageUrl(pageSheet.creator) : chatUrl(pageSheet.creator, videoIdOf(pageSheet.creator), embed, host)}
                 embed={embed}
       frameDonate={canFrameDonate(host, DONATE_FRAME_HOSTS)}
+      nativeDonate={canNativeDonate()}
       onOpenWindow={() => openPopup(pageSheet.creator)} // 웹: 투네이션 후원 페이지는 다른 사이트 안에 띄울 수 없어 새 창 버튼
                 emptyText={pageSheet.kind === 'chat' ? '유튜브 채팅은 방송이 재생되면 표시됩니다' : undefined}
               />

@@ -2,7 +2,16 @@ package at.toon.multiview;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.annotation.SuppressLint;
+import android.graphics.Color;
+import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -27,6 +36,8 @@ import java.util.Map;
  *   허용한 주소(https, 투네이션·유튜브·트위치·치지직·숲)만.
  * - login: toon.at 공식 로그인 화면(ToonationLoginActivity)을 연다. 비밀번호는 앱이 다루지 않는다.
  * - logout: 앱에 저장된 toon.at 쿠키를 지운다.
+ * - showDonate/hideDonate: 후원 페이지를 앱 화면 위 지정한 자리에 별도 웹뷰로 띄운다.
+ *   웹 화면 속(iframe)이 아니라 맨 위 페이지라 로그인 창에서 받은 toon.at 쿠키가 그대로 쓰인다 (로그인 상태로 후원).
  */
 @CapacitorPlugin(name = "Toonation")
 public class ToonationPlugin extends Plugin {
@@ -173,5 +184,90 @@ public class ToonationPlugin extends Plugin {
         }
         cm.flush();
         call.resolve();
+    }
+
+    // ---------- 후원 페이지 웹뷰 (앱 화면 위에 겹쳐 띄운다) ----------
+    private WebView donateView;
+    private String donateUrl;
+
+    /** 웹 좌표(CSS px, 앱 웹뷰 기준) → 화면 자리. url이 바뀌면 새로 불러온다 */
+    @SuppressLint("SetJavaScriptEnabled")
+    @PluginMethod
+    public void showDonate(final PluginCall call) {
+        final String url = call.getString("url", "");
+        if (!allowed(url)) {
+            call.reject("BLOCKED_URL");
+            return;
+        }
+        final double x = call.getDouble("x", 0.0), y = call.getDouble("y", 0.0), w = call.getDouble("width", 0.0), h = call.getDouble("height", 0.0);
+        getActivity().runOnUiThread(() -> {
+            try {
+                WebView app = getBridge().getWebView();
+                ViewGroup root = getActivity().findViewById(android.R.id.content);
+                if (donateView == null) {
+                    donateView = new WebView(getActivity());
+                    WebSettings ws = donateView.getSettings();
+                    ws.setJavaScriptEnabled(true);
+                    ws.setDomStorageEnabled(true);
+                    ws.setMediaPlaybackRequiresUserGesture(false);
+                    donateView.setBackgroundColor(Color.WHITE);
+                    CookieManager.getInstance().setAcceptCookie(true);
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(donateView, true);
+                    donateView.setWebViewClient(new WebViewClient() {
+                        @Override
+                        public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
+                            String u = req.getUrl().toString();
+                            // 결제 앱 호출(intent:, 카드사 앱 등)은 휴대폰에 맡긴다
+                            if (!u.startsWith("http")) {
+                                try {
+                                    Intent i = u.startsWith("intent:") ? Intent.parseUri(u, Intent.URI_INTENT_SCHEME) : new Intent(Intent.ACTION_VIEW, Uri.parse(u));
+                                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    getActivity().startActivity(i);
+                                } catch (Exception ignored) {
+                                    // 열 수 있는 앱이 없다
+                                }
+                                return true;
+                            }
+                            return false;
+                        }
+                    });
+                    root.addView(donateView, new FrameLayout.LayoutParams(1, 1));
+                }
+                // 앱 웹뷰의 화면 속 자리 + 웹 좌표 × 화면 밀도
+                float d = getActivity().getResources().getDisplayMetrics().density;
+                int[] a = new int[2], r = new int[2];
+                app.getLocationOnScreen(a);
+                root.getLocationOnScreen(r);
+                ViewGroup.LayoutParams lp = donateView.getLayoutParams();
+                lp.width = Math.max(1, (int) Math.round(w * d));
+                lp.height = Math.max(1, (int) Math.round(h * d));
+                donateView.setLayoutParams(lp);
+                donateView.setX(a[0] - r[0] + app.getPaddingLeft() + (float) (x * d));
+                donateView.setY(a[1] - r[1] + app.getPaddingTop() + (float) (y * d));
+                donateView.setVisibility(w > 0 && h > 0 ? View.VISIBLE : View.INVISIBLE);
+                donateView.bringToFront();
+                if (!url.equals(donateUrl)) {
+                    donateUrl = url;
+                    donateView.loadUrl(url);
+                }
+                call.resolve();
+            } catch (Exception e) {
+                call.reject(String.valueOf(e.getMessage()));
+            }
+        });
+    }
+
+    @PluginMethod
+    public void hideDonate(final PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            if (donateView != null) {
+                ViewGroup parent = (ViewGroup) donateView.getParent();
+                if (parent != null) parent.removeView(donateView);
+                donateView.destroy();
+                donateView = null;
+                donateUrl = null;
+            }
+            call.resolve();
+        });
     }
 }
