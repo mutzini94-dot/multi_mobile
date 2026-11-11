@@ -298,7 +298,7 @@ button:disabled { cursor: not-allowed; }
 /* 직접 추가 폼 (Textinput: 8px, #DEE5EC) */
 .fav-form { display: flex; flex-direction: column; gap: 10px; }
 .page-view--native { display: flex; align-items: center; justify-content: center; background: #fff; }
-.focus-view__chat-btn:has(.focus-view__chat-text) { width: auto; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; font-size: 14px; font-weight: 700; line-height: 1; }
+.app .focus-view__bar .focus-view__chat-btn:has(.focus-view__chat-text) { width: auto; min-width: 0; height: 36px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: none; border-radius: 999px; font-size: 14px; font-weight: 700; line-height: 1; white-space: nowrap; } /* .app--phone .tile__bar .sound(폭 40px)보다 구체적으로: 글자가 버튼 밖으로 넘치지 않게 */
 .phone-picker { height: min(80vh, 640px); }
 .phone-picker__tabs { display: flex; gap: 6px; padding: 2px 0 4px; }
 .phone-picker__tab { flex: 1; height: 38px; border: 0; border-radius: 10px; background: var(--surface); color: var(--ink-sub); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
