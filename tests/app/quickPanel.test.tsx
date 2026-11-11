@@ -111,8 +111,8 @@ test('퀵패널 맨 아래 창 추가: 놓을 자리를 고르면 그 자리에 
   expect(within(tiles()[1]).getByText('하나')).toBeInTheDocument();
 });
 
-test('9분할이면 창 추가를 누를 수 없다', () => {
-  setup({ settings: { defaultLayout: 'nine' } });
+test('16분할이면 창 추가를 누를 수 없다', () => {
+  setup({ settings: { defaultLayout: 'sixteen' } });
   expect(within(panel()).getByRole('button', { name: '창 추가' })).toBeDisabled();
 });
 

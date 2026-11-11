@@ -6,24 +6,25 @@ import { mkCreator } from '../helpers/fixtures';
 import type { LayoutKind } from '../../src/domain/types';
 
 test('레이아웃: 맨 앞 큰 화면+1, 1·2·1+2·4분할에 큰 화면+3·큰 화면+5·6분할·9분할', () => {
-  expect(LAYOUTS).toEqual(['wideSide', 'single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine']);
-  expect(LAYOUTS.map((l) => SLOT_COUNT[l])).toEqual([2, 1, 2, 3, 4, 4, 6, 6, 9]);
+  expect(LAYOUTS).toEqual(['wideSide', 'single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine', 'twelve', 'sixteen']);
+  expect(LAYOUTS.map((l) => SLOT_COUNT[l])).toEqual([2, 1, 2, 3, 4, 4, 6, 6, 9, 12, 16]);
   expect(LAYOUT_LABEL.wideSide).toBe('큰 화면+1');
   expect(LAYOUT_LABEL.nine).toBe('9분할');
-  expect(MAX_SLOTS).toBe(9);
+  expect(LAYOUT_LABEL.sixteen).toBe('16분할');
+  expect(MAX_SLOTS).toBe(16);
 });
 
 test('9분할에서 4분할로 줄였다 다시 늘리면 숨겼던 창이 그대로 돌아온다', () => {
   const slots = Array.from({ length: MAX_SLOTS }, (_, i) => mkCreator(i + 1));
-  const nine = { ...applyLayout(initialViewState, 'nine'), slots };
+  const nine = { ...applyLayout(initialViewState, 'sixteen'), slots };
   const quad = applyLayout(nine, 'quad');
-  expect(quad.slots).toHaveLength(9);
-  expect(applyLayout(quad, 'nine').slots.map((c) => c?.name)).toEqual(slots.map((c) => c.name));
+  expect(quad.slots).toHaveLength(16);
+  expect(applyLayout(quad, 'sixteen').slots.map((c) => c?.name)).toEqual(slots.map((c) => c.name));
 });
 
-test('예전 4창 상태도 9창으로 늘려 보관한다', () => {
+test('예전 4창 상태도 16창으로 늘려 보관한다', () => {
   const s = applyLayout({ ...initialViewState, slots: [mkCreator(1), null, null, null] }, 'six');
-  expect(s.slots).toHaveLength(9);
+  expect(s.slots).toHaveLength(16);
 });
 
 test.each<[LayoutKind, number]>([
@@ -32,6 +33,8 @@ test.each<[LayoutKind, number]>([
   ['oneFive', 6],
   ['six', 6],
   ['nine', 9],
+  ['twelve', 12],
+  ['sixteen', 16],
 ])('TileGrid %s: 창 %i개를 그린다', (layout, n) => {
   const state = applyLayout(initialViewState, layout);
   const { container } = render(<TileGrid state={state} onSizes={() => {}} renderTile={(slot) => <div className="t" data-slot={slot} />} />);
@@ -51,7 +54,8 @@ test('창 추가: 지금보다 창이 가장 적게 늘어나는 레이아웃들
   expect(growLayouts('wideSide')).toEqual(['oneTwo']);
   expect(growLayouts('oneTwo')).toEqual(['quad', 'oneThree']);
   expect(growLayouts('quad')).toEqual(['oneFive', 'six']);
-  expect(growLayouts('nine')).toEqual([]);
+  expect(growLayouts('nine')).toEqual(['twelve']);
+  expect(growLayouts('sixteen')).toEqual([]);
 });
 
 test('창 추가: 고른 자리는 빈 창, 원래 창은 순서대로 나머지 자리에 (숨겨 둔 방송은 뒤에 보관, 선택은 따라감)', () => {

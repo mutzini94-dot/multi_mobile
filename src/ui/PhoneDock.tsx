@@ -11,7 +11,7 @@ interface Props {
   login?: { loggedIn: boolean; onLogin(): void };
   shorts: { open: boolean; onToggle(): void; content: ReactNode };
   overview: { on: boolean; onToggle(): void };
-  onAddWindow: (() => void) | null; // null = 더 늘릴 수 없음 (앱 최대 9개)
+  onAddWindow: (() => void) | null; // null = 더 늘릴 수 없음 (앱 최대 16개)
   onHome?(): void; // 홈: 처음 화면으로
   onDotSeen?(): void; // 빨간 점 첫 안내 말풍선 (본 적 없을 때만 넘긴다)
 }
@@ -102,7 +102,7 @@ export function PhoneDock({ onHome, favorites, recent, started, onPick, onRemove
           <Grid />
           <span>전체보기</span>
         </button>
-        <button type="button" className="phone-dock__tab" aria-label="창 추가" disabled={!onAddWindow} title={onAddWindow ? '창 추가' : '창은 최대 9개까지'} onClick={() => onAddWindow?.()}>
+        <button type="button" className="phone-dock__tab" aria-label="창 추가" disabled={!onAddWindow} title={onAddWindow ? '창 추가' : '창은 최대 16개까지'} onClick={() => onAddWindow?.()}>
           <Plus />
           <span>창 추가</span>
         </button>

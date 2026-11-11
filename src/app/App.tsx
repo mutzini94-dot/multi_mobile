@@ -1463,7 +1463,7 @@ export function App(props: Props) {
   const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 창 놓을 자리 고르기
   // 휴대폰: 자리를 묻지 않고 맨 위에 빈 창을 더한다
-  const growTo = growLayouts(state.layout); // 휴대폰도 따로 제한하지 않는다 (앱이 담을 수 있는 9개까지)
+  const growTo = growLayouts(state.layout); // 휴대폰도 따로 제한하지 않는다 (앱이 담을 수 있는 16개까지)
   /**
    * 방송을 창에 넣기: 넓은 화면은 넣을 창을 묻고, 휴대폰은 묻지 않는다
    * (이미 보이면 그 창 선택 → 첫 빈 창 → 맨 위에 새 창 → 선택한 창(없으면 첫 창)을 바꾼다)
@@ -2442,7 +2442,7 @@ export function App(props: Props) {
           onClose={closeEmptyMenu}
           items={[
             { label: '불러오기', icon: '▶', onSelect: () => setPickerSlot(emptyMenu.slot) },
-            { label: '창 추가', icon: '+', hint: growTo.length ? undefined : phone ? '최대 9개' : '9분할', disabled: !growTo.length, onSelect: addNewWindow },
+            { label: '창 추가', icon: '+', hint: growTo.length ? undefined : '최대 16개', disabled: !growTo.length, onSelect: addNewWindow },
             {
               label: '창 닫기',
               icon: '✕',

@@ -115,7 +115,7 @@ test('휴대폰: 전체 화면이면 가로 화면으로 돌리고, 나오면 �
   expect(unlock).toHaveBeenCalled();
 });
 
-test('휴대폰: 창 추가는 자리를 묻지 않고 맨 위에 빈 창 (휴대폰 제한 없이 앱 최대 9개까지)', () => {
+test('휴대폰: 창 추가는 자리를 묻지 않고 맨 위에 빈 창 (휴대폰 제한 없이 앱 최대 16개까지)', () => {
   mockPhone(true);
   setup();
   pickA();
@@ -133,6 +133,10 @@ test('휴대폰: 창 추가는 자리를 묻지 않고 맨 위에 빈 창 (휴�
   expect(screen.getByRole('button', { name: '창 추가' })).toBeEnabled();
   add();
   expect(tiles()).toHaveLength(9);
+  add();
+  expect(tiles()).toHaveLength(12);
+  add();
+  expect(tiles()).toHaveLength(16);
   expect(screen.getByRole('button', { name: '창 추가' })).toBeDisabled();
 });
 

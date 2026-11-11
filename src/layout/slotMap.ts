@@ -18,4 +18,6 @@ export const SLOT_MAP: Record<LayoutKind, { cols: string[]; rows: string[]; area
   },
   six: { cols: ['1fr', '1fr', '1fr'], rows: ['1fr', '1fr'], areas: [0, 1, 2, 3, 4, 5].map((s): SlotArea => [(s % 2) + 1, Math.floor(s / 2) + 1, 1, 1]) },
   nine: { cols: ['1fr', '1fr', '1fr'], rows: ['1fr', '1fr', '1fr'], areas: [0, 1, 2, 3, 4, 5, 6, 7, 8].map((s): SlotArea => [(s % 3) + 1, Math.floor(s / 3) + 1, 1, 1]) },
+  twelve: { cols: ['1fr', '1fr', '1fr', '1fr'], rows: ['1fr', '1fr', '1fr'], areas: Array.from({ length: 12 }, (_, s): SlotArea => [(s % 3) + 1, Math.floor(s / 3) + 1, 1, 1]) },
+  sixteen: { cols: ['1fr', '1fr', '1fr', '1fr'], rows: ['1fr', '1fr', '1fr', '1fr'], areas: Array.from({ length: 16 }, (_, s): SlotArea => [(s % 4) + 1, Math.floor(s / 4) + 1, 1, 1]) },
 };

@@ -1,6 +1,6 @@
 import type { LayoutKind, ViewState } from '../domain/types';
 
-export const SLOT_COUNT: Record<LayoutKind, number> = { wideSide: 2, single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9 };
+export const SLOT_COUNT: Record<LayoutKind, number> = { wideSide: 2, single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9, twelve: 12, sixteen: 16 };
 
 export const LAYOUT_LABEL: Record<LayoutKind, string> = {
   wideSide: '큰 화면+1',
@@ -12,13 +12,15 @@ export const LAYOUT_LABEL: Record<LayoutKind, string> = {
   oneFive: '큰 화면+5',
   six: '6분할',
   nine: '9분할',
+  twelve: '12분할',
+  sixteen: '16분할',
 };
 
 /** 상단 레이아웃 버튼 순서 */
-export const LAYOUTS: LayoutKind[] = ['wideSide', 'single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine'];
+export const LAYOUTS: LayoutKind[] = ['wideSide', 'single', 'split2', 'oneTwo', 'quad', 'oneThree', 'oneFive', 'six', 'nine', 'twelve', 'sixteen'];
 
 /** 창은 항상 MAX_SLOTS개를 보관하고, 레이아웃은 그중 앞의 몇 창을 보여줄지만 정한다. */
-export const MAX_SLOTS = 9;
+export const MAX_SLOTS = 16;
 
 export function visibleCount(state: Pick<ViewState, 'layout'>): number {
   return SLOT_COUNT[state.layout];
@@ -90,6 +92,8 @@ export function addWindow(state: ViewState, layout: LayoutKind, at: number): Vie
 
 /** 빈 창 삭제: 한 단계 작은 레이아웃 (같은 모양 계열로) */
 const SHRINK: Record<LayoutKind, LayoutKind | null> = {
+  sixteen: 'twelve',
+  twelve: 'nine',
   nine: 'six',
   six: 'quad',
   oneFive: 'oneThree',

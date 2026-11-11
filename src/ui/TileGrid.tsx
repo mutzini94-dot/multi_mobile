@@ -86,6 +86,12 @@ export function TileGrid({ state, renderTile, onSizes, onDragging, phone = false
     case 'nine':
       content = group('root', 'horizontal', [column('col-1', 'left', [0, 1, 2]), column('col-2', 'mid', [3, 4, 5]), column('col-3', 'right', [6, 7, 8])]);
       break;
+    case 'twelve': // 4열 × 3창
+      content = group('root', 'horizontal', [column('col-1', 'left', [0, 1, 2]), column('col-2', 'mid', [3, 4, 5]), column('col-3', 'mid', [6, 7, 8]), column('col-4', 'right', [9, 10, 11])]);
+      break;
+    case 'sixteen': // 4열 × 4창
+      content = group('root', 'horizontal', [column('col-1', 'left', [0, 1, 2, 3]), column('col-2', 'mid', [4, 5, 6, 7]), column('col-3', 'mid', [8, 9, 10, 11]), column('col-4', 'right', [12, 13, 14, 15])]);
+      break;
   }
   return (
     <div className="tile-grid" key={key}>

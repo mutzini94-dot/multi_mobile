@@ -6,14 +6,14 @@ import type { ViewState } from '../../src/domain/types';
 
 const full: ViewState = {
   layout: 'quad',
-  slots: [mkCreator(1), mkCreator(2), mkCreator(3), mkCreator(4), null, null, null, null, null],
+  slots: [mkCreator(1), mkCreator(2), mkCreator(3), mkCreator(4), ...Array(12).fill(null)],
   sizes: { root: [30, 70] },
   selected: 3,
   soundOn: true,
 };
 
 test('SLOT_COUNT', () => {
-  expect(SLOT_COUNT).toEqual({ wideSide: 2, single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9 });
+  expect(SLOT_COUNT).toEqual({ wideSide: 2, single: 1, split2: 2, oneTwo: 3, quad: 4, oneThree: 4, oneFive: 6, six: 6, nine: 9, twelve: 12, sixteen: 16 });
 });
 
 test('quad→split2: 보이는 창은 앞 2창, 나머지 방송은 지우지 않고 보관', () => {
@@ -28,9 +28,9 @@ test('quad→single→quad: 방송이 그대로 돌아온다 (초기화되지 �
 });
 
 test('MAX_SLOTS와 창 수가 모자란 상태는 null로 채움', () => {
-  expect(MAX_SLOTS).toBe(9);
+  expect(MAX_SLOTS).toBe(16);
   const s = applyLayout({ ...full, slots: [mkCreator(1)] }, 'quad');
-  expect(s.slots).toEqual([mkCreator(1), null, null, null, null, null, null, null, null]);
+  expect(s.slots).toEqual([mkCreator(1), ...Array(15).fill(null)]);
 });
 
 test('선택된 창(3번)이 사라지면 selected는 null', () => {
@@ -52,7 +52,7 @@ test('숨겨진 창에는 assign·select 하지 않는다', () => {
 });
 
 test('initialViewState', () => {
-  expect(initialViewState).toEqual({ layout: 'quad', slots: Array(9).fill(null), sizes: {}, selected: null, soundOn: true });
+  expect(initialViewState).toEqual({ layout: 'quad', slots: Array(16).fill(null), sizes: {}, selected: null, soundOn: true });
 });
 
 test('assign하면 그 창이 선택된다', () => {

@@ -18,6 +18,8 @@ const ICON_CELLS: Record<LayoutKind, string[]> = {
   oneFive: ['a', 'b', 'c', 'd', 'e', 'f'],
   six: ['a', 'b', 'c', 'd', 'e', 'f'],
   nine: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'],
+  twelve: Array.from({ length: 12 }, (_, i) => `c${i}`),
+  sixteen: Array.from({ length: 16 }, (_, i) => `c${i}`),
 };
 
 interface Props {

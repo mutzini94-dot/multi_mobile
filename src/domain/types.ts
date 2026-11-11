@@ -64,7 +64,7 @@ export interface DetachedMark {
 /** 창 하나의 내용: 방송 · 페이지 · 분리 표시 */
 export type SlotItem = Creator | PageSlot | DetachedMark;
 
-export type LayoutKind = 'wideSide' | 'single' | 'split2' | 'oneTwo' | 'quad' | 'oneThree' | 'oneFive' | 'six' | 'nine';
+export type LayoutKind = 'wideSide' | 'single' | 'split2' | 'oneTwo' | 'quad' | 'oneThree' | 'oneFive' | 'six' | 'nine' | 'twelve' | 'sixteen';
 
 export interface ViewState {
   layout: LayoutKind;
