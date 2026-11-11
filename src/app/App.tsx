@@ -21,6 +21,7 @@ import { AddWindowDialog } from '../ui/AddWindowDialog';
 import { ContextMenu } from '../ui/ContextMenu';
 import { usePhone, PHONE_QUERY } from '../ui/usePhone';
 import { PhoneDock } from '../ui/PhoneDock';
+import { PhonePicker } from '../ui/PhonePicker';
 import { onNativeBack } from '../native/backButton';
 import { nativeToonationBridge } from '../native/toonation/nativeBridge';
 import { Capacitor } from '@capacitor/core';
@@ -119,8 +120,6 @@ const PHONE_FILTERS: [PhoneFilter, string][] = [
   ['pages', '후원 페이지'],
   ['fav', '즐겨찾기'],
 ];
-/** 휴대폰에서 만들 수 있는 창 수 */
-const PHONE_MAX_WINDOWS = 6;
 /** 후원 페이지를 창 안에 띄워도 되는 이 앱 주소 (투네이션이 허용한 뒤 Vercel 환경 변수로) */
 const DONATE_FRAME_HOSTS = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_DONATE_FRAME_HOSTS ?? '';
 /** 새 창으로 분리할 수 있는 창 (방송·후원 페이지·채팅·웹페이지) */
@@ -236,6 +235,14 @@ export function App(props: Props) {
     kv.set(APP_WELCOME_KEY, '1');
     setAppWelcome(false);
   };
+  const keepFocusRef = useRef(false); // 플레이어 전체 화면을 앱 전체 화면으로 바꾸는 동안 전체 화면이 풀려도 나가지 않는다
+  const navStack = useRef<{ overview: boolean; sheet: { kind: 'donate' | 'chat'; creator: Creator } | null; shorts: boolean }[]>([]);
+  const [exitHint, setExitHint] = useState(false); // 맨 처음 화면에서 뒤로가기: 한 번 더 누르면 앱을 닫는다
+  useEffect(() => {
+    if (!exitHint) return;
+    const t = setTimeout(() => setExitHint(false), 2000);
+    return () => clearTimeout(t);
+  }, [exitHint]);
   const [undo, setUndo] = useState<{ text: string; run(): void } | null>(null); // 창 비우기 등을 5초 동안 되돌리기
   useEffect(() => {
     if (!undo) return;
@@ -761,6 +768,7 @@ export function App(props: Props) {
     setPageSheet(null);
     setShortsOpen(false);
     setPhoneFilter('all');
+    navStack.current = [];
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   useEffect(() => {
@@ -771,7 +779,7 @@ export function App(props: Props) {
       else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !miniRef.current) focusStepRef.current(e.key === 'ArrowRight' ? 1 : -1);
     };
     // 브라우저 전체 화면을 Esc로 빠져나오면 keydown 대신 fullscreenchange만 온다
-    const onChange = () => !document.fullscreenElement && setFocused(null);
+    const onChange = () => !document.fullscreenElement && !keepFocusRef.current && setFocused(null);
     window.addEventListener('keydown', onKey);
     document.addEventListener('fullscreenchange', onChange);
     return () => {
@@ -780,6 +788,25 @@ export function App(props: Props) {
     };
   }, [focused, exitFullscreen]);
   const focusedCreator = focused !== null && focused < visibleCount(state) ? state.slots[focused] ?? null : null; // 방송 또는 페이지
+  // 휴대폰: 영상 플레이어 자체의 전체 화면(유튜브·트위치 ⛶)은 앱 전체 화면으로 바꾼다 — 그래야 후원하기·채팅 버튼이 보인다
+  useEffect(() => {
+    const onFs = () => {
+      const el = document.fullscreenElement;
+      if (!el || el.tagName !== 'IFRAME' || !phoneRef.current) return;
+      const host = el.closest<HTMLElement>('[data-slot]');
+      const slot = host ? Number(host.dataset.slot) : stateRef.current.selected;
+      keepFocusRef.current = true;
+      const done = () => {
+        if (slot !== null && Number.isInteger(slot)) keyActions.current.fullscreen(slot);
+        setTimeout(() => (keepFocusRef.current = false), 800);
+      };
+      const p = document.exitFullscreen?.();
+      if (p) p.then(done, done);
+      else done();
+    };
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
   const focusedStream = isStream(focusedCreator) ? focusedCreator : null;
   const focusStreams = visibleSlots(state).flatMap((s, i) => (isStream(s) ? [i] : []));
   focusStepRef.current = (dir) => {
@@ -1331,6 +1358,21 @@ export function App(props: Props) {
   // 휴대폰 전체보기: 모든 창을 작은 타일(2열)로 모아 본다. 영상은 그대로 재생되며, 타일을 누르면 그 창으로 이동
   const [overviewOn, setOverview] = useState(false);
   const overview = phone && overviewOn;
+  // 휴대폰 뒤로가기용 이동 기록: 전체보기 · 채팅/후원 시트 · 추천 라이브가 바뀔 때마다 앞 화면을 쌓는다.
+  // 앞 화면으로 돌아가는 변화(닫기 버튼 등)면 쌓지 않고 꺼낸다 — 뒤로가기가 닫은 것을 다시 열지 않게
+  type NavSnap = { overview: boolean; sheet: typeof pageSheet; shorts: boolean };
+  const navNow: NavSnap = { overview, sheet: pageSheet, shorts: shortsOpen };
+  const navPrev = useRef<NavSnap>(navNow);
+  const sameSnap = (a: NavSnap, b: NavSnap) => a.overview === b.overview && a.shorts === b.shorts && a.sheet?.kind === b.sheet?.kind && a.sheet?.creator.key === b.sheet?.creator.key;
+  useEffect(() => {
+    const prev = navPrev.current;
+    navPrev.current = navNow;
+    if (sameSnap(prev, navNow)) return;
+    const st = navStack.current;
+    if (st.length && sameSnap(st[st.length - 1], navNow)) st.pop();
+    else st.push(prev), st.length > 30 && st.shift();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overview, pageSheet, shortsOpen]);
   const [scrollToSlot, setScrollToSlot] = useState<number | null>(null);
   /** 이 방송을 맨 위 창으로 올리고 그 아래에 채팅 */
   const openStreamChat = (slot: number) => {
@@ -1420,8 +1462,8 @@ export function App(props: Props) {
   }, [chatDock, state.layout]);
   const [shortsSize, setShortsSize] = useState<ShortsSize>(() => ({ width: readShortsWidth(kv), height: readShortsHeight(kv) })); // 추천 라이브 탐색 창 크기 (조절하면 기억)
   const [addOpen, setAddOpen] = useState(false); // 퀵패널 '창 추가': 새 창 놓을 자리 고르기
-  // 휴대폰: 창은 최대 6개, 자리를 묻지 않고 맨 위에 빈 창을 더한다
-  const growTo = growLayouts(state.layout).filter((l) => !phone || SLOT_COUNT[l] <= PHONE_MAX_WINDOWS);
+  // 휴대폰: 자리를 묻지 않고 맨 위에 빈 창을 더한다
+  const growTo = growLayouts(state.layout); // 휴대폰도 따로 제한하지 않는다 (앱이 담을 수 있는 9개까지)
   /**
    * 방송을 창에 넣기: 넓은 화면은 넣을 창을 묻고, 휴대폰은 묻지 않는다
    * (이미 보이면 그 창 선택 → 첫 빈 창 → 맨 위에 새 창 → 선택한 창(없으면 첫 창)을 바꾼다)
@@ -1553,6 +1595,7 @@ export function App(props: Props) {
   // 휴대폰 아래 탭 (시안 C): 추천 라이브 · 즐겨찾기 · 최근 본 · 전체보기 · 창 추가
   const phoneDock = (
     <PhoneDock
+      onHome={goHome}
       onDotSeen={dotSeen ? undefined : () => {
         kv.set(DOT_HINT_KEY, '1');
         setDotSeen(true);
@@ -1754,12 +1797,36 @@ export function App(props: Props) {
       exitFullscreen();
       return true;
     }
-    if (pageSheet) {
-      setPageSheet(null);
+    // 앱 안의 시트(메뉴·목록·창 메뉴 등): 맨 위 바탕을 눌러 닫는다
+    const backdrops = document.querySelectorAll<HTMLElement>('.phone-sheet__backdrop, .context-sheet__backdrop, .modal-backdrop:not(.page-sheet__backdrop)') // 채팅·후원 시트는 아래 이동 기록으로;
+    const top = backdrops[backdrops.length - 1];
+    if (top) {
+      top.click();
       return true;
     }
-    if (overview) {
+    // 앞 화면으로 (전체보기에서 방송을 눌러 왔으면 전체보기로)
+    const prev = navStack.current[navStack.current.length - 1];
+    if (prev) {
+      setOverview(prev.overview);
+      setPageSheet(prev.sheet);
+      setShortsOpen(prev.shorts);
+      return true;
+    }
+    if (pageSheet || overview || shortsOpen) {
+      setPageSheet(null);
       setOverview(false);
+      setShortsOpen(false);
+      return true;
+    }
+    // 아래로 내려 봤으면 맨 위로
+    if ((document.scrollingElement?.scrollTop ?? 0) > 40 || phoneFilter !== 'all') {
+      setPhoneFilter('all');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
+    }
+    // 맨 처음 화면: 한 번 더 누르면 닫는다 (실수로 앱이 꺼지지 않게)
+    if (!exitHint) {
+      setExitHint(true);
       return true;
     }
     return false;
@@ -2058,6 +2125,7 @@ export function App(props: Props) {
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
                       <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />
                     </svg>
+                    {phone && <span className="focus-view__chat-text">채팅</span>}
                   </button>
                 )}
                 {!mini && (
@@ -2185,7 +2253,31 @@ export function App(props: Props) {
           onClose={closeDesktopDonate}
         />
       )}
-      {pickerSlot !== null && (
+      {pickerSlot !== null && phone && (
+        <PhonePicker
+          favorites={withLive(quickFavs.map(quickLiveCreator), quickIsLive)}
+          recent={withLive(quickRecents.map(quickLiveCreator), quickIsLive)}
+          started={quickStarted}
+          login={{ loggedIn: !!toonation.state.account, onLogin: toonation.login }}
+          onClose={() => setPickerSlot(null)}
+          onPick={(creator) => {
+            dispatch({ type: 'assign', slot: pickerSlot, creator });
+            setPickerSlot(null);
+          }}
+          live={
+            <LiveTab
+              load={liveSource}
+              favoriteTags={loggedIn ? favoriteTags : undefined}
+              onToggleFavorite={loggedIn ? toggleToonFavorite : undefined}
+              onPick={(creator) => {
+                dispatch({ type: 'assign', slot: pickerSlot, creator });
+                setPickerSlot(null);
+              }}
+            />
+          }
+        />
+      )}
+      {pickerSlot !== null && !phone && (
         <FavoritesPicker
           filter={inGroup}
           rowExtra={groupSelect}
@@ -2350,7 +2442,7 @@ export function App(props: Props) {
           onClose={closeEmptyMenu}
           items={[
             { label: '불러오기', icon: '▶', onSelect: () => setPickerSlot(emptyMenu.slot) },
-            { label: '창 추가', icon: '+', hint: growTo.length ? undefined : phone ? `최대 ${PHONE_MAX_WINDOWS}개` : '9분할', disabled: !growTo.length, onSelect: addNewWindow },
+            { label: '창 추가', icon: '+', hint: growTo.length ? undefined : phone ? '최대 9개' : '9분할', disabled: !growTo.length, onSelect: addNewWindow },
             {
               label: '창 닫기',
               icon: '✕',
@@ -2399,8 +2491,8 @@ export function App(props: Props) {
         />
       )}
       {appWelcome && !toonation.state.account && (
-        <div className="modal-backdrop modal-backdrop--top">
-          <div className="modal app-welcome" role="dialog" aria-label="투네이션 로그인 안내">
+        <div className="modal-backdrop modal-backdrop--top" onClick={closeAppWelcome}>
+          <div className="modal app-welcome" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="투네이션 로그인 안내">
             <h2>투네이션 계정으로 시작하기</h2>
             <p>로그인하면 즐겨찾기한 크리에이터와 방송 중인 사람을 바로 불러오고, 후원 내역도 볼 수 있어요.</p>
             <button
@@ -2431,6 +2523,11 @@ export function App(props: Props) {
             .filter((x): x is { s: Creator; slot: number } => isStream(x.s))
             .map(({ s, slot }) => ({ label: `${s.name}에게 후원`, icon: '♥', hint: `${slot + 1}번 창`, onSelect: () => donateTo(s) }))}
         />
+      )}
+      {exitHint && !undo && (
+        <div className="undo-toast" role="status">
+          <span>뒤로 버튼을 한 번 더 누르면 앱이 닫힙니다</span>
+        </div>
       )}
       {undo && (
         <div className="undo-toast" role="status">

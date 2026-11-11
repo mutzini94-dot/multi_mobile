@@ -28,10 +28,11 @@ afterEach(() => {
   delete (window as unknown as { matchMedia?: unknown }).matchMedia;
 });
 
-function setup() {
+function setup({ welcomed = true } = {}) {
   mockPhone();
   const kv = safeStorage(undefined);
   kv.set(ONBOARDED_KEY, '1');
+  if (welcomed) kv.set('mv.appWelcome.v1', '1'); // 앱 첫 실행 로그인 안내는 따로
   const favorites = localFavorites(kv);
   favorites.add(mkCreator(1, { name: 'A' }));
   const win = { open: vi.fn(), screen: {} as Screen, location: { hash: '', href: 'http://localhost/' } as Location, navigator: {} as Navigator };
@@ -58,8 +59,34 @@ test('앱에서 휴대폰 뒤로가기: 전체 화면 → 원래 화면, 채팅 
   fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
   press();
   expect(document.querySelector('.app')).not.toHaveClass('app--overview');
+  // 맨 처음 화면: 한 번은 안내만, 한 번 더 누르면 앱을 뒤로 보낸다
+  press();
+  expect(minimizeApp).not.toHaveBeenCalled();
+  expect(screen.getByText('뒤로 버튼을 한 번 더 누르면 앱이 닫힙니다')).toBeInTheDocument();
   press();
   expect(minimizeApp).toHaveBeenCalledTimes(1);
+});
+
+test('전체보기에서 방송을 눌러 들어갔으면 뒤로가기는 전체보기로 돌아간다', () => {
+  setup();
+  fireEvent.click(screen.getByRole('button', { name: '전체보기' }));
+  fireEvent.click(screen.getByRole('button', { name: 'A 보기' }));
+  expect(document.querySelector('.app')!.classList.contains('app--overview')).toBe(false);
+  press();
+  expect(document.querySelector('.app')!.classList.contains('app--overview')).toBe(true);
+});
+
+test('앱 첫 실행 로그인 안내·목록 시트도 뒤로가기로 닫힌다 (앱을 끄지 않음)', () => {
+  minimizeApp.mockClear();
+  setup({ welcomed: false });
+  expect(screen.getByRole('dialog', { name: '투네이션 로그인 안내' })).toBeInTheDocument();
+  press();
+  expect(screen.queryByRole('dialog', { name: '투네이션 로그인 안내' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '최근 본' }));
+  expect(screen.getByRole('dialog', { name: '최근 본' })).toBeInTheDocument();
+  press();
+  expect(screen.queryByRole('dialog', { name: '최근 본' })).toBeNull();
+  expect(minimizeApp).not.toHaveBeenCalled();
 });
 
 test('영상 플레이어 자체 전체 화면(유튜브 ⛶)에서 뒤로가기: 앱을 끄지 않고 전체 화면만 나간다', () => {

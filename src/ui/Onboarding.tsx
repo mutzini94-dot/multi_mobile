@@ -17,7 +17,7 @@ export const TOUR_STEPS: { target: string; title: string; body: string }[] = [
 export const PHONE_TOUR_STEPS: { target: string; title: string; body: string }[] = [
   { target: '.tile', title: '창 누르기', body: '짧게 누르면 그 방송 소리로 바뀌고, 길게 누르면 창 메뉴(전체 화면·채팅·후원·즐겨찾기)가 열립니다. 전체 화면에서는 좌우로 밀어 다음 방송으로 넘깁니다.' },
   { target: '.gnb__chat', title: '채팅 · 후원하기', body: '채팅은 방송 아래에 채팅을 붙이고, 후원하기는 지금 보는 방송에 후원합니다.' },
-  { target: '.phone-dock', title: '아래 탭', body: '추천 라이브 · 즐겨찾기 · 최근 본에서 방송을 바로 넣고, 전체보기로 모든 창을 모아 봅니다. 창 추가로 창을 더합니다(최대 6개).' },
+  { target: '.phone-dock', title: '아래 탭', body: '추천 라이브 · 즐겨찾기 · 최근 본에서 방송을 바로 넣고, 전체보기로 모든 창을 모아 봅니다. 홈은 처음 화면으로, 창 추가로 창을 더합니다.' },
 ];
 
 interface Rect {

@@ -11,10 +11,16 @@ interface Props {
   login?: { loggedIn: boolean; onLogin(): void };
   shorts: { open: boolean; onToggle(): void; content: ReactNode };
   overview: { on: boolean; onToggle(): void };
-  onAddWindow: (() => void) | null; // null = 더 늘릴 수 없음 (휴대폰 최대 6개)
+  onAddWindow: (() => void) | null; // null = 더 늘릴 수 없음 (앱 최대 9개)
+  onHome?(): void; // 홈: 처음 화면으로
   onDotSeen?(): void; // 빨간 점 첫 안내 말풍선 (본 적 없을 때만 넘긴다)
 }
 
+const Home = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z" />
+  </svg>
+);
 const Star = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z" />
@@ -44,13 +50,19 @@ const Plus = () => (
  * 휴대폰 하단 탭 막대 (시안 C · 와이드 피드): 추천 라이브 · 즐겨찾기 · 최근 본 · 전체보기 · 창 추가.
  * 즐겨찾기·최근 본은 아래에서 올라오는 목록으로, 누르면 그 방송을 창에 넣는다.
  */
-export function PhoneDock({ favorites, recent, started, onPick, onRemoveRecent, login, shorts, overview, onAddWindow, onDotSeen }: Props) {
+export function PhoneDock({ onHome, favorites, recent, started, onPick, onRemoveRecent, login, shorts, overview, onAddWindow, onDotSeen }: Props) {
   const [sheet, setSheet] = useState<'fav' | 'recent' | null>(null);
   const startedKeys = new Set(started.map((c) => c.key));
   const items = sheet === 'fav' ? favorites : sheet === 'recent' ? recent : [];
   return (
     <>
       <nav className="phone-dock" aria-label="하단 메뉴">
+        {onHome && (
+          <button type="button" className="phone-dock__tab" aria-label="홈" onClick={onHome}>
+            <Home />
+            <span>홈</span>
+          </button>
+        )}
         <button type="button" className="phone-dock__tab" aria-pressed={shorts.open} onClick={shorts.onToggle}>
           <b className="phone-dock__live" aria-hidden="true">
             LIVE
@@ -90,7 +102,7 @@ export function PhoneDock({ favorites, recent, started, onPick, onRemoveRecent, 
           <Grid />
           <span>전체보기</span>
         </button>
-        <button type="button" className="phone-dock__tab" aria-label="창 추가" disabled={!onAddWindow} title={onAddWindow ? '창 추가' : '창은 최대 6개까지'} onClick={() => onAddWindow?.()}>
+        <button type="button" className="phone-dock__tab" aria-label="창 추가" disabled={!onAddWindow} title={onAddWindow ? '창 추가' : '창은 최대 9개까지'} onClick={() => onAddWindow?.()}>
           <Plus />
           <span>창 추가</span>
         </button>
